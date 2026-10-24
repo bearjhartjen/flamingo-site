@@ -177,6 +177,16 @@ EDITOR_CSS = site_build.CSS + r'''
     width:16px;height:16px;padding:0;box-sizing:border-box;border:1px solid #777;
   }
   .toolbar button.swatch:hover{border-color:#141414;box-shadow:0 0 0 1px #141414}
+  .toolbar #sizeNum{
+    width:58px;text-align:center;font-weight:700;font-size:12px;color:#141414;
+    background:#fff;border:1px solid #999;border-radius:2px;padding:3px 4px;
+    -moz-appearance:textfield;
+  }
+  .toolbar #sizeNum::-webkit-outer-spin-button,
+  .toolbar #sizeNum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .toolbar #sizeNum:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
+  /* the live-site star would sit under the dark page list: shift it right */
+  .star-badge{left:250px;top:120px;}
   .toolbar input[type=color]{
     width:26px;height:22px;padding:1px;border:1px solid #999;border-radius:2px;
     background:#fff;cursor:pointer;vertical-align:middle;
@@ -246,6 +256,7 @@ __CSS__
   <button data-cmd="p">Text</button>
   <button data-cmd="smaller" title="Smaller text">A-</button>
   <button data-cmd="bigger" title="Bigger text">A+</button>
+  <input type="number" id="sizeNum" min="8" max="200" title="Font size in px">
   <span class="sep"></span>
   <button data-cmd="ul">Bullets</button>
   <button data-cmd="ol">Numbers</button>
@@ -269,6 +280,7 @@ __CSS__
   <button data-cmd="image">Picture</button>
   <button data-cmd="gallery">Gallery</button>
   <button data-cmd="divider">Divider</button>
+  <button data-cmd="section" title="Insert a nice section panel">Section</button>
   <button data-cmd="small" disabled>Small</button>
   <button data-cmd="medium" disabled>Medium</button>
   <button data-cmd="full" disabled>Full</button>
@@ -277,6 +289,7 @@ __CSS__
   <button data-cmd="clear">Clear style</button>
 </div>
 <div class="page" id="page">
+  <a class="star-badge" id="starBadge" href="#" title="Open the hidden page"><span class="star-title">Latest and greatest</span><span class="star-sub">Click me</span></a>
   <div class="masthead">
     <img id="logo" src="__LOGO__" alt="Flamingo and Cactus">
     <h1 data-ed="title">__TITLE_ESC__</h1>
@@ -333,7 +346,8 @@ function renderAll(){
   $("#in-title").value = SITE.title; $("#in-tagline").value = SITE.tagline;
   $("#in-footer").value = SITE.footer || ""; $("#in-theme").value = SITE.theme;
   const nav = $("#nav"); nav.innerHTML = "";
-  if (SITE.pages.length > 1) SITE.pages.forEach(p => {
+  const visPages = SITE.pages.filter(p => !p.hidden);
+  if (visPages.length > 1) visPages.forEach(p => {
     if (p.slug === SLUG) {
       const s = document.createElement("span"); s.className = "cur"; s.textContent = p.nav;
       nav.appendChild(s);
@@ -347,8 +361,8 @@ function renderAll(){
   SITE.pages.forEach(p => {
     const li = document.createElement("li");
     if (p.slug === SLUG) li.className = "cur";
-    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = p.nav;
-    nm.title = p.slug + ".html"; nm.onclick = () => openPage(p.slug);
+    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = (p.hidden ? "\u2605 " : "") + p.nav;
+    nm.title = p.slug + ".html" + (p.hidden ? " (hidden page, not in the menu)" : ""); nm.onclick = () => openPage(p.slug);
     li.appendChild(nm);
     const up = document.createElement("button"); up.textContent = "↑"; up.title = "move up";
     up.onclick = () => movePage(p.slug, -1); li.appendChild(up);
@@ -366,6 +380,9 @@ function renderAll(){
   $("#pagename").textContent = cur ? cur.nav : SLUG;
   $("#foot").textContent = SITE.footer || "";
   $("#foot").style.display = SITE.footer ? "" : "none";
+  const hiddenPage = SITE.pages.find(p => p.hidden);
+  const starBadge = $("#starBadge");
+  if (starBadge) starBadge.style.display = hiddenPage ? "" : "none";
   $("#link-built").href = "/built?slug=" + encodeURIComponent(SLUG);
   const liveA = $("#link-live");
   if (SITE.live) {
@@ -485,13 +502,19 @@ function placeCaretAtEnd(el){
   const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
 /* ---------- text size + text color ----------
-   Class-based only (t- and c- classes), never inline styles or font tags,
-   because save() folds inline styles into the "ac" class and the sanitizer
-   keeps classes. */
-const SIZE_ORDER = ["t-small", "", "t-large", "t-huge"];   // smallest → largest, "" = default
+   Sizes are NUMERIC pixels: the toolbar writes inline style="font-size:NNpx"
+   (integer, 8-200) and never a t-* class. Colors are the c-* classes or an
+   inline style="color:...". save() whitelists both before sending and the
+   server re-validates, so nothing hostile survives a save.
+   The old t-* classes still render (the CSS keeps them) and a legacy element
+   still reads back its true size through getComputedStyle, but the toolbar
+   only ever writes numbers — and setting a size strips any legacy t-* class
+   off the element it touches. */
+const PX_SCALE = [8,9,10,11,12,14,16,18,20,24,28,32,36,48,64,72,96];
+const SIZE_MIN = 8, SIZE_MAX = 200;    // the number box's range
 const COLOR_CLASSES = ["c-muted", "c-red", "c-blue", "c-green", "c-gold"];
 const BLOCK_SEL = "p,h2,h3,blockquote,li";
-const SIZE_RE = /^t-(small|large|huge)$/;
+const SIZE_RE = /^t-(tiny|small|large|huge|giant)$/;
 const COLOR_RE = /^c-/;
 const WHEEL_RE = /^#[0-9a-f]{6}$/i;   // native picker always yields #rrggbb
 // ---------- undo history: snapshots of the canvas ----------
@@ -516,12 +539,14 @@ function doUndo(){
   hi--; canvas.innerHTML = hist[hi];
   canvas.focus(); placeCaretAtEnd(canvas);
   markDirty(); hint(); updateHistBtns();
+  updateSizeNum();
 }
 function doRedo(){
   if (hi >= hist.length - 1) return;
   hi++; canvas.innerHTML = hist[hi];
   canvas.focus(); placeCaretAtEnd(canvas);
   markDirty(); hint(); updateHistBtns();
+  updateSizeNum();
 }
 // typing coalesces into one undo step per burst
 canvas.addEventListener("input", () => {
@@ -566,7 +591,7 @@ function nodeBlock(n){
   }
   return null;
 }
-// nearest span carrying a class, i.e. where a selection would toggle off
+// nearest span around the selection — where an inline run of text goes
 function nearestSpan(r){
   let n = r.commonAncestorContainer;
   if (n.nodeType === 3) n = n.parentNode;
@@ -582,28 +607,79 @@ function blocksIntersecting(r){
 function stripClasses(el, re){
   Array.from(el.classList).forEach(c => { if (re.test(c)) el.classList.remove(c); });
 }
-function sizeIndex(el){
-  if (!el) return 1;                       // the default size sits at index 1
-  const c = SIZE_ORDER.find(x => x && el.classList.contains(x));
-  return c ? SIZE_ORDER.indexOf(c) : 1;
+// the real size in px, read from the computed style — never inferred from a
+// class, so legacy t-* content and default-size blocks both come out right
+function effectivePx(el){
+  if (!el) return null;
+  const v = parseFloat(getComputedStyle(el).fontSize);
+  return (isFinite(v) && v > 0) ? v : null;
 }
-function clampIdx(i){ return Math.max(0, Math.min(SIZE_ORDER.length - 1, i)); }
-function setSize(el, cls){
+// One step along PX_SCALE from a current effective size: down takes the
+// nearest step at/below it, up the nearest step at/above it, and a size
+// sitting exactly on a step moves on to the next one. The index is clamped to
+// the ends of the scale, so A-/A+ stop at 8 and 96 — they never wrap round to
+// the other end and never fall back to a default. A typed size outside the
+// scale is pulled onto its nearest end.
+function stepSize(px, dir){
+  const n = PX_SCALE.length;
+  if (!isFinite(px) || px <= 0) px = effectivePx(canvas) || 16;
+  let i;
+  if (dir > 0) {
+    i = PX_SCALE.findIndex(v => v >= px);
+    if (i < 0) i = n;                        // above the scale: clamp to the top
+    else if (PX_SCALE[i] === px) i++;        // on a step: take the next one up
+    i = Math.min(i, n - 1);
+  } else {
+    i = -1;
+    for (let k = 0; k < n; k++) if (PX_SCALE[k] <= px) i = k;   // last at/below
+    if (i >= 0 && PX_SCALE[i] === px) i--;   // on a step: take the one below
+    i = Math.max(i, 0);                      // below the scale: clamp to the bottom
+  }
+  return PX_SCALE[i];
+}
+// The toolbar writes numbers only: an inline style.fontSize in whole pixels,
+// never a t-* class and never a <font> tag. The legacy t-* class is stripped
+// off whatever it lands on; c-* classes and an inline color are left alone.
+function setSizePx(el, px){
   stripClasses(el, SIZE_RE);
-  if (cls) el.classList.add(cls);
-}
-// one step up (dir 1) or down (dir -1); re-choosing the size it already has
-// drops back to the default
-function cycleSize(el, dir){
-  const had = SIZE_ORDER.find(x => x && el.classList.contains(x)) || "";
-  const want = SIZE_ORDER[clampIdx(sizeIndex(el) + dir)];
-  if (want === had) { stripClasses(el, SIZE_RE); return; }
-  setSize(el, want);
+  el.style.fontSize = Math.max(SIZE_MIN, Math.min(SIZE_MAX, Math.round(px))) + "px";
 }
 function setColor(el, cls){
   if (cls && el.classList.contains(cls)) { el.classList.remove(cls); return; }
   stripClasses(el, COLOR_RE); el.style.removeProperty("color");
   if (cls) el.classList.add(cls);
+}
+// The live range if it is still inside the canvas, else the last one: clicking
+// into the size box moves focus off the canvas and some browsers then drop the
+// selection, but Enter still has to know what it is sizing.
+let lastRange = null;
+document.addEventListener("selectionchange", () => {
+  const r = getRange();
+  if (r) lastRange = r.cloneRange();
+});
+function activeRange(){
+  const r = getRange();
+  if (r) return r;
+  if (lastRange && canvas.contains(lastRange.commonAncestorContainer)) return lastRange;
+  return null;
+}
+// the effective px the caret (or selection start) is sitting in
+function sizeAtCaret(){
+  const r = activeRange(); if (!r) return null;
+  let n = r.startContainer;
+  if (n.nodeType === 3) n = n.parentNode;
+  while (n && n !== canvas) {
+    if (n.nodeType === 1 && (n.tagName === "SPAN" || n.matches(BLOCK_SEL))) return effectivePx(n);
+    n = n.parentNode;
+  }
+  return effectivePx(canvas);
+}
+// the number box doubles as the readout and the input
+function updateSizeNum(){
+  const inp = $("#sizeNum"); if (!inp) return;
+  if (document.activeElement === inp) return;   // don't stomp what is being typed
+  const px = sizeAtCaret();
+  inp.value = px === null ? "" : String(Math.round(px * 10) / 10);   // "16", not "16.0"
 }
 function unwrapSpan(el){
   const p = el.parentNode; if (!p) return;
@@ -630,23 +706,56 @@ function wrapSpan(r, cls){
   restoreRange(nr);
   return s;
 }
-function applySize(dir){
-  const r = getRange(); if (!r) return;
+// Run fn over the size target(s) of the current selection: a collapsed caret
+// sizes its whole block, a selection reaching across blocks sizes every block
+// it touches, and a selection inside one block paints the nearest span (or
+// wraps a bare one) so only that run of text changes. Each element is sized
+// from its own effective size, so a mixed-size selection keeps its spread.
+function eachSizeTarget(fn){
+  let r = getRange();
+  if (!r) {
+    r = activeRange();
+    if (r) restoreRange(r);          // focus left the canvas: put the range back
+  }
+  if (!r) return;
   if (r.collapsed) {                       // caret only: size the current block
     const b = nodeBlock(r.startContainer);
-    if (b) cycleSize(b, dir);
+    if (b) fn(b);
     return;
   }
   const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
   if (a !== z) {                           // selection reaches across blocks
-    const want = SIZE_ORDER[clampIdx(sizeIndex(a) + dir)];
-    blocksIntersecting(r).forEach(b => setSize(b, want));
+    blocksIntersecting(r).forEach(b => fn(b));
     return;
   }
   const s = nearestSpan(r);
-  if (s) { cycleSize(s, dir); if (!s.className && !s.style.color) unwrapSpan(s); }
-  else wrapSpan(r, SIZE_ORDER[clampIdx(1 + dir)]);   // default ± one step
+  if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize) unwrapSpan(s); }
+  else { const sp = wrapSpan(r, ""); if (sp) fn(sp); }
 }
+// A-/A+: one step along PX_SCALE, clamped at the ends — no wrap-around and no
+// falling back to a default size.
+function applySize(dir){
+  eachSizeTarget(el => setSizePx(el, stepSize(effectivePx(el), dir)));
+}
+// a typed size: exactly what the number box says, rounded and clamped
+function applyExactSize(px){
+  eachSizeTarget(el => setSizePx(el, px));
+}
+// Enter (or the change event) in the size box applies that size to the caret's
+// block or the selection, same targeting rules as A-/A+.
+function commitSizeNum(){
+  const inp = $("#sizeNum"); if (!inp) return;
+  const raw = (inp.value || "").trim();
+  const n = Math.round(Number(raw));
+  if (raw === "" || !isFinite(n)) { updateSizeNum(); return; }   // not a number: show the real size again
+  applyExactSize(Math.max(SIZE_MIN, Math.min(SIZE_MAX, n)));
+  canvas.focus();
+  pushHist(); imgButtons(); markDirty(); hint(); updateSizeNum();
+}
+$("#sizeNum").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); commitSizeNum(); }
+});
+$("#sizeNum").addEventListener("change", commitSizeNum);
 function applyColor(cls){
   if (cls && COLOR_CLASSES.indexOf(cls) < 0) return;
   const r = getRange(); if (!r) return;
@@ -677,7 +786,8 @@ function clearSizeColor(){
     stripClasses(el, SIZE_RE);
     stripClasses(el, COLOR_RE);
     el.style.removeProperty("color");
-    if (el.tagName === "SPAN" && !el.className && !el.style.color) unwrapSpan(el);   // no class left: unwrap
+    el.style.removeProperty("font-size");      // the numeric size the toolbar writes
+    if (el.tagName === "SPAN" && !el.className && !el.style.color && !el.style.fontSize) unwrapSpan(el);   // no class left: unwrap
   });
 }
 // full color wheel: live-paints any color as the selection changes
@@ -685,7 +795,7 @@ $("#colorwheel").addEventListener("input", e => {
   if (!editing) return;
   canvas.focus();
   applyWheelColor(e.target.value);
-  pushHist(); imgButtons(); markDirty(); hint();
+  pushHist(); imgButtons(); markDirty(); hint(); updateSizeNum();
 });
 $("#toolbar").addEventListener("click", e => {
   const b = e.target.closest("[data-cmd]"); if (!b || !editing) return;
@@ -723,6 +833,8 @@ $("#toolbar").addEventListener("click", e => {
     if (a) { a.textContent = label; placeCaretAtEnd(a.parentElement); }
   }
   else if (c === "divider") document.execCommand("insertHTML", false, "<hr><p><br></p>");
+  else if (c === "section") document.execCommand("insertHTML", false,
+    '<div class="card"><h2>Section title</h2><p>Write something great here.</p></div><p><br></p>');
   else if (c === "image") { galleryMode = false; filepick.multiple = false; filepick.click(); }
   else if (c === "gallery") { galleryMode = true; filepick.multiple = true; filepick.click(); }
   else if ((c === "small" || c === "medium" || c === "full") && selImg) {
@@ -731,7 +843,7 @@ $("#toolbar").addEventListener("click", e => {
   }
   else if (c === "delimg" && selImg) { selImg.remove(); selImg = null; }
   else return;
-  pushHist(); imgButtons(); markDirty(); hint();
+  pushHist(); imgButtons(); markDirty(); hint(); updateSizeNum();
 });
 filepick.onchange = async () => {
   const files = Array.from(filepick.files); filepick.value = "";
@@ -824,26 +936,34 @@ canvas.addEventListener("paste", async e => {
   }
   pushHist(); markDirty(); hint();
 });
+canvas.addEventListener("mouseup", updateSizeNum);
+canvas.addEventListener("keyup", updateSizeNum);
 async function save(){
   readInputsToSite();
-  // The Center/Left buttons write inline styles; fold centering into the
-  // "ac" class before saving so it survives the page cleaner and still
-  // looks identical here and on the built page.
-  // The Center/Left buttons write text-align; fold centering into the
-  // "ac" class, and keep a validated wheel color as an inline style,
-  // before saving so both survive the page cleaner. The server
-  // re-validates the color; anything hostile is dropped there.
+  // The Center/Left buttons write text-align; fold centering into the "ac"
+  // class, and keep a validated wheel color and a validated font size as an
+  // inline style, before saving so all three survive the page cleaner. The
+  // canonical form is style="color:X;font-size:Ypx" — color first, then a
+  // whole number of pixels between 8 and 200. The server re-validates both
+  // properties, so anything hostile is dropped there too.
   canvas.querySelectorAll("[style]").forEach(el => {
     const t = (el.style.textAlign || "").toLowerCase();
     const col = (el.style.color || "").trim();
+    const fsz = (el.style.fontSize || "").trim();
     el.removeAttribute("style");
     el.classList.remove("ac");
     if (t === "center") el.classList.add("ac");
+    const keep = [];
     const v = col.replace(/\\s+/g, "");
     if (/^(#[0-9a-f]{3,8}|[a-z]{3,30}|rgba?\\([0-9,.%/]+\\)|hsla?\\([0-9,.%/]+(?:deg|turn)?\\))$/i.test(v)
         && !/url|expression|javascript/i.test(v)) {
-      el.setAttribute("style", "color:" + v);
+      keep.push("color:" + v);
     }
+    const f = /^(\\d{1,3})px$/.exec(fsz.replace(/\\s+/g, ""));
+    if (f && +f[1] >= SIZE_MIN && +f[1] <= SIZE_MAX) {
+      keep.push("font-size:" + (+f[1]) + "px");
+    }
+    if (keep.length) el.setAttribute("style", keep.join(";"));
   });
   pushHist();
   const settings = {
@@ -862,6 +982,11 @@ async function save(){
   } catch (err) { status.textContent = "save failed: " + err.message; }
 }
 btnSave.onclick = save;
+$("#starBadge").addEventListener("click", e => {
+  e.preventDefault();
+  const h = SITE.pages.find(p => p.hidden);
+  if (h) openPage(h.slug);
+});
 document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "s" && editing) { e.preventDefault(); save(); }
   const inEd = editing && document.activeElement && document.activeElement.closest

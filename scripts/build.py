@@ -56,7 +56,10 @@ def load_site(path: Path) -> dict:
         if not SLUG_RE.match(slug) or slug in seen:
             continue
         seen.add(slug)
-        clean_pages.append({"slug": slug, "nav": str(p.get("nav", slug))[:60] or slug})
+        entry = {"slug": slug, "nav": str(p.get("nav", slug))[:60] or slug}
+        if p.get("hidden"):
+            entry["hidden"] = True
+        clean_pages.append(entry)
     if "index" not in seen:
         clean_pages.insert(0, {"slug": "index", "nav": "Home"})
     theme = str(doc.get("theme", "classic"))
@@ -79,8 +82,10 @@ IMG_CLASSES = {"secimg", "small", "medium", "full"}
 # Text size / colour classes. Sizes work on blocks and inline spans; colours
 # are the same set. Anything not listed here (other than "ac", below) is
 # dropped. Inline styles are dropped except a strictly validated `color`
-# property (the colour wheel), which is normalised to `style="color:..."`.
-SIZE_CLASSES = {"t-small", "t-large", "t-huge"}
+# property (the colour wheel) and a strictly validated numeric `font-size`
+# (Google-Slides-style pixel sizes); those are normalised into a single
+# `style="color:...;font-size:..."` attribute.
+SIZE_CLASSES = {"t-tiny", "t-small", "t-large", "t-huge", "t-giant"}
 COLOR_CLASSES = {"c-muted", "c-red", "c-blue", "c-green", "c-gold"}
 TEXT_CLASSES = SIZE_CLASSES | COLOR_CLASSES
 # Block tags that keep the "ac" centering class as well as size/colour.
@@ -120,6 +125,59 @@ def _clean_color(style: str | None) -> str | None:
     return None
 
 
+# A `font-size` value is safe only as a plain pixel length: an integer or
+# one-decimal number of pixels in the inclusive range 8-200, with a literal
+# `px` suffix. Anything else (em/%/rem/ex, url(), expression(), quotes,
+# braces, huge numbers) is rejected so no CSS escape hatch survives.
+SIZE_VALUE_RE = re.compile(r"\d+(?:\.\d)?px")
+
+
+def _clean_size(style: str | None) -> str | None:
+    """Return a canonical font-size value from a style attribute, or None.
+
+    Only the `font-size` property is read; every other declaration is dropped.
+    Accepts an integer or one-decimal number of pixels from 8 to 200 inclusive
+    and returns it with whitespace and leading zeros stripped (`18px`, `12.5px`),
+    or None for anything else.
+    """
+    if not style:
+        return None
+    for decl in style.split(";"):
+        prop, sep, val = decl.partition(":")
+        if not sep or prop.strip().lower() != "font-size":
+            continue
+        v = re.sub(r"\s+", "", val)
+        if any(bad in v.lower() for bad in (
+                "url", "expression", "javascript", "<", ">", '"', "'", "{", "}")):
+            continue
+        if not SIZE_VALUE_RE.fullmatch(v):
+            continue
+        n, _, frac = v[:-2].partition(".")  # strip the literal `px`
+        tens = int(n) * 10 + (int(frac) if frac else 0)
+        if not 80 <= tens <= 2000:  # 8px to 200px, inclusive
+            continue
+        if frac and frac != "0":
+            return f"{int(n)}.{frac}px"
+        return f"{int(n)}px"
+    return None
+
+
+def _style_attr(style: str | None) -> str:
+    """Build one canonical style attribute: colour first, then font-size.
+
+    Returns an empty string when neither declaration is kept, so callers
+    emit no style attribute at all.
+    """
+    parts = []
+    col = _clean_color(style)
+    if col:
+        parts.append(f"color:{col}")
+    size = _clean_size(style)
+    if size:
+        parts.append(f"font-size:{size}")
+    return f' style="{";".join(parts)}"' if parts else ""
+
+
 def _clean_href(href: str) -> str | None:
     h = (href or "").strip()
     if h.startswith(("http://", "https://", "mailto:", "#", "/")):
@@ -155,8 +213,13 @@ class _Sanitize(HTMLParser):
             return
         ad = dict(attrs)
         if tag == "div":
-            # only galleries survive as divs; everything else is a paragraph
-            if "gallery" not in ad.get("class", "").split():
+            # galleries and cards survive as divs; everything else is a paragraph
+            classes = ad.get("class", "").split()
+            if "gallery" in classes:
+                pass
+            elif "card" in classes:
+                ad["class"] = "card"
+            else:
                 tag = "p"
         if tag not in ALLOWED_TAGS:
             return
@@ -185,7 +248,10 @@ class _Sanitize(HTMLParser):
             self.out.append(
                 f'<img class="{cls}" src="{html.escape(src, quote=True)}" alt="{alt}">')
         elif tag == "div":
-            self.out.append('<div class="gallery">')
+            if ad.get("class", "") == "card":
+                self.out.append('<div class="card">')
+            else:
+                self.out.append('<div class="gallery">')
         elif tag == "span":
             # inline size/colour wrapper. A span with nothing left to keep
             # must not emit an empty tag: drop the tag, keep the children.
@@ -193,12 +259,11 @@ class _Sanitize(HTMLParser):
             for c in ad.get("class", "").split():
                 if c in TEXT_CLASSES and c not in keep:
                     keep.append(c)
-            col = _clean_color(ad.get("style", ""))
             attrs = ""
             if keep:
                 attrs += f' class="{" ".join(keep)}"'
-            if col:
-                attrs += f' style="color:{col}"'
+            # one canonical style attribute: colour first, then font-size
+            attrs += _style_attr(ad.get("style", ""))
             if attrs:
                 self.out.append(f"<span{attrs}>")
                 self.span_open.append(True)
@@ -222,10 +287,9 @@ class _Sanitize(HTMLParser):
                         keep.append(c)
                 if keep:
                     extra = f' class="{" ".join(keep)}"'
-                # a wheel-picked colour survives as a validated inline style
-                col = _clean_color(ad.get("style", ""))
-                if col:
-                    extra += f' style="color:{col}"'
+                # wheel-picked colour and numeric size survive together as
+                # one validated inline style: colour first, then font-size
+                extra += _style_attr(ad.get("style", ""))
             self.out.append(f"<{tag}{extra}>")
         if tag != "span":
             self.open.append(tag)
@@ -331,9 +395,11 @@ CSS = r'''  :root{
   .canvas:empty{padding:0}
   .canvas p{margin:0 0 12px}
   .canvas .ac{text-align:center}
+  .canvas .t-tiny{font-size:12px}
   .canvas .t-small{font-size:13px}
   .canvas .t-large{font-size:19px}
   .canvas .t-huge{font-size:26px;line-height:1.35}
+  .canvas .t-giant{font-size:34px;line-height:1.3}
   .canvas .c-muted{color:var(--muted)}
   .canvas .c-red{color:#b3261e}
   .canvas .c-blue{color:#0b2a8c}
@@ -366,7 +432,36 @@ CSS = r'''  :root{
   .canvas img.medium{width:420px}
   .canvas img.full{width:100%}
   .canvas img{max-width:100%}
+  .canvas .card{
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
+    padding:18px 20px;margin:0 0 16px;
+  }
+  .canvas .card h2:first-child{margin-top:0}
+  .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
+  .star-badge{
+    position:fixed;top:120px;left:calc(50% - 566px);z-index:200;width:168px;height:168px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 35% 30%,#f3d97b,#c9a227 58%,#a37f14);
+    color:#3a2d00;text-decoration:none;text-align:center;
+    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));
+    transition:transform .18s ease;
+  }
+  .star-badge:hover{transform:scale(1.07) rotate(-4deg)}
+  .star-badge .star-title{display:block;max-width:58%;font:700 12px/1.3 "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase}
+  .star-badge .star-sub{display:block;margin-top:4px;font:italic 10px Georgia,serif;animation:starpulse 3s ease-in-out infinite}
+  @keyframes starpulse{0%,100%{opacity:.45}50%{opacity:.9}}
+  @media (max-width:1250px){.star-badge{top:20px;left:56px}}
+  @media print{.star-badge{display:none}}
+  .star-badge.warp{animation:starwarp .95s ease-in forwards;z-index:999}
+  @keyframes starwarp{to{transform:scale(14) rotate(720deg)}}
+  body.warping::after{content:"";position:fixed;inset:0;background:#c9a227;z-index:997;opacity:0;animation:veilin .9s ease-in forwards;pointer-events:none}
+  @keyframes veilin{to{opacity:1}}
+  body.arrive::before{content:"";position:fixed;inset:0;background:#c9a227;z-index:998;animation:veilout .8s ease-out forwards;pointer-events:none}
+  @keyframes veilout{from{opacity:1}to{opacity:0;visibility:hidden}}
+  body.arrive .page{animation:pagesettle .8s ease-out}
+  @keyframes pagesettle{from{transform:scale(.96)}to{transform:scale(1)}}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
   footer{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
@@ -375,11 +470,31 @@ CSS = r'''  :root{
 '''
 
 
+STAR_TITLE = "Latest and greatest"
+STAR_SUB = "Click me"
+
+
+def star_slug(pages):
+    """Slug of the hidden page the star links to, or None when there is none."""
+    return next((p["slug"] for p in pages if p.get("hidden")), None)
+
+
+def star_html(pages):
+    slug = star_slug(pages)
+    if not slug:
+        return ""
+    return (
+        f'<a class="star-badge" href="{html.escape(slug)}.html" title="{STAR_TITLE}">'
+        f'<span class="star-title">{STAR_TITLE}</span>'
+        f'<span class="star-sub">{STAR_SUB}</span></a>'
+    )
+
+
 def nav_html(pages, current: str) -> str:
-    if len(pages) <= 1:
+    if len([p for p in pages if not p.get("hidden")]) <= 1:
         return ""
     parts = []
-    for p in pages:
+    for p in [p for p in pages if not p.get("hidden")]:
         if p["slug"] == current:
             parts.append(f'<span class="cur">{html.escape(p["nav"])}</span>')
         else:
@@ -402,6 +517,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "</head>\n"
         f'<body data-theme="{theme}">\n'
         '<div class="page">\n'
+        f"{star_html(pages)}"
         "\n"
         '  <div class="masthead">\n'
         f'    <img src="{logo_uri}" alt="Flamingo and Cactus">\n'
@@ -414,6 +530,25 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         f"{canvas}"
         f"{footer_block}"
         "</div>\n"
+        "<script>/* star-warp: spin into a fullscreen whirlpool, then land. Arrival plays in reverse. */"
+        "(function(){try{"
+        "var flag='fcWarp';"
+        "if(sessionStorage.getItem(flag)){sessionStorage.removeItem(flag);"
+        "document.body.classList.add('arrive');"
+        "setTimeout(function(){document.body.classList.remove('arrive')},900);}"
+        "var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;"
+        "document.addEventListener('click',function(e){"
+        "var a=e.target.closest?e.target.closest('a.star-badge'):null;"
+        "if(!a||!a.getAttribute('href'))return;"
+        "var href=a.getAttribute('href');"
+        "if(href.charAt(0)==='#')return;"
+        "e.preventDefault();"
+        "if(instant){window.location.href=href;return;}"
+        "try{sessionStorage.setItem(flag,'1')}catch(_){}"
+        "a.classList.add('warp');document.body.classList.add('warping');"
+        "setTimeout(function(){window.location.href=href},950);});"
+        "}catch(_){}"
+        "})();</script>"
         "</body>\n"
         "</html>\n"
     )
@@ -496,7 +631,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         expect(len(idx) > 0, "index.html non-empty")
         expect(html.escape(site["title"]) in idx, "title present")
         expect("min-width:1120px" in idx, "desktop-only floor kept")
-        expect("<script" not in idx.lower(), "no script in built page")
+        warp_scripts = idx.lower().count("<script")
+        expect(warp_scripts == 1 and "star-warp" in idx.lower(), "only the star-warp script in built pages")
         expect("onclick" not in idx.lower(), "no event-handler attributes in built page")
         expect('body[data-theme="parchment"]' in idx, "parchment theme CSS present")
         expect('body[data-theme="ink"]' in idx, "ink theme CSS present")
@@ -527,10 +663,10 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         spanned = sanitize('<p><span class="c-blue t-small">x</span></p>')
         expect(spanned == '<p><span class="c-blue t-small">x</span></p>',
                "sanitizer keeps size/color classes on span")
-        wiped = sanitize('<p class="evil" style="font-size:99px;color:lime">Hi</p>')
+        wiped = sanitize('<p class="evil" style="font-size:999px;color:lime">Hi</p>')
         expect(wiped == '<p style="color:lime">Hi</p>',
                 "sanitizer drops unknown classes and styles but keeps a safe color")
-        evil_style = sanitize('<p style="color:red;background:url(x);font-size:9px">Hi</p>')
+        evil_style = sanitize('<p style="color:red;background:url(x);font-size:10em">Hi</p>')
         expect(evil_style == '<p style="color:red">Hi</p>',
                 "sanitizer keeps only the color declaration, drops the rest")
         expr = sanitize('<p style="color:expression(alert(1))">Hi</p>')
@@ -555,17 +691,73 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         again = sanitize(styled + spanned + mixed + liStyled)
         expect(again == styled + spanned + mixed + liStyled,
                "size/color survive a second sanitize pass (rebuild stability)")
-        base_rules = (".canvas .t-small", ".canvas .t-large", ".canvas .t-huge",
+        # numeric font sizes (Google Slides style), additive to the t-* classes
+        sized_p = sanitize('<p style="font-size:36px">x</p>')
+        expect(sized_p == '<p style="font-size:36px">x</p>',
+               "sanitizer keeps font-size:36px on p")
+        sized_span = sanitize('<p><span style="font-size:36px">x</span></p>')
+        expect(sized_span == '<p><span style="font-size:36px">x</span></p>',
+               "sanitizer keeps font-size:36px on span")
+        canonical = sanitize('<p style="font-size: 018.0px">x</p>')
+        expect(canonical == '<p style="font-size:18px">x</p>',
+               "font-size canonicalised (whitespace and leading zeros stripped)")
+        sized_h2 = sanitize('<h2 style="font-size:36px">x</h2>')
+        expect(sized_h2 == '<h2 style="font-size:36px">x</h2>',
+               "inline font-size kept on h2 (beats the 12px rule by specificity)")
+        for bad_size in ("font-size:999px", "font-size:10em", "font-size:10%",
+                         "font-size:expression(alert(1))"):
+            dropped = sanitize(f'<p style="{bad_size}">Hi</p>')
+            expect("style=" not in dropped and "Hi" in dropped,
+                   f"sanitizer drops {bad_size}")
+        combined = sanitize('<p style="color:red;font-size:36px">x</p>')
+        expect(combined == '<p style="color:red;font-size:36px">x</p>',
+               "combined style=color + font-size on one attribute, byte-identical")
+        expect(sanitize(combined) == combined,
+               "combined color+font-size survives a second sanitize pass (byte-identical)")
+        combined_span = sanitize('<p><span class="t-small" style="color:#b3261e;'
+                                 'font-size:36px">x</span></p>')
+        expect(combined_span == '<p><span class="t-small" '
+                                 'style="color:#b3261e;font-size:36px">x</span></p>',
+               "kept class plus combined color/size on one span attribute")
+        expect(sanitize(combined_span) == combined_span,
+               "combined span style survives a second sanitize pass")
+        sized_centered = sanitize('<p style="text-align:center;color:#123456;'
+                                  'font-size:24px">x</p>')
+        expect(sized_centered == '<p class="ac" style="color:#123456;font-size:24px">x</p>',
+               "centered tag keeps class, color and size in canonical order")
+        bare_size = sanitize('<p><span style="font-size:7px">x</span></p>')
+        expect(bare_size == "<p>x</p>",
+               "span with no kept class/color/size emits no tag, children kept")
+        base_rules = (".canvas .t-tiny", ".canvas .t-small", ".canvas .t-large",
+                      ".canvas .t-huge", ".canvas .t-giant",
                       ".canvas .c-muted", ".canvas .c-red", ".canvas .c-blue",
                       ".canvas .c-green", ".canvas .c-gold")
         missing = [r for r in base_rules if r not in CSS]
         expect(not missing, f"CSS size/color rules present ({', '.join(missing) or 'all'})")
         ink_rules = tuple(r.replace(".canvas .c", 'body[data-theme="ink"] .canvas .c')
-                          for r in base_rules[4:])
+                          for r in base_rules if ".canvas .c-" in r and r != ".canvas .c-muted")
         missing = [r for r in ink_rules if r not in CSS]
         expect(not missing, f"CSS ink-theme color overrides present ({', '.join(missing) or 'all'})")
         expect(all(r in idx for r in base_rules),
                "size/color CSS reaches the built page")
+        card = sanitize('<div class="card"><h2 class="t-giant">T</h2><p>x</p></div>')
+        expect(card == '<div class="card"><h2 class="t-giant">T</h2><p>x</p></div>',
+                "sanitizer keeps card sections with their content")
+        expect(sanitize(card) == card,
+                "card sections survive a second sanitize pass")
+        expect(".canvas .card" in CSS and ".canvas .t-giant" in CSS
+               and ".canvas .t-tiny" in CSS,
+                "card + extended-size CSS present")
+        star = star_html([{"slug": "a", "nav": "A"}, {"slug": "z", "nav": "Z", "hidden": True}])
+        expect('href="z.html"' in star and "Latest and greatest" in star and "Click me" in star,
+                "star links the hidden page with its text")
+        expect(star_html([{"slug": "a", "nav": "A"}]) == "",
+                "no star without a hidden page")
+        nohidden = nav_html([{"slug": "a", "nav": "A"}, {"slug": "b", "nav": "B"}, {"slug": "z", "nav": "Z", "hidden": True}], "a")
+        expect("z.html" not in nohidden and ">A</span>" in nohidden and "b.html" in nohidden,
+                "hidden pages stay out of the nav")
+        expect('class="cur"' not in nav_html([{"slug": "a", "nav": "A"}, {"slug": "z", "nav": "Z", "hidden": True}], "z"),
+                "open hidden page shows sibling nav with no current marker")
         newtab = sanitize('<p><a class="btn" href="https://example.com/x" '
                           'target="_blank" rel="noopener">Hi</a></p>')
         expect('target="_blank"' in newtab and 'rel="noopener"' in newtab,

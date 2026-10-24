@@ -19,6 +19,15 @@
     {
       "slug": "people",
       "nav": "People"
+    },
+    {
+      "slug": "latest",
+      "nav": "Latest",
+      "hidden": true
+    },
+    {
+      "slug": "events",
+      "nav": "EVENTS"
     }
   ]
 }
