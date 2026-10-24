@@ -91,6 +91,20 @@ def safe_upload_name(name: str) -> str:
     return base[:80]
 
 
+def live_base() -> str | None:
+    """Public GitHub Pages URL derived from the origin remote, if any."""
+    try:
+        out = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"], cwd=str(ROOT),
+            capture_output=True, text=True, timeout=10).stdout.strip()
+        m = re.search(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?$", out)
+        if m:
+            return f"https://{m.group(1)}.github.io/{m.group(2)}/"
+    except Exception:
+        pass
+    return None
+
+
 def slugify(nav: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", nav.lower()).strip("-")[:40] or "page"
     return slug
@@ -171,7 +185,9 @@ EDITOR_CSS = site_build.CSS + r'''
 '''
 
 
-def editor_page(site: dict, slug: str, body: str) -> bytes:
+def editor_page(site: dict, slug: str, body: str, live: str | None) -> bytes:
+    site = dict(site)
+    site["live"] = live
     logo_uri = site_build.logo_data_uri(LOGO)
     page = """<!DOCTYPE html>
 <html lang="en">
@@ -200,6 +216,7 @@ __CSS__
   <div class="row"><button id="btn-logo">Logo…</button></div>
   <div class="side-h">Check</div>
   <a id="link-built" href="#" target="_blank" rel="noopener">view built page</a>
+  <a id="link-live" href="#" target="_blank" rel="noopener">view live site</a>
 </aside>
 <main id="main">
 <div class="editbar">
@@ -328,6 +345,13 @@ function renderAll(){
   $("#foot").textContent = SITE.footer || "";
   $("#foot").style.display = SITE.footer ? "" : "none";
   $("#link-built").href = "/built?slug=" + encodeURIComponent(SLUG);
+  const liveA = $("#link-live");
+  if (SITE.live) {
+    liveA.style.display = "";
+    liveA.href = SITE.live + (SLUG === "index" ? "" : encodeURIComponent(SLUG) + ".html");
+  } else {
+    liveA.style.display = "none";
+  }
   hint();
 }
 async function openPage(slug){
@@ -640,10 +664,10 @@ class Handler(BaseHTTPRequestHandler):
         url = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(url.query)
         try:
-            if url.path in ("/", "/index.html"):
+            if url.path == "/":
                 site = read_site()
                 slug = "index"
-                self._send(200, editor_page(site, slug, read_body(slug)))
+                self._send(200, editor_page(site, slug, read_body(slug), live_base()))
             elif url.path == "/built":
                 rebuild()
                 slug = qs.get("slug", ["index"])[0]
@@ -654,12 +678,29 @@ class Handler(BaseHTTPRequestHandler):
                     p = SITE / "index.html"
                 self._send(200, p.read_bytes())
             elif url.path == "/api/site":
-                self._json(200, read_site())
+                site = read_site()
+                site["live"] = live_base()
+                self._json(200, site)
             elif url.path == "/api/page":
                 slug = qs.get("slug", [""])[0]
                 if not site_build.SLUG_RE.match(slug):
                     return self._json(400, {"error": "bad slug"})
                 self._json(200, {"slug": slug, "body": read_body(slug)})
+            elif url.path.endswith(".html"):
+                # Serve a built page directly, e.g. /financials.html, so the
+                # local preview matches the live URL structure.
+                site = read_site()
+                known = {p["slug"] for p in site["pages"]} | {"404"}
+                name = url.path.lstrip("/").rsplit(".", 1)[0]
+                if site_build.SLUG_RE.match(name) and name in known:
+                    try:
+                        rebuild()
+                    except Exception as e:
+                        return self._json(500, {"error": str(e)[:300]})
+                    p = SITE / f"{name}.html"
+                    if p.is_file():
+                        return self._send(200, p.read_bytes())
+                return self._json(404, {"error": "not found"})
             elif url.path.startswith("/uploads/"):
                 name = safe_upload_name(url.path[len("/uploads/"):])
                 for base in (SITE / "uploads", UPLOADS):

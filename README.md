@@ -31,7 +31,9 @@ You are the only one who enters text. There is no login and no online editor.
 6. **Quit** stops the builder from the browser, or Ctrl+C in the terminal.
 
 `view built page` shows the exact built file for the open page (no edit
-chrome), so you can check before committing.
+chrome), so you can check before committing. `view live site` opens the
+published GitHub Pages copy in a new tab. Each page is also served
+locally at its live address (e.g. `/financials.html`), rebuilt on the spot.
 
 ## Publishing (GitHub Pages, same as the Flank)
 
