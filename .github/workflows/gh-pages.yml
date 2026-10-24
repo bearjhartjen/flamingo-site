@@ -1,0 +1,95 @@
+name: Publish to the gh-pages branch
+
+# A zero-settings fallback: this publishes the site by pushing it to a
+# `gh-pages` branch, which GitHub serves automatically at
+# https://<owner>.github.io/<repo>/ — no repository settings required.
+#
+# Use this when GitHub Pages has not been enabled for the repository and you
+# would rather not turn it on. If you do enable GitHub Pages (Settings →
+# Pages → Source → GitHub Actions), the pages.yml workflow takes over and this
+# workflow can be left alone; the two are independent.
+#
+# This uses plain git rather than a third-party action, so the only thing
+# running in CI is GitHub's own tooling.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish to gh-pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Build site
+        run: |
+          set -euo pipefail
+          python3 scripts/build.py
+          test -f site/index.html
+
+      - name: Publish to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Work on the published branch itself rather than on a copy of main.
+          # The published branch has its own history, so building on top of
+          # main and pushing would be rejected as a non-fast-forward. Fetch it
+          # explicitly - a shallow checkout of main does not contain it.
+          rm -rf .publish
+          git init -q .publish
+          cd .publish
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+
+          if git fetch -q --depth 1 origin gh-pages 2>/dev/null; then
+            git checkout -q -B gh-pages FETCH_HEAD
+          else
+            # First publish: the branch does not exist yet.
+            echo "No gh-pages branch yet - creating it."
+            git checkout -q --orphan gh-pages
+            git rm -rq --cached . 2>/dev/null || true
+          fi
+
+          # Empty the branch, then copy the fresh build in. The .git directory
+          # must survive, or git would lose track of the repository.
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a ../site/. .
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "Site is already up to date on gh-pages; nothing to publish."
+            exit 0
+          fi
+          git commit -m "Publish site from ${GITHUB_SHA}"
+          git push origin HEAD:refs/heads/gh-pages
+
+      - name: Summary
+        run: |
+          {
+            echo "## gh-pages branch"
+            echo ""
+            echo "- Status: published"
+            echo "- Branch: \`gh-pages\`"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          } >> "$GITHUB_STEP_SUMMARY"

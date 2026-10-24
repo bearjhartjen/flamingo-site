@@ -1,0 +1,48 @@
+#!/bin/sh
+# pre-commit — rebuild the site and stage the result so a single commit
+# carries both the edited data and the regenerated site. Safe to run from
+# any directory and quiet when there is nothing to do. (The builder already
+# rebuilds and stages on every Save; this is the safety net for anything
+# changed by hand.)
+#
+# Notes on the shell:
+#   * `set -e` aborts on any unhandled failure. Calls whose non-zero exit is
+#     meaningful here (the build) are guarded with `if`/`||` so they never
+#     abort the script.
+set -e
+
+ROOT=$(git rev-parse --show-toplevel) || {
+  printf 'pre-commit: not inside a git repository.\n' >&2
+  exit 1
+}
+
+BUILD="$ROOT/scripts/build.py"
+SITE="$ROOT/site"
+DATA="$ROOT/data"
+
+# 1. Rebuild the site. A failed build aborts the commit so a broken site is
+#    never published. (A missing build.py is a setup gap, not a build error,
+#    so it is reported and skipped rather than failing every commit.)
+if [ -f "$BUILD" ]; then
+  if ! out=$(python3 "$BUILD" 2>&1); then
+    printf '%s\n' "$out" >&2
+    printf 'pre-commit: site build FAILED. Commit aborted.\n' >&2
+    printf 'pre-commit: bypass with: git commit --no-verify\n' >&2
+    exit 1
+  fi
+else
+  printf 'pre-commit: scripts/build.py not found; skipping site build.\n'
+fi
+
+# 2. Stage the data and the regenerated site.
+if [ -d "$DATA" ]; then
+  git add -- data
+fi
+if [ -d "$SITE" ]; then
+  git add -- site
+fi
+if [ -f "$ROOT/assets/logo.png" ]; then
+  git add -- assets/logo.png
+fi
+
+exit 0

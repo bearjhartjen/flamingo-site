@@ -1,0 +1,42 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (v4+ major line)
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0 (v5+ major line)
+        with:
+          python-version: "3.12"
+
+      - name: Compile check
+        run: python3 -m py_compile scripts/build.py edit.py
+
+      - name: Check site data is present
+        run: |
+          set -euo pipefail
+          test -f "data/site.json"
+          test -s "data/site.json"
+          test -f "data/pages/index.html"
+
+      - name: Build site
+        run: |
+          set -euo pipefail
+          python3 scripts/build.py
+          test -f site/index.html
+
+      - name: Sanitizer check
+        run: |
+          set -euo pipefail
+          python3 scripts/build.py --check

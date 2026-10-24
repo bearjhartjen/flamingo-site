@@ -1,0 +1,16 @@
+{
+  "title": "Flamingo and Cactus",
+  "tagline": "Flamingo and Cactus Group",
+  "footer": "",
+  "theme": "classic",
+  "pages": [
+    {
+      "slug": "index",
+      "nav": "Home"
+    },
+    {
+      "slug": "financials",
+      "nav": "Financials"
+    }
+  ]
+}

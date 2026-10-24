@@ -1,0 +1,26 @@
+#!/bin/sh
+# pre-push — refuse to push if the site does not build. The pre-commit hook
+# already rebuilds and stages site/, so this is a last line of defence.
+set -e
+
+ROOT=$(git rev-parse --show-toplevel) || {
+  printf 'pre-push: not inside a git repository.\n' >&2
+  exit 1
+}
+
+BUILD="$ROOT/scripts/build.py"
+
+# A missing build.py is a setup gap, not a build failure; allow the push.
+if [ ! -f "$BUILD" ]; then
+  printf 'pre-push: scripts/build.py not found; skipping site build.\n'
+  exit 0
+fi
+
+if ! out=$(python3 "$BUILD" 2>&1); then
+  printf '%s\n' "$out" >&2
+  printf 'pre-push: site build FAILED. Push aborted.\n' >&2
+  printf 'pre-push: fix the build, or bypass with: git push --no-verify\n' >&2
+  exit 1
+fi
+
+exit 0
