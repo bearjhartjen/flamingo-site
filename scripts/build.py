@@ -440,7 +440,7 @@ CSS = r'''  :root{
   .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
   .star-badge{
-    position:fixed;top:120px;left:calc(50% - 566px);z-index:200;width:168px;height:168px;
+    position:fixed;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     background:radial-gradient(circle at 35% 30%,#f3d97b,#c9a227 58%,#a37f14);
     color:#3a2d00;text-decoration:none;text-align:center;
