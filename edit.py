@@ -173,6 +173,14 @@ EDITOR_CSS = site_build.CSS + r'''
   }
   .toolbar button:hover{background:#141414;color:#fff;border-color:#141414}
   .toolbar button:disabled{opacity:.4;cursor:default}
+  .toolbar button.swatch{
+    width:16px;height:16px;padding:0;box-sizing:border-box;border:1px solid #777;
+  }
+  .toolbar button.swatch:hover{border-color:#141414;box-shadow:0 0 0 1px #141414}
+  .toolbar input[type=color]{
+    width:26px;height:22px;padding:1px;border:1px solid #999;border-radius:2px;
+    background:#fff;cursor:pointer;vertical-align:middle;
+  }
   .toolbar .sep{width:1px;height:20px;background:#bbb;margin:0 4px}
   .editing [data-ed]{outline:1px dashed #1c4fd8;outline-offset:4px;min-height:1em}
   .editing #canvas{outline-offset:8px;min-height:45vh}
@@ -228,11 +236,16 @@ __CSS__
   <button id="btn-quit" class="warn">Quit</button>
 </div>
 <div class="toolbar" id="toolbar">
+  <button data-cmd="undo" id="btn-undo" title="Undo (Ctrl+Z)" disabled>Undo</button>
+  <button data-cmd="redo" id="btn-redo" title="Redo (Ctrl+Y)" disabled>Redo</button>
+  <span class="sep"></span>
   <button data-cmd="bold"><b>B</b></button>
   <button data-cmd="italic"><i>I</i></button>
   <button data-cmd="underline"><u>U</u></button>
   <button data-cmd="h2">Heading</button>
   <button data-cmd="p">Text</button>
+  <button data-cmd="smaller" title="Smaller text">A-</button>
+  <button data-cmd="bigger" title="Bigger text">A+</button>
   <span class="sep"></span>
   <button data-cmd="ul">Bullets</button>
   <button data-cmd="ol">Numbers</button>
@@ -240,6 +253,15 @@ __CSS__
   <span class="sep"></span>
   <button data-cmd="left">Left</button>
   <button data-cmd="center">Center</button>
+  <span class="sep"></span>
+  <button data-cmd="color" data-color="" title="Default color">Auto</button>
+  <button data-cmd="color" data-color="c-muted" class="swatch" title="Muted" style="background:#7a7a7a"></button>
+  <button data-cmd="color" data-color="c-red" class="swatch" title="Red" style="background:#c0392b"></button>
+  <button data-cmd="color" data-color="c-blue" class="swatch" title="Blue" style="background:#2f6fd0"></button>
+  <button data-cmd="color" data-color="c-green" class="swatch" title="Green" style="background:#2e8b57"></button>
+  <button data-cmd="color" data-color="c-gold" class="swatch" title="Gold" style="background:#c9a227"></button>
+  <input type="color" id="colorwheel" title="Any color — full wheel" value="#c0392b">
+  <span class="sep"></span>
   <button data-cmd="link">Link</button>
   <button data-cmd="button">Button</button>
   <button data-cmd="unlink">Unlink</button>
@@ -359,6 +381,7 @@ async function openPage(slug){
   if (dirty && !confirm("Switch page without saving?")) return;
   const j = await api("/api/page?slug=" + encodeURIComponent(slug));
   SLUG = slug; canvas.innerHTML = j.body; selImg = null;
+  histReset();
   dirty = false; renderAll(); placeCaretStart();
   status.textContent = editing ? "editing — nothing saved yet" : "viewing";
 }
@@ -403,6 +426,7 @@ $("#btn-addpage").onclick = async () => {
   SITE = j.site; dirty = false;
   const b = await api("/api/page?slug=" + encodeURIComponent(j.slug));
   SLUG = j.slug; canvas.innerHTML = b.body; renderAll();
+  histReset();
   status.textContent = "page added — it is already saved";
 };
 async function renamePage(slug, old){
@@ -417,6 +441,7 @@ async function deletePage(slug, nav){
   if (SLUG === slug) {
     SLUG = "index";
     canvas.innerHTML = (await api("/api/page?slug=index")).body;
+  histReset();
   }
   dirty = false; renderAll(); status.textContent = "page deleted";
 }
@@ -459,6 +484,209 @@ function placeCaretAtEnd(el){
   const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
   const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
+/* ---------- text size + text color ----------
+   Class-based only (t- and c- classes), never inline styles or font tags,
+   because save() folds inline styles into the "ac" class and the sanitizer
+   keeps classes. */
+const SIZE_ORDER = ["t-small", "", "t-large", "t-huge"];   // smallest → largest, "" = default
+const COLOR_CLASSES = ["c-muted", "c-red", "c-blue", "c-green", "c-gold"];
+const BLOCK_SEL = "p,h2,h3,blockquote,li";
+const SIZE_RE = /^t-(small|large|huge)$/;
+const COLOR_RE = /^c-/;
+const WHEEL_RE = /^#[0-9a-f]{6}$/i;   // native picker always yields #rrggbb
+// ---------- undo history: snapshots of the canvas ----------
+let hist = [], hi = -1, typeTimer = null;
+function histReset(){ hist = [canvas.innerHTML]; hi = 0; updateHistBtns(); }
+function pushHist(){
+  const cur = canvas.innerHTML;
+  if (hist[hi] === cur) return;
+  hist = hist.slice(0, hi + 1);
+  hist.push(cur);
+  if (hist.length > 60) hist.shift();
+  hi = hist.length - 1;
+  updateHistBtns();
+}
+function updateHistBtns(){
+  const u = $("#btn-undo"), r = $("#btn-redo");
+  if (u) u.disabled = hi <= 0;
+  if (r) r.disabled = hi >= hist.length - 1;
+}
+function doUndo(){
+  if (hi <= 0) return;
+  hi--; canvas.innerHTML = hist[hi];
+  canvas.focus(); placeCaretAtEnd(canvas);
+  markDirty(); hint(); updateHistBtns();
+}
+function doRedo(){
+  if (hi >= hist.length - 1) return;
+  hi++; canvas.innerHTML = hist[hi];
+  canvas.focus(); placeCaretAtEnd(canvas);
+  markDirty(); hint(); updateHistBtns();
+}
+// typing coalesces into one undo step per burst
+canvas.addEventListener("input", () => {
+  clearTimeout(typeTimer);
+  typeTimer = setTimeout(pushHist, 800);
+});
+// paint an arbitrary wheel color (inline style the sanitizer keeps)
+function paintWheel(el, hex){
+  stripClasses(el, COLOR_RE);
+  el.style.color = hex.toLowerCase();
+}
+function applyWheelColor(hex){
+  if (!WHEEL_RE.test(hex || "")) return;
+  const r = getRange(); if (!r) return;
+  hex = hex.toLowerCase();
+  if (r.collapsed) {
+    const b = nodeBlock(r.startContainer);
+    if (b) paintWheel(b, hex);
+    return;
+  }
+  const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
+  if (a !== z) { blocksIntersecting(r).forEach(b => paintWheel(b, hex)); return; }
+  const s = nearestSpan(r);
+  if (s) { paintWheel(s, hex); if (!s.className && !s.style.color) unwrapSpan(s); }
+  else { const sp = wrapSpan(r, ""); if (sp) paintWheel(sp, hex); }
+}
+function getRange(){
+  const s = getSelection();
+  if (!s.rangeCount) return null;
+  const r = s.getRangeAt(0);
+  return canvas.contains(r.commonAncestorContainer) ? r : null;
+}
+function restoreRange(r){
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+// nearest block (p/h2/h3/blockquote/li) holding n, stopping at the canvas
+function nodeBlock(n){
+  if (n.nodeType === 3) n = n.parentNode;
+  while (n && n !== canvas) {
+    if (n.nodeType === 1 && n.matches(BLOCK_SEL)) return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+// nearest span carrying a class, i.e. where a selection would toggle off
+function nearestSpan(r){
+  let n = r.commonAncestorContainer;
+  if (n.nodeType === 3) n = n.parentNode;
+  while (n && n !== canvas) {
+    if (n.nodeType === 1 && n.tagName === "SPAN") return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+function blocksIntersecting(r){
+  return Array.from(canvas.querySelectorAll(BLOCK_SEL)).filter(el => r.intersectsNode(el));
+}
+function stripClasses(el, re){
+  Array.from(el.classList).forEach(c => { if (re.test(c)) el.classList.remove(c); });
+}
+function sizeIndex(el){
+  if (!el) return 1;                       // the default size sits at index 1
+  const c = SIZE_ORDER.find(x => x && el.classList.contains(x));
+  return c ? SIZE_ORDER.indexOf(c) : 1;
+}
+function clampIdx(i){ return Math.max(0, Math.min(SIZE_ORDER.length - 1, i)); }
+function setSize(el, cls){
+  stripClasses(el, SIZE_RE);
+  if (cls) el.classList.add(cls);
+}
+// one step up (dir 1) or down (dir -1); re-choosing the size it already has
+// drops back to the default
+function cycleSize(el, dir){
+  const had = SIZE_ORDER.find(x => x && el.classList.contains(x)) || "";
+  const want = SIZE_ORDER[clampIdx(sizeIndex(el) + dir)];
+  if (want === had) { stripClasses(el, SIZE_RE); return; }
+  setSize(el, want);
+}
+function setColor(el, cls){
+  if (cls && el.classList.contains(cls)) { el.classList.remove(cls); return; }
+  stripClasses(el, COLOR_RE); el.style.removeProperty("color");
+  if (cls) el.classList.add(cls);
+}
+function unwrapSpan(el){
+  const p = el.parentNode; if (!p) return;
+  const r = document.createRange();
+  r.setStartBefore(el);
+  const last = el.lastChild;
+  while (el.firstChild) p.insertBefore(el.firstChild, el);
+  p.removeChild(el);
+  if (last) { r.setEndAfter(last); restoreRange(r); }
+}
+function wrapSpan(r, cls){
+  const s = document.createElement("span");
+  s.className = cls;
+  try { r.surroundContents(s); }
+  catch (e) {
+    // selection grazes an element boundary: move the contents in instead
+    const frag = r.extractContents();
+    s.appendChild(frag);
+    if (!s.firstChild) return null;
+    r.insertNode(s);
+  }
+  const nr = document.createRange();
+  nr.selectNodeContents(s);
+  restoreRange(nr);
+  return s;
+}
+function applySize(dir){
+  const r = getRange(); if (!r) return;
+  if (r.collapsed) {                       // caret only: size the current block
+    const b = nodeBlock(r.startContainer);
+    if (b) cycleSize(b, dir);
+    return;
+  }
+  const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
+  if (a !== z) {                           // selection reaches across blocks
+    const want = SIZE_ORDER[clampIdx(sizeIndex(a) + dir)];
+    blocksIntersecting(r).forEach(b => setSize(b, want));
+    return;
+  }
+  const s = nearestSpan(r);
+  if (s) { cycleSize(s, dir); if (!s.className && !s.style.color) unwrapSpan(s); }
+  else wrapSpan(r, SIZE_ORDER[clampIdx(1 + dir)]);   // default ± one step
+}
+function applyColor(cls){
+  if (cls && COLOR_CLASSES.indexOf(cls) < 0) return;
+  const r = getRange(); if (!r) return;
+  if (r.collapsed) {                       // caret only: color the current block
+    const b = nodeBlock(r.startContainer);
+    if (b) setColor(b, cls);
+    return;
+  }
+  const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
+  if (a !== z) {                           // selection reaches across blocks
+    blocksIntersecting(r).forEach(b => setColor(b, cls));
+    return;
+  }
+  const s = nearestSpan(r);
+  if (s) { setColor(s, cls); if (!s.className && !s.style.color) unwrapSpan(s); }
+  else if (cls) wrapSpan(r, cls);          // "Auto" on a bare selection: nothing to strip
+}
+// the Clear style button, beyond what removeFormat already does
+function clearSizeColor(){
+  const r = getRange(); if (!r) return;
+  let range = r;
+  if (r.collapsed) {                       // a caret clears its whole block
+    const b = nodeBlock(r.startContainer);
+    if (b) { range = document.createRange(); range.selectNodeContents(b); }
+  }
+  Array.from(canvas.querySelectorAll(BLOCK_SEL + ",span")).forEach(el => {
+    if (!range.intersectsNode(el)) return;
+    stripClasses(el, SIZE_RE);
+    stripClasses(el, COLOR_RE);
+    el.style.removeProperty("color");
+    if (el.tagName === "SPAN" && !el.className && !el.style.color) unwrapSpan(el);   // no class left: unwrap
+  });
+}
+// full color wheel: live-paints any color as the selection changes
+$("#colorwheel").addEventListener("input", e => {
+  if (!editing) return;
+  canvas.focus();
+  applyWheelColor(e.target.value);
+  pushHist(); imgButtons(); markDirty(); hint();
+});
 $("#toolbar").addEventListener("click", e => {
   const b = e.target.closest("[data-cmd]"); if (!b || !editing) return;
   const c = b.dataset.cmd;
@@ -470,8 +698,13 @@ $("#toolbar").addEventListener("click", e => {
   else if (c === "quote") document.execCommand("formatBlock", false, "<blockquote>");
   else if (c === "left") document.execCommand("justifyLeft");
   else if (c === "center") document.execCommand("justifyCenter");
+  else if (c === "smaller") applySize(-1);
+  else if (c === "bigger") applySize(1);
+  else if (c === "color") applyColor(b.dataset.color || "");
   else if (c === "bold" || c === "italic" || c === "underline") document.execCommand(c);
-  else if (c === "clear") document.execCommand("removeFormat");
+  else if (c === "undo") doUndo();
+  else if (c === "redo") doRedo();
+  else if (c === "clear") { document.execCommand("removeFormat"); clearSizeColor(); }
   else if (c === "unlink") document.execCommand("unlink");
   else if (c === "link") {
     const u = prompt("Link to (a page or http://, https://, mailto:):", "https://");
@@ -498,7 +731,7 @@ $("#toolbar").addEventListener("click", e => {
   }
   else if (c === "delimg" && selImg) { selImg.remove(); selImg = null; }
   else return;
-  imgButtons(); markDirty(); hint();
+  pushHist(); imgButtons(); markDirty(); hint();
 });
 filepick.onchange = async () => {
   const files = Array.from(filepick.files); filepick.value = "";
@@ -524,7 +757,7 @@ filepick.onchange = async () => {
       appendNode(img);
     });
   }
-  markDirty(); hint();
+  pushHist(); markDirty(); hint();
 };
 function appendNode(node){
   const sel = getSelection();
@@ -573,7 +806,7 @@ canvas.addEventListener("drop", async e => {
       range = null;
     }
   }
-  markDirty(); hint();
+  pushHist(); markDirty(); hint();
 });
 canvas.addEventListener("paste", async e => {
   if (!editing) return;
@@ -589,19 +822,30 @@ canvas.addEventListener("paste", async e => {
       appendNode(img);
     }
   }
-  markDirty(); hint();
+  pushHist(); markDirty(); hint();
 });
 async function save(){
   readInputsToSite();
   // The Center/Left buttons write inline styles; fold centering into the
   // "ac" class before saving so it survives the page cleaner and still
   // looks identical here and on the built page.
+  // The Center/Left buttons write text-align; fold centering into the
+  // "ac" class, and keep a validated wheel color as an inline style,
+  // before saving so both survive the page cleaner. The server
+  // re-validates the color; anything hostile is dropped there.
   canvas.querySelectorAll("[style]").forEach(el => {
     const t = (el.style.textAlign || "").toLowerCase();
+    const col = (el.style.color || "").trim();
     el.removeAttribute("style");
     el.classList.remove("ac");
     if (t === "center") el.classList.add("ac");
+    const v = col.replace(/\\s+/g, "");
+    if (/^(#[0-9a-f]{3,8}|[a-z]{3,30}|rgba?\\([0-9,.%/]+\\)|hsla?\\([0-9,.%/]+(?:deg|turn)?\\))$/i.test(v)
+        && !/url|expression|javascript/i.test(v)) {
+      el.setAttribute("style", "color:" + v);
+    }
   });
+  pushHist();
   const settings = {
     title: SITE.title.slice(0, 300) || "Flamingo and Cactus",
     tagline: SITE.tagline.slice(0, 300),
@@ -620,6 +864,14 @@ async function save(){
 btnSave.onclick = save;
 document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "s" && editing) { e.preventDefault(); save(); }
+  const inEd = editing && document.activeElement && document.activeElement.closest
+    && document.activeElement.closest("#canvas,[data-ed]");
+  if (inEd && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey)
+    { e.preventDefault(); doUndo(); }
+  if (inEd && (e.ctrlKey || e.metaKey)
+      && (e.key.toLowerCase() === "y"
+        || (e.shiftKey && e.key.toLowerCase() === "z")))
+    { e.preventDefault(); doRedo(); }
 });
 $("#btn-quit").onclick = async () => {
   if (dirty && !confirm("You have unsaved edits. Quit anyway?")) return;
@@ -628,6 +880,7 @@ $("#btn-quit").onclick = async () => {
 };
 renderAll();
 setEditing(false);
+histReset();
 </script>
 </body>
 </html>

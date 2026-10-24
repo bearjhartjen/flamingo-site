@@ -73,9 +73,51 @@ def load_site(path: Path) -> dict:
 # Sanitizer: page bodies are freeform editor HTML, so only an allowlist of
 # plain tags survives. editor and builder share this.
 ALLOWED_TAGS = {"p", "h2", "h3", "br", "strong", "b", "em", "i", "u", "s",
-                "ul", "ol", "li", "a", "img", "blockquote", "hr", "div"}
+                "ul", "ol", "li", "a", "img", "blockquote", "hr", "div", "span"}
 DROP_WITH_CONTENT = {"script", "style", "form", "iframe", "object", "embed"}
 IMG_CLASSES = {"secimg", "small", "medium", "full"}
+# Text size / colour classes. Sizes work on blocks and inline spans; colours
+# are the same set. Anything not listed here (other than "ac", below) is
+# dropped. Inline styles are dropped except a strictly validated `color`
+# property (the colour wheel), which is normalised to `style="color:..."`.
+SIZE_CLASSES = {"t-small", "t-large", "t-huge"}
+COLOR_CLASSES = {"c-muted", "c-red", "c-blue", "c-green", "c-gold"}
+TEXT_CLASSES = SIZE_CLASSES | COLOR_CLASSES
+# Block tags that keep the "ac" centering class as well as size/colour.
+CENTERED_TAGS = ("p", "h2", "h3", "blockquote", "li")
+
+# A `color:` value is safe only in these shapes: hex, plain colour name, or a
+# functional rgb()/hsl() with plain numbers. Anything else (url(), var(),
+# expression(), quotes, braces) is rejected so no CSS escape hatch survives.
+COLOR_VALUE_RE = re.compile(
+    r"(?:#[0-9a-fA-F]{3,8}|[a-zA-Z]{3,30}"
+    r"|rgba?\([0-9\s,./%]+\)|hsla?\([0-9\s,./%]+(?:deg|turn)?\))"
+)
+
+
+def _clean_color(style: str | None) -> str | None:
+    """Return a canonical colour value from a style attribute, or None.
+
+    Only the `color` property is read; every other declaration is dropped.
+    Returns the value with whitespace removed (hex lowercased), or None when
+    no safe colour is found.
+    """
+    if not style:
+        return None
+    for decl in style.split(";"):
+        prop, sep, val = decl.partition(":")
+        if not sep or prop.strip().lower() != "color":
+            continue
+        v = re.sub(r"\s+", "", val)
+        if any(bad in v.lower() for bad in (
+                "url", "expression", "javascript", "<", ">", '"', "'", "{", "}")):
+            continue
+        if not COLOR_VALUE_RE.fullmatch(v):
+            continue
+        if v.startswith("#"):
+            v = "#" + v[1:].lower()
+        return v
+    return None
 
 
 def _clean_href(href: str) -> str | None:
@@ -99,6 +141,9 @@ class _Sanitize(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.out: list[str] = []
         self.open: list[str] = []
+        # one entry per <span> start: True when the tag itself was emitted,
+        # False when it was dropped for having no kept class (children stay)
+        self.span_open: list[bool] = []
         self.drop_depth = 0
 
     def handle_starttag(self, tag, attrs):
@@ -141,23 +186,49 @@ class _Sanitize(HTMLParser):
                 f'<img class="{cls}" src="{html.escape(src, quote=True)}" alt="{alt}">')
         elif tag == "div":
             self.out.append('<div class="gallery">')
+        elif tag == "span":
+            # inline size/colour wrapper. A span with nothing left to keep
+            # must not emit an empty tag: drop the tag, keep the children.
+            keep = []
+            for c in ad.get("class", "").split():
+                if c in TEXT_CLASSES and c not in keep:
+                    keep.append(c)
+            col = _clean_color(ad.get("style", ""))
+            attrs = ""
+            if keep:
+                attrs += f' class="{" ".join(keep)}"'
+            if col:
+                attrs += f' style="color:{col}"'
+            if attrs:
+                self.out.append(f"<span{attrs}>")
+                self.span_open.append(True)
+            else:
+                self.span_open.append(False)
         else:
             extra = ""
-            if tag in ("p", "h2", "h3", "blockquote"):
+            if tag in CENTERED_TAGS:
                 # keep text centering: from an inline style (toolbar Center
-                # button) or from an "ac" class already on the tag, so a
-                # rebuild's second sanitize pass preserves it. Every other
-                # style and class is dropped.
+                # button) or from an "ac" class already on the tag, plus any
+                # allowed size/colour class, so a rebuild's second sanitize
+                # pass preserves them. Every other style and class is dropped.
                 keep = []
                 if "ac" in ad.get("class", "").split():
                     keep.append("ac")
                 if re.search(r"text-align\s*:\s*center", ad.get("style", ""), re.I):
                     if "ac" not in keep:
                         keep.append("ac")
+                for c in ad.get("class", "").split():
+                    if c in TEXT_CLASSES and c not in keep:
+                        keep.append(c)
                 if keep:
                     extra = f' class="{" ".join(keep)}"'
+                # a wheel-picked colour survives as a validated inline style
+                col = _clean_color(ad.get("style", ""))
+                if col:
+                    extra += f' style="color:{col}"'
             self.out.append(f"<{tag}{extra}>")
-        self.open.append(tag)
+        if tag != "span":
+            self.open.append(tag)
 
     def handle_endtag(self, tag):
         tag = tag.lower()
@@ -168,6 +239,12 @@ class _Sanitize(HTMLParser):
             return
         if tag == "div":
             tag = "div"  # matches the gallery div kept above
+        if tag == "span":
+            # closes the matching <span> start; </span> is emitted only when
+            # the start tag itself was kept (see handle_starttag)
+            if self.span_open and self.span_open.pop():
+                self.out.append("</span>")
+            return
         if tag in ALLOWED_TAGS and tag not in ("br", "hr", "img") and tag in self.open:
             self.open.remove(tag)
             self.out.append(f"</{tag}>")
@@ -254,6 +331,18 @@ CSS = r'''  :root{
   .canvas:empty{padding:0}
   .canvas p{margin:0 0 12px}
   .canvas .ac{text-align:center}
+  .canvas .t-small{font-size:13px}
+  .canvas .t-large{font-size:19px}
+  .canvas .t-huge{font-size:26px;line-height:1.35}
+  .canvas .c-muted{color:var(--muted)}
+  .canvas .c-red{color:#b3261e}
+  .canvas .c-blue{color:#0b2a8c}
+  .canvas .c-green{color:#1a7f37}
+  .canvas .c-gold{color:#9a6700}
+  body[data-theme="ink"] .canvas .c-red{color:#ff8a80}
+  body[data-theme="ink"] .canvas .c-blue{color:#9db8ff}
+  body[data-theme="ink"] .canvas .c-green{color:#7ee2a8}
+  body[data-theme="ink"] .canvas .c-gold{color:#d29922}
   .canvas h2{
     font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;
     text-transform:uppercase;color:var(--ink2);margin:26px 0 8px;
@@ -431,6 +520,52 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "sanitizer keeps centering as a class, drops the style")
         expect('class="ac"' in sanitize(centered),
                "centering survives a rebuild (second sanitize pass)")
+        # text size / colour classes
+        styled = sanitize('<p class="t-large c-red">Hi</p>')
+        expect(styled == '<p class="t-large c-red">Hi</p>',
+               "sanitizer keeps size/color classes on p")
+        spanned = sanitize('<p><span class="c-blue t-small">x</span></p>')
+        expect(spanned == '<p><span class="c-blue t-small">x</span></p>',
+               "sanitizer keeps size/color classes on span")
+        wiped = sanitize('<p class="evil" style="font-size:99px;color:lime">Hi</p>')
+        expect(wiped == '<p style="color:lime">Hi</p>',
+                "sanitizer drops unknown classes and styles but keeps a safe color")
+        evil_style = sanitize('<p style="color:red;background:url(x);font-size:9px">Hi</p>')
+        expect(evil_style == '<p style="color:red">Hi</p>',
+                "sanitizer keeps only the color declaration, drops the rest")
+        expr = sanitize('<p style="color:expression(alert(1))">Hi</p>')
+        expect("style=" not in expr and "Hi" in expr,
+                "sanitizer drops hostile color values entirely")
+        hexed = sanitize('<p style="COLOR:#B3261E">Hi</p>')
+        expect(hexed == '<p style="color:#b3261e">Hi</p>',
+                "sanitizer normalises hex colors (second-pass stable)")
+        expect(sanitize(hexed) == hexed,
+                "wheel colors survive a second sanitize pass (rebuild stability)")
+        wheel_span = sanitize('<p><span style="color:#123456">x</span></p>')
+        expect(wheel_span == '<p><span style="color:#123456">x</span></p>',
+                "sanitizer keeps wheel colors on spans")
+        bare = sanitize('<p><span class="evil">x</span><span>y</span></p>')
+        expect(bare == "<p>xy</p>", "classless spans are omitted, children kept")
+        mixed = sanitize('<p class="t-huge" style="text-align: center">x</p>')
+        expect(mixed == '<p class="ac t-huge">x</p>',
+               "centering and size/color kept together on the same tag")
+        liStyled = sanitize('<li class="c-gold t-small">x</li>')
+        expect(liStyled == '<li class="c-gold t-small">x</li>',
+               "sanitizer keeps size/color classes on li")
+        again = sanitize(styled + spanned + mixed + liStyled)
+        expect(again == styled + spanned + mixed + liStyled,
+               "size/color survive a second sanitize pass (rebuild stability)")
+        base_rules = (".canvas .t-small", ".canvas .t-large", ".canvas .t-huge",
+                      ".canvas .c-muted", ".canvas .c-red", ".canvas .c-blue",
+                      ".canvas .c-green", ".canvas .c-gold")
+        missing = [r for r in base_rules if r not in CSS]
+        expect(not missing, f"CSS size/color rules present ({', '.join(missing) or 'all'})")
+        ink_rules = tuple(r.replace(".canvas .c", 'body[data-theme="ink"] .canvas .c')
+                          for r in base_rules[4:])
+        missing = [r for r in ink_rules if r not in CSS]
+        expect(not missing, f"CSS ink-theme color overrides present ({', '.join(missing) or 'all'})")
+        expect(all(r in idx for r in base_rules),
+               "size/color CSS reaches the built page")
         newtab = sanitize('<p><a class="btn" href="https://example.com/x" '
                           'target="_blank" rel="noopener">Hi</a></p>')
         expect('target="_blank"' in newtab and 'rel="noopener"' in newtab,
