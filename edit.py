@@ -408,13 +408,18 @@ function setEditing(on){
   canvas.contentEditable = on ? "true" : "false";
   $$("[data-ed]").forEach(el => el.contentEditable = on ? "true" : "false");
   btnEdit.textContent = on ? "Viewing" : "Edit";
-  btnSave.disabled = !on;
-  status.textContent = on ? "editing — nothing saved yet" : "viewing";
+  updateSaveBtn();
+  if (dirty) status.textContent = "edited — press Save";
+  else status.textContent = on ? "editing — nothing saved yet" : "viewing";
   hint();
+}
+function updateSaveBtn(){
+  btnSave.disabled = !(editing || dirty);
 }
 function markDirty(msg){
   dirty = true;
-  if (editing) status.textContent = msg || "edited — press Save";
+  updateSaveBtn();
+  status.textContent = msg || "edited — press Save";
 }
 function hint(){
   $("#hint").style.display =
@@ -488,11 +493,14 @@ async function openPage(slug){
   if (slug === SLUG) return;
   if (dirty && !confirm("Switch page without saving?")) return;
   if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
-  const j = await api("/api/page?slug=" + encodeURIComponent(slug));
+  let j;
+  try {
+    j = await api("/api/page?slug=" + encodeURIComponent(slug));
+  } catch (err) { status.textContent = "could not open page: " + err.message; return; }
   SLUG = slug; canvas.innerHTML = j.body; selImg = null;
   ensureExitBlock();
   histReset();
-  dirty = false; renderAll(); placeCaretStart();
+  dirty = false; renderAll(); updateSaveBtn(); placeCaretStart();
   status.textContent = editing ? "editing — nothing saved yet" : "viewing";
 }
 function placeCaretStart(){
@@ -538,34 +546,54 @@ document.addEventListener("input", e => {
 btnEdit.onclick = () => setEditing(!editing);
 
 $("#btn-addpage").onclick = async () => {
+  if (dirty && !confirm("Add a page without saving this one?")) return;
   const nav = prompt("Name for the new page:", "New page");
   if (!nav) return;
-  const j = await api("/api/pages/add", {nav});
+  if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
+  let j;
+  try {
+    j = await api("/api/pages/add", {nav});
+  } catch (err) { status.textContent = "could not add page: " + err.message; return; }
   SITE = j.site; dirty = false;
-  const b = await api("/api/page?slug=" + encodeURIComponent(j.slug));
-  SLUG = j.slug; canvas.innerHTML = b.body; renderAll();
+  let b;
+  try {
+    b = await api("/api/page?slug=" + encodeURIComponent(j.slug));
+  } catch (err) { status.textContent = "page added but it could not be loaded: " + err.message; renderAll(); updateSaveBtn(); return; }
+  SLUG = j.slug; canvas.innerHTML = b.body; renderAll(); updateSaveBtn();
   histReset();
   status.textContent = "page added — it is already saved";
 };
 async function renamePage(slug, old){
+  if (dirty && !confirm("Rename without saving this page?")) return;
   const nav = prompt("Menu name:", old);
   if (!nav || nav === old) return;
-  SITE = (await api("/api/pages/rename", {slug, nav})).site;
-  dirty = false; renderAll(); status.textContent = "page renamed — saved";
+  try {
+    SITE = (await api("/api/pages/rename", {slug, nav})).site;
+  } catch (err) { status.textContent = "rename failed: " + err.message; return; }
+  dirty = false; renderAll(); updateSaveBtn(); status.textContent = "page renamed — saved";
 }
 async function deletePage(slug, nav){
+  if (dirty && !confirm("Delete without saving this page?")) return;
   if (!confirm('Delete the page "' + nav + '"? This cannot be undone.')) return;
-  SITE = (await api("/api/pages/delete", {slug})).site;
+  if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
+  try {
+    SITE = (await api("/api/pages/delete", {slug})).site;
+  } catch (err) { status.textContent = "delete failed: " + err.message; return; }
   if (SLUG === slug) {
     SLUG = "index";
-    canvas.innerHTML = (await api("/api/page?slug=index")).body;
+    try {
+      canvas.innerHTML = (await api("/api/page?slug=index")).body;
+    } catch (err) { status.textContent = "page deleted but home could not load: " + err.message; dirty = false; renderAll(); updateSaveBtn(); return; }
   histReset();
   }
-  dirty = false; renderAll(); status.textContent = "page deleted";
+  dirty = false; renderAll(); updateSaveBtn(); status.textContent = "page deleted";
 }
 async function movePage(slug, dir){
-  SITE = (await api("/api/pages/move", {slug, dir})).site;
-  dirty = false; renderAll();
+  if (dirty && !confirm("Reorder without saving this page?")) return;
+  try {
+    SITE = (await api("/api/pages/move", {slug, dir})).site;
+  } catch (err) { status.textContent = "move failed: " + err.message; return; }
+  dirty = false; renderAll(); updateSaveBtn();
 }
 $("#btn-logo").onclick = async () => {
   const inp = document.createElement("input");
@@ -1429,13 +1457,14 @@ async function save(){
     theme: SITE.theme
   };
   status.textContent = "saving…";
+  btnSave.disabled = true;
   try {
     const a = await api("/api/settings", settings);
     SITE = a.site;
     const b = await api("/api/page/save", {slug: SLUG, body: canvas.innerHTML});
-    dirty = false; renderAll();
+    dirty = false; renderAll(); updateSaveBtn();
     status.textContent = "saved — " + (b.note || "built pages updated");
-  } catch (err) { status.textContent = "save failed: " + err.message; }
+  } catch (err) { status.textContent = "save failed: " + err.message; updateSaveBtn(); }
 }
 btnSave.onclick = save;
 $("#starBadge").addEventListener("click", e => {
@@ -1449,11 +1478,18 @@ $("#gemBadge").addEventListener("click", e => {
   if (h) openPage(h.slug);
 });
 document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === "s" && editing) { e.preventDefault(); save(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === "s" && (editing || dirty)) { e.preventDefault(); save(); }
   const inEd = editing && document.activeElement && document.activeElement.closest
     && document.activeElement.closest("#canvas,[data-ed]");
   if (inEd && e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown"))
     { e.preventDefault(); moveBlock(e.key === "ArrowUp" ? -1 : 1); }
+  if (inEd && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey)
+    { e.preventDefault(); doUndo(); }
+  if (inEd && (e.ctrlKey || e.metaKey)
+      && (e.key.toLowerCase() === "y"
+        || (e.shiftKey && e.key.toLowerCase() === "z")))
+    { e.preventDefault(); doRedo(); }
+});
 /* ---------- exit block: the caret must always have somewhere to go ----------
    A page whose last block is a card, table, divider or gallery traps the
    caret: every click below it lands back inside the last block, so the
@@ -1467,13 +1503,6 @@ function ensureExitBlock(){
     canvas.appendChild(p);
   }
 }
-  if (inEd && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey)
-    { e.preventDefault(); doUndo(); }
-  if (inEd && (e.ctrlKey || e.metaKey)
-      && (e.key.toLowerCase() === "y"
-        || (e.shiftKey && e.key.toLowerCase() === "z")))
-    { e.preventDefault(); doRedo(); }
-});
 $("#btn-quit").onclick = async () => {
   if (dirty && !confirm("You have unsaved edits. Quit anyway?")) return;
   await fetch("/api/shutdown", {method: "POST"});

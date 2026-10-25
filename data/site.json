@@ -3,6 +3,7 @@
   "tagline": "Flamingo and Cactus Group",
   "footer": "",
   "theme": "classic",
+  "description": "Open-source electronics with open books — products, projects, and a public ledger from the Flamingo and Cactus Group.",
   "pages": [
     {
       "slug": "index",
@@ -34,7 +35,7 @@
     },
     {
       "slug": "events",
-      "nav": "EVENTS"
+      "nav": "Events"
     },
     {
       "slug": "contact",
