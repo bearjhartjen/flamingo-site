@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found &mdash; Flamingo &amp; Cactus</title>
+<meta name="robots" content="noindex">
 <style>
   :root{
     --paper:#ffffff;
@@ -67,6 +68,7 @@
   .canvas:empty{padding:0}
   .canvas p{margin:0 0 12px}
   .canvas .ac{text-align:center}
+  .canvas .ar{text-align:right}
   .canvas .t-tiny{font-size:12px}
   .canvas .t-small{font-size:13px}
   .canvas .t-large{font-size:19px}
@@ -125,9 +127,22 @@
   .star-badge .star-sub{display:block;margin-top:4px;font:italic 10px Georgia,serif;animation:starpulse 3s ease-in-out infinite}
   @keyframes starpulse{0%,100%{opacity:.45}50%{opacity:.9}}
   @media (max-width:1250px){.star-badge{top:20px;left:56px}}
-  @media print{.star-badge{display:none}}
+  @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
-  .star-badge.warp{animation:starwarp 1.05s cubic-bezier(.5,-0.1,.7,.4) forwards;z-index:1001}
+  .gem-badge{
+    position:fixed;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#8fbef5,#1c4fd8 58%,#0b2a8c);
+    color:#fff;text-decoration:none;text-align:center;
+    border-radius:16px;
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));
+    transition:transform .18s ease;
+  }
+  .gem-badge:hover{transform:scale(1.06) rotate(3deg)}
+  .gem-badge .gem-title{display:block;max-width:80%;font:700 13px/1.4 "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase}
+  @media (max-width:1250px){.gem-badge{top:20px;left:auto;right:56px}}
+  @media print{.gem-badge{display:none}}
+  .star-badge.warp,.gem-badge.warp{animation:starwarp 1.05s cubic-bezier(.5,-0.1,.7,.4) forwards;z-index:1001}
   @keyframes starwarp{
     0%{transform:scale(1) rotate(0)}
     25%{transform:scale(1.6) rotate(200deg)}
@@ -159,6 +174,13 @@
   body.arrive .page{animation:pagesettle .8s cubic-bezier(.2,1.4,.4,1)}
   @keyframes pagesettle{from{transform:scale(.9)}to{transform:scale(1)}}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
+  .canvas::after{content:"";display:table;clear:both}
+  .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
+  .canvas th,.canvas td{border:1px solid var(--rule);padding:7px 10px;text-align:left;font-size:14.5px}
+  .canvas th{background:var(--paper2);font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--ink2)}
+  .canvas img.ileft{float:left;margin:4px 14px 8px 0}
+  .canvas img.iright{float:right;margin:4px 0 8px 14px}
+  .canvas img.icenter{display:block;margin-left:auto;margin-right:auto}
   .contactform{max-width:560px;margin:26px auto 0;padding:20px 22px;border:1px solid var(--rule);border-radius:4px;background:var(--paper2)}
   .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
   .contactform label:first-of-type{margin-top:0}
@@ -188,6 +210,8 @@
     .star-badge{top:10px;left:10px;right:auto;width:104px;height:104px}
     .star-badge .star-title{font-size:7px;max-width:62%;line-height:1.3;letter-spacing:.5px}
     .star-badge .star-sub{display:none}
+    .gem-badge{top:10px;left:auto;right:10px;width:112px;height:76px;border-radius:11px}
+    .gem-badge .gem-title{font-size:9px;letter-spacing:1.2px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
     /* giant inline titles (the toolbar writes up to 200px) stay dramatic
@@ -205,6 +229,8 @@
     }
     .canvas img.small{width:140px}
     .canvas img.medium{width:100%}
+    .canvas table{display:block;overflow-x:auto}
+    .canvas th,.canvas td{font-size:13.5px;padding:6px 8px}
     .canvas .t-giant{font-size:26px;line-height:1.25}
     .canvas .t-huge{font-size:22px}
     .canvas .gallery{flex-direction:column}

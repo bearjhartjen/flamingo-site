@@ -199,6 +199,8 @@ CSS = r'''  :root{
     font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;
     text-transform:uppercase;color:var(--faint);
   }
+  a.spotflag{text-decoration:none;color:inherit;display:block}
+  a.spotflag:hover #spotflag-txt{text-decoration:underline}
   .spotflag .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#1c6b3a;margin-right:6px;vertical-align:1px}
   .spotflag.off .dot{background:var(--down)}
   .spotflag.old .dot{background:var(--faint)}
@@ -304,6 +306,7 @@ CSS = r'''  :root{
     text-transform:uppercase;color:var(--ink2);margin:26px 0 6px;
   }
   .prose p{margin:0 0 12px;color:var(--ink2)}
+  .prose a{color:var(--link)}
   .prose code{
     font:12.5px Consolas,"Liberation Mono",Menlo,monospace;
     background:var(--paper2);border:1px solid var(--rule2);border-radius:2px;padding:1px 4px;
@@ -362,7 +365,7 @@ __CSS__
 <a class="mainsite" href="../index.html">Head to main site</a>
 <div class="page">
 
-  <div class="spotflag" id="spotflag" title="Live silver spot (XAG/USD per troy oz)"><span class="dot"></span><span id="spotflag-txt">Ag spot &mdash;</span></div>
+  <a class="spotflag" id="spotflag" href="https://gold-api.com/" target="_blank" rel="noopener" title="Live silver spot (XAG/USD per troy oz) — click to check the feed"><span class="dot"></span><span id="spotflag-txt">Ag spot &mdash;</span></a>
 
   <div class="masthead">
     <img src="__LOGO__" alt="Flamingo and Cactus">
@@ -996,7 +999,7 @@ __CSS__
     <h2>Where the live silver price comes from</h2>
     <p>The silver spot flag at the top of the ledger page and the approximate
     value under Silver Holdings are fetched live in the browser from the free
-    public feed at <code>api.gold-api.com</code> (no key, XAG/USD per troy
+    public feed at <a href="https://gold-api.com/">api.gold-api.com</a> (no key, XAG/USD per troy
     ounce), refreshed about once a minute. The flag also stamps the time of
     the last successful refresh, so it reads as alive even while the price
     sits on one cent. If the feed cannot be reached, the
@@ -1109,6 +1112,8 @@ def check(data_path: Path, logo_path: Path):
         expect("Unrecorded" in index_html, "index.html keeps the Unrecorded gap flagging")
         expect("9</option>" not in index_html and "2026" in index_html, "index.html keeps the filter dropdown")
         expect("spotflag" in index_html, "index.html has the silver spot flag")
+        expect('id="spotflag" href="https://gold-api.com/"' in index_html,
+               "spot flag links out to the feed it quotes")
         expect("width=device-width" in index_html, "ledger scales on phones (viewport meta)")
         expect("@media (max-width:" in index_html, "ledger reshapes on small screens")
         expect("overflow-x:auto" in index_html.replace(" ", ""), "wide chart/table scroll on small screens")
@@ -1129,6 +1134,7 @@ def check(data_path: Path, logo_path: Path):
         expect("b6568e6a00d2bd0444c92d1de175744c3e55b539f116538f83e96aa4ba5aab58" in index_html, "index.html stores the code as a hash")
         expect("73774" not in index_html, "index.html never contains the code in plaintext")
         expect("scripts/build_flank.py" in about_html, "about.html names the build script")
+        expect('href="https://gold-api.com/"' in about_html, "about.html links the feed it names")
         expect("Why some transaction notes are blurred" in about_html, "about.html explains the per-transaction blur")
         expect('href="index.html"' in about_html, "about.html links back to index.html")
         expect("US dollar holdings" in about_html, "about.html states the dollar-only scope")

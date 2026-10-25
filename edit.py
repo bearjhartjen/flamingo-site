@@ -198,13 +198,38 @@ EDITOR_CSS = site_build.CSS + r'''
   .toolbar #sizeNum::-webkit-outer-spin-button,
   .toolbar #sizeNum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .toolbar #sizeNum:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
+  .toolbar #fontSel{
+    max-width:118px;font-size:12px;color:#141414;
+    background:#fff;border:1px solid #999;border-radius:2px;padding:4px 2px;
+  }
+  .toolbar #fontSel:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
   /* the live-site star would sit under the dark page list: shift it right */
   .star-badge{left:250px;top:120px;}
+  .gem-badge{top:120px;}
   .toolbar input[type=color]{
     width:26px;height:22px;padding:1px;border:1px solid #999;border-radius:2px;
     background:#fff;cursor:pointer;vertical-align:middle;
   }
   .toolbar .sep{width:1px;height:20px;background:#bbb;margin:0 4px}
+  #linkStat{font:12px "Helvetica Neue",Arial,sans-serif;color:#bbb;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ld-back{position:fixed;inset:0;background:rgba(20,20,20,.5);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:12vh 12px 12px}
+  .ld-back[hidden]{display:none}
+  .ld-box{background:#fff;color:#141414;border-radius:4px;padding:16px 18px;width:440px;max-width:94vw;box-shadow:0 12px 40px rgba(0,0,0,.4);font:13px "Helvetica Neue",Arial,sans-serif}
+  .ld-box h3{margin:0 0 4px;font-size:14px;letter-spacing:.8px;text-transform:uppercase}
+  .ld-box label{display:block;margin:10px 0 3px;font-size:12px;color:#444}
+  .ld-box input[type=text]{width:100%;box-sizing:border-box;font-size:13px;padding:7px 9px;border:1px solid #999;border-radius:2px}
+  .ld-box input[type=text]:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
+  .ld-hint{min-height:16px;font-size:12px;margin-top:4px;color:#b3261e}
+  .ld-pages{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+  .ld-pages button{background:#f2f0eb;border:1px solid #999;border-radius:2px;padding:4px 10px;font-size:12px;cursor:pointer;color:#141414}
+  .ld-pages button:hover{background:#141414;color:#fff;border-color:#141414}
+  .ld-pages button.on{background:#141414;color:#fff;border-color:#141414}
+  .ld-box label.ld-check{display:flex;align-items:center;gap:7px;margin:8px 0 0;font-size:12.5px;color:#222}
+  .ld-btns{display:flex;gap:8px;margin-top:14px}
+  .ld-btns button{flex:1;padding:8px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;border-radius:2px;cursor:pointer}
+  #linkApply{background:#141414;color:#fff;border:1px solid #141414}
+  #linkApply:disabled{opacity:.4;cursor:default}
+  #linkCancel,#linkRemove{background:#fff;color:#141414;border:1px solid #999}
   .editing [data-ed]{outline:1px dashed #1c4fd8;outline-offset:4px;min-height:1em}
   .editing #canvas{outline-offset:8px;min-height:45vh}
   .editing [data-ed]:focus,.editing #canvas:focus{outline:2px solid #1c4fd8}
@@ -275,10 +300,21 @@ __CSS__
   <button data-cmd="italic"><i>I</i></button>
   <button data-cmd="underline"><u>U</u></button>
   <button data-cmd="h2">Heading</button>
+  <button data-cmd="h3">Subhead</button>
   <button data-cmd="p">Text</button>
   <button data-cmd="smaller" title="Smaller text">A-</button>
   <button data-cmd="bigger" title="Bigger text">A+</button>
   <input type="number" id="sizeNum" min="8" max="200" title="Font size in px">
+  <select id="fontSel" title="Font">
+    <option value="">Font: default</option>
+    <option value='Georgia,Times New Roman,serif' data-first="georgia">Serif (Georgia)</option>
+    <option value='Arial,Helvetica,sans-serif' data-first="arial">Sans (Arial)</option>
+    <option value='Times New Roman,Times,serif' data-first="timesnewroman">Times</option>
+    <option value='Courier New,Courier,monospace' data-first="couriernew">Mono (Courier)</option>
+    <option value='Verdana,Geneva,sans-serif' data-first="verdana">Verdana</option>
+    <option value='Trebuchet MS,Verdana,sans-serif' data-first="trebuchetms">Trebuchet</option>
+    <option value='Palatino Linotype,Palatino,serif' data-first="palatinolinotype">Palatino</option>
+  </select>
   <span class="sep"></span>
   <button data-cmd="ul">Bullets</button>
   <button data-cmd="ol">Numbers</button>
@@ -286,6 +322,7 @@ __CSS__
   <span class="sep"></span>
   <button data-cmd="left">Left</button>
   <button data-cmd="center">Center</button>
+  <button data-cmd="right">Right</button>
   <span class="sep"></span>
   <button data-cmd="color" data-color="" title="Default color">Auto</button>
   <button data-cmd="color" data-color="c-muted" class="swatch" title="Muted" style="background:#7a7a7a"></button>
@@ -298,11 +335,13 @@ __CSS__
   <button data-cmd="link">Link</button>
   <button data-cmd="button">Button</button>
   <button data-cmd="unlink">Unlink</button>
+  <span id="linkStat" title="Put the caret in linked text to see where it goes">no link</span>
   <span class="sep"></span>
   <button data-cmd="image">Picture</button>
   <button data-cmd="gallery">Gallery</button>
   <button data-cmd="divider">Divider</button>
   <button data-cmd="section" title="Insert a nice section panel">Section</button>
+  <button data-cmd="table" title="Insert a 2x2 table">Table</button>
   <button data-cmd="small" disabled>Small</button>
   <button data-cmd="medium" disabled>Medium</button>
   <button data-cmd="full" disabled>Full</button>
@@ -310,8 +349,27 @@ __CSS__
   <span class="sep"></span>
   <button data-cmd="clear">Clear style</button>
 </div>
+<div class="ld-back" id="linkdlg" hidden>
+  <div class="ld-box" role="dialog" aria-label="Link editor">
+    <h3 id="linkdlgTitle">Insert link</h3>
+    <label for="linkText">Words on the page</label>
+    <input type="text" id="linkText" maxlength="200" autocomplete="off" placeholder="What the reader clicks">
+    <label for="linkUrl">Goes to</label>
+    <input type="text" id="linkUrl" inputmode="url" maxlength="500" autocomplete="off" placeholder="Pick a page below, or paste https://…">
+    <div class="ld-hint" id="linkHint"></div>
+    <div class="ld-pages" id="linkPages"></div>
+    <label class="ld-check"><input type="checkbox" id="linkBlank"> Open in a new tab</label>
+    <label class="ld-check"><input type="checkbox" id="linkBtn"> Show as a button</label>
+    <div class="ld-btns">
+      <button id="linkApply" type="button">Apply</button>
+      <button id="linkRemove" type="button">Remove link</button>
+      <button id="linkCancel" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="page" id="page">
   <a class="star-badge" id="starBadge" href="#" title="Open the hidden page"><span class="star-title">Latest and greatest</span><span class="star-sub">Click me</span></a>
+  <a class="gem-badge" id="gemBadge" href="#" title="Open the feedback page"><span class="gem-title">Feedback</span></a>
   <div class="masthead">
     <img id="logo" src="__LOGO__" alt="Flamingo and Cactus">
     <h1 data-ed="title">__TITLE_ESC__</h1>
@@ -405,9 +463,15 @@ function renderAll(){
   if (fp) fp.style.display = (cur && cur.form) ? "" : "none";
   $("#foot").textContent = SITE.footer || "";
   $("#foot").style.display = SITE.footer ? "" : "none";
-  const hiddenPage = SITE.pages.find(p => p.hidden);
+  const starPage = SITE.pages.find(p => p.hidden && (p.badge || "star") === "star");
   const starBadge = $("#starBadge");
-  if (starBadge) starBadge.style.display = hiddenPage ? "" : "none";
+  if (starBadge) starBadge.style.display = starPage ? "" : "none";
+  const gemPage = SITE.pages.find(p => p.hidden && p.badge === "gem");
+  const gemBadge = $("#gemBadge");
+  if (gemBadge) {
+    gemBadge.style.display = gemPage ? "" : "none";
+    if (gemPage) gemBadge.querySelector(".gem-title").textContent = gemPage.nav;
+  }
   $("#link-built").href = "/built?slug=" + encodeURIComponent(SLUG);
   const liveA = $("#link-live");
   if (SITE.live) {
@@ -417,6 +481,8 @@ function renderAll(){
     liveA.style.display = "none";
   }
   hint();
+  updateLinkStat();
+  updateFontSel();
 }
 async function openPage(slug){
   if (slug === SLUG) return;
@@ -424,6 +490,7 @@ async function openPage(slug){
   if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
   const j = await api("/api/page?slug=" + encodeURIComponent(slug));
   SLUG = slug; canvas.innerHTML = j.body; selImg = null;
+  ensureExitBlock();
   histReset();
   dirty = false; renderAll(); placeCaretStart();
   status.textContent = editing ? "editing — nothing saved yet" : "viewing";
@@ -567,6 +634,8 @@ function nodeFromPath(root, path){
    off the element it touches. */
 const PX_SCALE = [8,9,10,11,12,14,16,18,20,24,28,32,36,48,64,72,96];
 const SIZE_MIN = 8, SIZE_MAX = 200;    // the number box's range
+// the seven stacks the Font dropdown offers — the only values save() keeps
+const FONT_OK = new Set(Array.from(document.querySelectorAll("#fontSel option")).map(o => o.value).filter(Boolean));
 const COLOR_CLASSES = ["c-muted", "c-red", "c-blue", "c-green", "c-gold"];
 const BLOCK_SEL = "p,h2,h3,blockquote,li";
 const SIZE_RE = /^t-(tiny|small|large|huge|giant)$/;
@@ -764,6 +833,7 @@ let lastRange = null;
 document.addEventListener("selectionchange", () => {
   const r = getRange();
   if (r) lastRange = r.cloneRange();
+  updateLinkStat();
 });
 function activeRange(){
   const r = getRange();
@@ -845,6 +915,85 @@ function eachSizeTarget(fn){
   if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize) unwrapSpan(s); }
   else { const sp = wrapSpan(r, ""); if (sp) fn(sp); }
 }
+/* ---------- fonts: same targeting as sizes, separate unwrap check ----------
+   The toolbar writes an exact allowlisted stack (or removes the property);
+   save() and the server re-validate, so only the seven stacks survive. */
+function eachFontTarget(fn){
+  let r = getRange();
+  if (!r) {
+    r = activeRange();
+    if (r) restoreRange(r);
+  }
+  if (!r) return;
+  if (r.collapsed) {
+    const s = nearestSpan(r);
+    if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize && !s.style.fontFamily) unwrapSpan(s); return; }
+    const b = nodeBlock(r.startContainer);
+    if (b) fn(b);
+    return;
+  }
+  const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
+  if (a !== z) {
+    blocksIntersecting(r).forEach(b => fn(b));
+    return;
+  }
+  const s = nearestSpan(r);
+  if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize && !s.style.fontFamily) unwrapSpan(s); }
+  else { const sp = wrapSpan(r, ""); if (sp) fn(sp); }
+}
+function setFontStack(el, stack){
+  if (stack) el.style.fontFamily = stack;
+  else el.style.removeProperty("font-family");
+}
+function applyFont(stack){
+  eachFontTarget(el => setFontStack(el, stack));
+}
+function fontFirstFamily(v){
+  return (v || "").split(",")[0].replace(/["'\\s]/g, "").toLowerCase();
+}
+// the real stack at the caret, read from the computed style — never inferred
+function updateFontSel(){
+  const sel = document.getElementById("fontSel"); if (!sel) return;
+  if (document.activeElement === sel) return;   // don't stomp what is being picked
+  const r = activeRange(); if (!r) { sel.value = ""; return; }
+  let n = r.startContainer;
+  if (n.nodeType === 3) n = n.parentNode;
+  let el = null;
+  if (n && n !== canvas) {
+    el = (n.nodeType === 1 && n.tagName === "SPAN") ? n : nodeBlock(n);
+  }
+  if (!el) { sel.value = ""; return; }
+  const fam = fontFirstFamily(getComputedStyle(el).fontFamily);
+  const opt = Array.from(sel.options).find(o => o.dataset.first === fam);
+  sel.value = opt ? opt.value : "";
+}
+/* ---------- pictures: align the selected image ---------- */
+function alignImage(how){
+  if (!selImg) return;
+  selImg.classList.remove("ileft", "iright", "icenter");
+  if (how === "left") selImg.classList.add("ileft");
+  else if (how === "right") selImg.classList.add("iright");
+  else selImg.classList.add("icenter");
+}
+/* ---------- move the caret's top-level block up or down (Alt+Arrow) ---------- */
+function topBlock(n){
+  if (!n) return null;
+  if (n.nodeType === 3) n = n.parentNode;
+  while (n && n !== canvas && n.parentNode !== canvas) n = n.parentNode;
+  return (n && n !== canvas) ? n : null;
+}
+function moveBlock(dir){
+  const r = activeRange(); if (!r) return;
+  const b = topBlock(r.startContainer); if (!b) return;
+  const sib = dir < 0 ? b.previousElementSibling : b.nextElementSibling;
+  if (!sib) return;
+  if (dir < 0) b.parentNode.insertBefore(b, sib);
+  else b.parentNode.insertBefore(sib, b);
+  const nr = document.createRange();
+  nr.selectNodeContents(b); nr.collapse(dir < 0);
+  restoreRange(nr);
+  pushHist(); markDirty(); hint(); updateSizeNum(); updateFontSel(); updateLinkStat();
+}
 // A-/A+: one step along PX_SCALE, clamped at the ends — no wrap-around and no
 // falling back to a default size.
 function applySize(dir){
@@ -869,6 +1018,12 @@ $("#sizeNum").addEventListener("keydown", e => {
   if (e.key === "Enter") { e.preventDefault(); commitSizeNum(); }
 });
 $("#sizeNum").addEventListener("change", commitSizeNum);
+$("#fontSel").addEventListener("change", () => {
+  if (!editing) return;
+  canvas.focus();
+  applyFont($("#fontSel").value);
+  pushHist(); markDirty(); hint(); updateSizeNum(); updateFontSel(); updateLinkStat();
+});
 function applyColor(cls){
   if (cls && COLOR_CLASSES.indexOf(cls) < 0) return;
   let r = getRange();
@@ -902,9 +1057,196 @@ function clearSizeColor(){
     stripClasses(el, COLOR_RE);
     el.style.removeProperty("color");
     el.style.removeProperty("font-size");      // the numeric size the toolbar writes
-    if (el.tagName === "SPAN" && !el.className && !el.style.color && !el.style.fontSize) unwrapSpan(el);   // no class left: unwrap
+    el.style.removeProperty("font-family");    // the font dropdown's stack
+    if (el.tagName === "SPAN" && !el.className && !el.style.color && !el.style.fontSize && !el.style.fontFamily) unwrapSpan(el);   // no class left: unwrap
+  });
+  Array.from(canvas.querySelectorAll("img.secimg")).forEach(img => {
+    if (!range.intersectsNode(img)) return;
+    img.classList.remove("ileft", "iright", "icenter");
   });
 }
+/* ---------- links: a real dialog instead of prompt() ----------
+   Page quick-pick, validation matching what save() keeps, editing the link
+   under the caret, and a live readout of where it goes. The server-side
+   sanitize() remains the enforcer: anything it would strip is blocked
+   up front with an explanation. */
+const linkDlg = $("#linkdlg"), linkTitle = $("#linkdlgTitle"),
+      linkText = $("#linkText"), linkUrl = $("#linkUrl"),
+      linkHint = $("#linkHint"), linkPages = $("#linkPages"),
+      linkBlank = $("#linkBlank"), linkBtnBox = $("#linkBtn"),
+      linkApply = $("#linkApply"), linkRemove = $("#linkRemove"),
+      linkCancel = $("#linkCancel"), linkStat = $("#linkStat");
+let linkEditTarget = null;
+function escapeHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+// nearest <a> holding node n, stopping at the canvas
+function anchorAtPoint(n){
+  if (n && n.nodeType === 3) n = n.parentNode;
+  while (n && n !== canvas) {
+    if (n.nodeType === 1 && n.tagName === "A") return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+// the link the caret/selection is editing, or null for a fresh insert
+function anchorForRange(r){
+  if (!r) return null;
+  const a = anchorAtPoint(r.startContainer);
+  if (!a) return null;
+  if (r.collapsed) return a;
+  return a.contains(r.endContainer) ? a : null;
+}
+// client mirror of the server's _clean_href: block what save() would strip
+function linkValidate(h){
+  h = (h || "").trim();
+  if (!h) return {ok:false, msg:"Type or pick a destination."};
+  if (/["<>]/.test(h)) return {ok:false, msg:"No quotes or angle brackets."};
+  if (h.includes("..")) return {ok:false, msg:"“..” is not allowed in a link."};
+  if (/^[A-Za-z0-9_.-]+(\\/[A-Za-z0-9_.-]+)*\\.html$/.test(h)) return {ok:true, msg:"Page on this site."};
+  if (h.startsWith("//")) return {ok:false, msg:"That would leave this site — paste the full address instead."};
+  const m = /^([A-Za-z][A-Za-z0-9+.-]*):/.exec(h);
+  if (m) {
+    const s = m[1].toLowerCase();
+    if (s === "http" || s === "https" || s === "mailto" || s === "tel") {
+      if (/\\s/.test(h)) return {ok:true, warn:"Spaces usually break a link — check it in the preview."};
+      return {ok:true, msg:"External link."};
+    }
+    return {ok:false, msg:"Only http, https, mailto, tel, #anchors, /paths and pages survive saving."};
+  }
+  if (h.startsWith("#")) return {ok:true, msg:"Anchor on this page."};
+  if (h.startsWith("/")) return {ok:true, msg:"Path on this site."};
+  if (/\\s/.test(h)) return {ok:false, msg:"That does not look like a link. Pick a page or paste a full address."};
+  return {ok:false, msg:"Pick a page below, or paste a full http(s) address."};
+}
+function refreshLinkDialog(){
+  const v = linkValidate(linkUrl.value);
+  linkApply.disabled = !v.ok;
+  linkHint.textContent = v.warn || v.msg || "";
+  linkHint.style.color = v.ok ? "#555" : "#b3261e";
+  const cur = linkUrl.value.trim();
+  linkPages.querySelectorAll("button").forEach(b => {
+    b.classList.toggle("on", b.dataset.href === cur);
+  });
+}
+function openLinkDialog(mode){
+  if (!editing) return;
+  const r = activeRange();
+  if (!r) { status.textContent = "click into the page text first, then Link"; return; }
+  linkEditTarget = anchorForRange(r);
+  const btnMode = mode === "btn";
+  linkTitle.textContent = linkEditTarget ? (btnMode ? "Edit button" : "Edit link")
+                                         : (btnMode ? "Insert button" : "Insert link");
+  if (linkEditTarget) {
+    linkText.value = (linkEditTarget.textContent || "").trim().slice(0, 200);
+    linkUrl.value = linkEditTarget.getAttribute("href") || "";
+    linkBlank.checked = linkEditTarget.getAttribute("target") === "_blank";
+    linkBtnBox.checked = linkEditTarget.classList.contains("btn");
+  } else {
+    linkText.value = r.collapsed ? "" : r.toString().slice(0, 200);
+    linkUrl.value = btnMode ? "https://" : "";
+    linkBlank.checked = btnMode;
+    linkBtnBox.checked = btnMode;
+  }
+  linkRemove.style.display = linkEditTarget ? "" : "none";
+  // page quick-pick, rebuilt every open so renames show up
+  linkPages.innerHTML = "";
+  SITE.pages.forEach(p => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = (p.hidden ? "☆ " : "") + p.nav;
+    b.title = p.slug + ".html" + (p.hidden ? " (hidden page)" : "");
+    b.dataset.href = p.slug + ".html";
+    b.onclick = () => { linkUrl.value = b.dataset.href; linkUrl.focus(); refreshLinkDialog(); };
+    linkPages.appendChild(b);
+  });
+  refreshLinkDialog();
+  linkDlg.hidden = false;
+  if (linkEditTarget) linkUrl.focus(); else { linkText.focus(); linkText.select(); }
+}
+function closeLinkDialog(){
+  linkDlg.hidden = true;
+  linkEditTarget = null;
+  if (editing) { canvas.focus(); const r = activeRange(); if (r) restoreRange(r); }
+  updateLinkStat();
+}
+function applyLink(){
+  const v = linkValidate(linkUrl.value);
+  if (!v.ok) { refreshLinkDialog(); return; }
+  const href = linkUrl.value.trim();
+  const label = linkText.value.trim();
+  const blank = linkBlank.checked, btn = linkBtnBox.checked;
+  const r = activeRange();
+  if (!r) return;
+  restoreRange(r);
+  canvas.focus();
+  if (linkEditTarget && canvas.contains(linkEditTarget)) {
+    if (label) linkEditTarget.textContent = label;
+    linkEditTarget.setAttribute("href", href);
+    if (blank) { linkEditTarget.setAttribute("target", "_blank"); linkEditTarget.setAttribute("rel", "noopener"); }
+    else { linkEditTarget.removeAttribute("target"); linkEditTarget.removeAttribute("rel"); }
+    linkEditTarget.classList.toggle("btn", btn);
+    const cur = getRange();
+    if (cur) { cur.selectNodeContents(linkEditTarget); cur.collapse(false); restoreRange(cur); }
+  } else if (r.collapsed) {
+    if (!label) { linkHint.textContent = "Give the link some words first."; linkHint.style.color = "#b3261e"; linkText.focus(); return; }
+    let tag = '<a href="' + escapeHtml(href) + '"';
+    if (blank) tag += ' target="_blank" rel="noopener"';
+    if (btn) tag += ' class="btn"';
+    let tagHtml = tag + ">" + escapeHtml(label) + "</a>";
+    if (btn) tagHtml = "<p>" + tagHtml + "</p>";
+    document.execCommand("insertHTML", false, tagHtml);
+  } else {
+    document.execCommand("createLink", false, "#fc-newlink");
+    const made = Array.from(canvas.querySelectorAll('a[href="#fc-newlink"]'));
+    if (!made.length) { linkHint.textContent = "Could not link that selection — try selecting plain text."; linkHint.style.color = "#b3261e"; return; }
+    made.forEach(a => {
+      a.setAttribute("href", href);
+      if (blank) { a.setAttribute("target", "_blank"); a.setAttribute("rel", "noopener"); }
+      if (btn) a.classList.add("btn");
+    });
+    if (made.length === 1 && label && label !== made[0].textContent) made[0].textContent = label;
+  }
+  closeLinkDialog();
+  pushHist(); markDirty(); hint(); updateSizeNum(); updateLinkStat();
+}
+function removeLink(){
+  const r = activeRange();
+  if (!r) return;
+  restoreRange(r);
+  canvas.focus();
+  const a = (linkEditTarget && canvas.contains(linkEditTarget)) ? linkEditTarget : anchorForRange(getRange());
+  if (!a) { closeLinkDialog(); return; }
+  const parent = a.parentNode, frag = document.createDocumentFragment();
+  while (a.firstChild) frag.appendChild(a.firstChild);
+  parent.replaceChild(frag, a);
+  if (parent.normalize) parent.normalize();
+  closeLinkDialog();
+  pushHist(); markDirty(); hint(); updateSizeNum(); updateLinkStat();
+}
+function updateLinkStat(){
+  if (!linkStat) return;
+  const r = activeRange();
+  const a = r ? anchorForRange(r) : null;
+  if (a) {
+    const h = a.getAttribute("href") || "";
+    linkStat.textContent = "→ " + (h.length > 42 ? h.slice(0, 41) + "…" : h);
+    linkStat.title = h || "(no destination)";
+  } else {
+    linkStat.textContent = "no link";
+    linkStat.title = "Put the caret in linked text to see where it goes";
+  }
+}
+linkApply.onclick = applyLink;
+linkRemove.onclick = removeLink;
+linkCancel.onclick = closeLinkDialog;
+linkText.oninput = refreshLinkDialog;
+linkUrl.oninput = refreshLinkDialog;
+linkDlg.addEventListener("mousedown", e => { if (e.target === linkDlg) closeLinkDialog(); });
+linkDlg.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !linkApply.disabled) { e.preventDefault(); applyLink(); }
+  else if (e.key === "Escape") { e.preventDefault(); closeLinkDialog(); }
+});
 // full color wheel: live-paints any color as the selection changes
 $("#colorwheel").addEventListener("input", e => {
   if (!editing) return;
@@ -917,12 +1259,17 @@ $("#toolbar").addEventListener("click", e => {
   const c = b.dataset.cmd;
   canvas.focus();
   if (c === "h2") document.execCommand("formatBlock", false, "<h2>");
+  else if (c === "h3") document.execCommand("formatBlock", false, "<h3>");
   else if (c === "p") document.execCommand("formatBlock", false, "<p>");
   else if (c === "ul") document.execCommand("insertUnorderedList");
   else if (c === "ol") document.execCommand("insertOrderedList");
   else if (c === "quote") document.execCommand("formatBlock", false, "<blockquote>");
-  else if (c === "left") document.execCommand("justifyLeft");
-  else if (c === "center") document.execCommand("justifyCenter");
+  else if (c === "left" || c === "center" || c === "right") {
+    if (selImg && editing) alignImage(c);
+    else if (c === "left") document.execCommand("justifyLeft");
+    else if (c === "center") document.execCommand("justifyCenter");
+    else document.execCommand("justifyRight");
+  }
   else if (c === "smaller") applySize(-1);
   else if (c === "bigger") applySize(1);
   else if (c === "color") applyColor(b.dataset.color || "");
@@ -931,25 +1278,13 @@ $("#toolbar").addEventListener("click", e => {
   else if (c === "redo") doRedo();
   else if (c === "clear") { document.execCommand("removeFormat"); clearSizeColor(); }
   else if (c === "unlink") document.execCommand("unlink");
-  else if (c === "link") {
-    const u = prompt("Link to (a page or http://, https://, mailto:):", "https://");
-    if (u) document.execCommand("createLink", false, u);
-  }
-  else if (c === "button") {
-    const label = prompt("Button words:", "Click me");
-    if (!label) return;
-    const u = prompt("Button goes to:", "https://");
-    if (!u) return;
-    const nt = confirm("Open in a new tab when pressed?");
-    const extra = nt ? ' target="_blank" rel="noopener"' : "";
-    document.execCommand("insertHTML", false,
-      '<p><a class="btn" href="' + u.replace(/"/g, "") + '"' + extra + '></a></p>');
-    const a = canvas.querySelector("a.btn:empty");
-    if (a) { a.textContent = label; placeCaretAtEnd(a.parentElement); }
-  }
+  else if (c === "link") openLinkDialog("link");
+  else if (c === "button") openLinkDialog("btn");
   else if (c === "divider") document.execCommand("insertHTML", false, "<hr><p><br></p>");
   else if (c === "section") document.execCommand("insertHTML", false,
     '<div class="card"><h2>Section title</h2><p>Write something great here.</p></div><p><br></p>');
+  else if (c === "table") document.execCommand("insertHTML", false,
+    '<table><tbody><tr><th>Header</th><th>Header</th></tr><tr><td><br></td><td><br></td></tr></tbody></table><p><br></p>');
   else if (c === "image") { galleryMode = false; filepick.multiple = false; filepick.click(); }
   else if (c === "gallery") { galleryMode = true; filepick.multiple = true; filepick.click(); }
   else if ((c === "small" || c === "medium" || c === "full") && selImg) {
@@ -1051,24 +1386,27 @@ canvas.addEventListener("paste", async e => {
   }
   pushHist(); markDirty(); hint();
 });
-canvas.addEventListener("mouseup", updateSizeNum);
-canvas.addEventListener("keyup", updateSizeNum);
+canvas.addEventListener("mouseup", ()=>{updateSizeNum();updateFontSel();updateLinkStat();});
+canvas.addEventListener("keyup", ()=>{updateSizeNum();updateFontSel();updateLinkStat();});
 async function save(){
   readInputsToSite();
-  // The Center/Left buttons write text-align; fold centering into the "ac"
-  // class, and keep a validated wheel color and a validated font size as an
-  // inline style, before saving so all three survive the page cleaner. The
-  // canonical form is style="color:X;font-size:Ypx" — color first, then a
-  // whole number of pixels between 8 and 200. The server re-validates both
-  // properties, so anything hostile is dropped there too.
+  // The Center/Left/Right buttons write text-align; fold alignment into the
+  // "ac"/"ar" classes, and keep a validated wheel color, a validated font
+  // size and one of the seven toolbar fonts as an inline style, before
+  // saving so all four survive the page cleaner. The canonical form is
+  // style="color:X;font-size:Ypx;font-family:Z" — anything else is dropped.
+  // The server re-validates every property, so nothing hostile survives there.
   canvas.querySelectorAll("[style]").forEach(el => {
     const wasCentered = el.classList.contains("ac");
+    const wasRight = el.classList.contains("ar");
     const t = (el.style.textAlign || "").toLowerCase();
     const col = (el.style.color || "").trim();
     const fsz = (el.style.fontSize || "").trim();
+    const ffm = (el.style.fontFamily || "").trim();
     el.removeAttribute("style");
-    el.classList.remove("ac");
+    el.classList.remove("ac", "ar");
     if (t === "center" || (wasCentered && t === "")) el.classList.add("ac");
+    else if (t === "right" || (wasRight && t === "")) el.classList.add("ar");
     const keep = [];
     const v = col.replace(/\\s+/g, "");
     if (/^(#[0-9a-f]{3,8}|[a-z]{3,30}|rgba?\\([0-9,.%/]+\\)|hsla?\\([0-9,.%/]+(?:deg|turn)?\\))$/i.test(v)
@@ -1079,8 +1417,10 @@ async function save(){
     if (f && +f[1] >= SIZE_MIN && +f[1] <= SIZE_MAX) {
       keep.push("font-size:" + (+f[1]) + "px");
     }
+    if (FONT_OK.has(ffm)) keep.push("font-family:" + ffm);
     if (keep.length) el.setAttribute("style", keep.join(";"));
   });
+  ensureExitBlock();
   pushHist();
   const settings = {
     title: SITE.title.slice(0, 300) || "Flamingo and Cactus",
@@ -1100,13 +1440,33 @@ async function save(){
 btnSave.onclick = save;
 $("#starBadge").addEventListener("click", e => {
   e.preventDefault();
-  const h = SITE.pages.find(p => p.hidden);
+  const h = SITE.pages.find(p => p.hidden && (p.badge || "star") === "star");
+  if (h) openPage(h.slug);
+});
+$("#gemBadge").addEventListener("click", e => {
+  e.preventDefault();
+  const h = SITE.pages.find(p => p.hidden && p.badge === "gem");
   if (h) openPage(h.slug);
 });
 document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "s" && editing) { e.preventDefault(); save(); }
   const inEd = editing && document.activeElement && document.activeElement.closest
     && document.activeElement.closest("#canvas,[data-ed]");
+  if (inEd && e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown"))
+    { e.preventDefault(); moveBlock(e.key === "ArrowUp" ? -1 : 1); }
+/* ---------- exit block: the caret must always have somewhere to go ----------
+   A page whose last block is a card, table, divider or gallery traps the
+   caret: every click below it lands back inside the last block, so the
+   mouse "can't leave the box". Guarantee a plain paragraph at the end of
+   the canvas — on load, on page switch, and on every save. */
+function ensureExitBlock(){
+  const last = canvas.lastElementChild;
+  if (!last || last.tagName !== "P") {
+    const p = document.createElement("p");
+    p.appendChild(document.createElement("br"));
+    canvas.appendChild(p);
+  }
+}
   if (inEd && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey)
     { e.preventDefault(); doUndo(); }
   if (inEd && (e.ctrlKey || e.metaKey)
@@ -1121,6 +1481,7 @@ $("#btn-quit").onclick = async () => {
 };
 renderAll();
 setEditing(false);
+ensureExitBlock();
 histReset();
 </script>
 </body>

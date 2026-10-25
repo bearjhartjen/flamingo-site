@@ -23,7 +23,14 @@
     {
       "slug": "latest",
       "nav": "Latest",
-      "hidden": true
+      "hidden": true,
+      "badge": "star"
+    },
+    {
+      "slug": "feedback",
+      "nav": "Feedback",
+      "hidden": true,
+      "badge": "gem"
     },
     {
       "slug": "events",

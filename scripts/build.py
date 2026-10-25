@@ -67,6 +67,8 @@ def load_site(path: Path) -> dict:
         entry = {"slug": slug, "nav": str(p.get("nav", slug))[:60] or slug}
         if p.get("hidden"):
             entry["hidden"] = True
+        if p.get("badge"):
+            entry["badge"] = str(p["badge"])[:20]
         if p.get("form"):
             entry["form"] = True
         clean_pages.append(entry)
@@ -78,6 +80,7 @@ def load_site(path: Path) -> dict:
         "tagline": str(doc.get("tagline", ""))[:300],
         "footer": str(doc.get("footer", ""))[:500],
         "theme": theme if theme in THEMES else "classic",
+        "description": str(doc.get("description", ""))[:300],
         "pages": clean_pages,
     }
 
@@ -86,11 +89,12 @@ def load_site(path: Path) -> dict:
 # Sanitizer: page bodies are freeform editor HTML, so only an allowlist of
 # plain tags survives. editor and builder share this.
 ALLOWED_TAGS = {"p", "h2", "h3", "br", "strong", "b", "em", "i", "u", "s",
-                "ul", "ol", "li", "a", "img", "blockquote", "hr", "div", "span"}
+                "ul", "ol", "li", "a", "img", "blockquote", "hr", "div", "span",
+                "table", "thead", "tbody", "tr", "th", "td"}
 DROP_WITH_CONTENT = {"script", "style", "form", "iframe", "object", "embed"}
-IMG_CLASSES = {"secimg", "small", "medium", "full"}
+IMG_CLASSES = {"secimg", "small", "medium", "full", "ileft", "iright", "icenter"}
 # Text size / colour classes. Sizes work on blocks and inline spans; colours
-# are the same set. Anything not listed here (other than "ac", below) is
+# are the same set. Anything not listed here (other than "ac"/"ar", below) is
 # dropped. Inline styles are dropped except a strictly validated `color`
 # property (the colour wheel) and a strictly validated numeric `font-size`
 # (Google-Slides-style pixel sizes); those are normalised into a single
@@ -98,7 +102,7 @@ IMG_CLASSES = {"secimg", "small", "medium", "full"}
 SIZE_CLASSES = {"t-tiny", "t-small", "t-large", "t-huge", "t-giant"}
 COLOR_CLASSES = {"c-muted", "c-red", "c-blue", "c-green", "c-gold"}
 TEXT_CLASSES = SIZE_CLASSES | COLOR_CLASSES
-# Block tags that keep the "ac" centering class as well as size/colour.
+# Block tags that keep the "ac"/"ar" alignment classes as well as size/colour.
 CENTERED_TAGS = ("p", "h2", "h3", "blockquote", "li")
 
 # A `color:` value is safe only in these shapes: hex, plain colour name, or a
@@ -135,10 +139,53 @@ def _clean_color(style: str | None) -> str | None:
     return None
 
 
+# Font stacks the toolbar can write. Keys are derived from the canonical
+# values the same way input is normalized (whitespace and quotes stripped,
+# lowercased), so only exact allowlist matches survive and every kept value
+# is already canonical — a rebuild's second sanitize pass is byte-stable.
+_FONT_STACKS = (
+    "Georgia,Times New Roman,serif",
+    "Arial,Helvetica,sans-serif",
+    "Times New Roman,Times,serif",
+    "Courier New,Courier,monospace",
+    "Verdana,Geneva,sans-serif",
+    "Trebuchet MS,Verdana,sans-serif",
+    "Palatino Linotype,Palatino,serif",
+)
+
+
+def _font_key(value: str) -> str:
+    return re.sub(r"\s+", "", value).replace('"', "").replace("'", "").lower()
+
+
+_FONT_CANON = {_font_key(s): s for s in _FONT_STACKS}
+
+
+def _clean_font(style: str | None) -> str | None:
+    """Return a canonical font-family stack from a style attribute, or None.
+
+    Only exact allowlist matches survive (compared with whitespace and
+    quotes stripped, lowercased), so no hostile value can pass and every
+    kept value is already canonical.
+    """
+    if not style:
+        return None
+    for decl in style.split(";"):
+        prop, sep, val = decl.partition(":")
+        if not sep or prop.strip().lower() != "font-family":
+            continue
+        v = _font_key(val)
+        if not re.fullmatch(r"[a-z0-9,.\-]+", v):
+            continue
+        if v in _FONT_CANON:
+            return _FONT_CANON[v]
+    return None
+
+
 # A `font-size` value is safe only as a plain pixel length: an integer or
-# one-decimal number of pixels in the inclusive range 8-200, with a literal
-# `px` suffix. Anything else (em/%/rem/ex, url(), expression(), quotes,
-# braces, huge numbers) is rejected so no CSS escape hatch survives.
+# one-to-two-decimal number of pixels (case-insensitive unit) in the
+# inclusive range 8-200. Anything else (em/%/rem/ex, url(), expression(),
+# quotes, braces, huge numbers) is rejected so no CSS escape hatch survives.
 SIZE_VALUE_RE = re.compile(r"\d+(?:\.\d{1,2})?px", re.IGNORECASE)
 
 
@@ -177,9 +224,9 @@ def _clean_size(style: str | None) -> str | None:
 
 
 def _style_attr(style: str | None) -> str:
-    """Build one canonical style attribute: colour first, then font-size.
+    """Build one canonical style attribute: colour, then font-size, then font.
 
-    Returns an empty string when neither declaration is kept, so callers
+    Returns an empty string when no declaration is kept, so callers
     emit no style attribute at all.
     """
     parts = []
@@ -189,6 +236,9 @@ def _style_attr(style: str | None) -> str:
     size = _clean_size(style)
     if size:
         parts.append(f"font-size:{size}")
+    fnt = _clean_font(style)
+    if fnt:
+        parts.append(f"font-family:{fnt}")
     return f' style="{";".join(parts)}"' if parts else ""
 
 
@@ -197,7 +247,7 @@ def _clean_href(href: str) -> str | None:
     # Reject traversal up front, before any allowlist branch.
     if ".." in h:
         return None
-    if h.startswith(("http://", "https://", "mailto:")):
+    if h.startswith(("http://", "https://", "mailto:", "tel:")):
         return h
     if h.startswith("#"):
         return h
@@ -304,16 +354,22 @@ class _Sanitize(HTMLParser):
         else:
             extra = ""
             if tag in CENTERED_TAGS:
-                # keep text centering: from an inline style (toolbar Center
-                # button) or from an "ac" class already on the tag, plus any
-                # allowed size/colour class, so a rebuild's second sanitize
-                # pass preserves them. Every other style and class is dropped.
+                # keep text alignment: from an inline style (toolbar
+                # Left/Center/Right buttons) or from an "ac"/"ar" class
+                # already on the tag, plus any allowed size/colour class, so
+                # a rebuild's second sanitize pass preserves them. Every
+                # other style and class is dropped.
                 keep = []
                 if "ac" in ad.get("class", "").split():
                     keep.append("ac")
+                if "ar" in ad.get("class", "").split():
+                    keep.append("ar")
                 if re.search(r"text-align\s*:\s*center", ad.get("style", ""), re.I):
                     if "ac" not in keep:
                         keep.append("ac")
+                if re.search(r"text-align\s*:\s*right", ad.get("style", ""), re.I):
+                    if "ar" not in keep:
+                        keep.append("ar")
                 for c in ad.get("class", "").split():
                     if c in TEXT_CLASSES and c not in keep:
                         keep.append(c)
@@ -437,6 +493,7 @@ CSS = r'''  :root{
   .canvas:empty{padding:0}
   .canvas p{margin:0 0 12px}
   .canvas .ac{text-align:center}
+  .canvas .ar{text-align:right}
   .canvas .t-tiny{font-size:12px}
   .canvas .t-small{font-size:13px}
   .canvas .t-large{font-size:19px}
@@ -495,9 +552,22 @@ CSS = r'''  :root{
   .star-badge .star-sub{display:block;margin-top:4px;font:italic 10px Georgia,serif;animation:starpulse 3s ease-in-out infinite}
   @keyframes starpulse{0%,100%{opacity:.45}50%{opacity:.9}}
   @media (max-width:1250px){.star-badge{top:20px;left:56px}}
-  @media print{.star-badge{display:none}}
+  @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
-  .star-badge.warp{animation:starwarp 1.05s cubic-bezier(.5,-0.1,.7,.4) forwards;z-index:1001}
+  .gem-badge{
+    position:fixed;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#8fbef5,#1c4fd8 58%,#0b2a8c);
+    color:#fff;text-decoration:none;text-align:center;
+    border-radius:16px;
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));
+    transition:transform .18s ease;
+  }
+  .gem-badge:hover{transform:scale(1.06) rotate(3deg)}
+  .gem-badge .gem-title{display:block;max-width:80%;font:700 13px/1.4 "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase}
+  @media (max-width:1250px){.gem-badge{top:20px;left:auto;right:56px}}
+  @media print{.gem-badge{display:none}}
+  .star-badge.warp,.gem-badge.warp{animation:starwarp 1.05s cubic-bezier(.5,-0.1,.7,.4) forwards;z-index:1001}
   @keyframes starwarp{
     0%{transform:scale(1) rotate(0)}
     25%{transform:scale(1.6) rotate(200deg)}
@@ -529,6 +599,13 @@ CSS = r'''  :root{
   body.arrive .page{animation:pagesettle .8s cubic-bezier(.2,1.4,.4,1)}
   @keyframes pagesettle{from{transform:scale(.9)}to{transform:scale(1)}}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
+  .canvas::after{content:"";display:table;clear:both}
+  .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
+  .canvas th,.canvas td{border:1px solid var(--rule);padding:7px 10px;text-align:left;font-size:14.5px}
+  .canvas th{background:var(--paper2);font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--ink2)}
+  .canvas img.ileft{float:left;margin:4px 14px 8px 0}
+  .canvas img.iright{float:right;margin:4px 0 8px 14px}
+  .canvas img.icenter{display:block;margin-left:auto;margin-right:auto}
   .contactform{max-width:560px;margin:26px auto 0;padding:20px 22px;border:1px solid var(--rule);border-radius:4px;background:var(--paper2)}
   .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
   .contactform label:first-of-type{margin-top:0}
@@ -558,6 +635,8 @@ CSS = r'''  :root{
     .star-badge{top:10px;left:10px;right:auto;width:104px;height:104px}
     .star-badge .star-title{font-size:7px;max-width:62%;line-height:1.3;letter-spacing:.5px}
     .star-badge .star-sub{display:none}
+    .gem-badge{top:10px;left:auto;right:10px;width:112px;height:76px;border-radius:11px}
+    .gem-badge .gem-title{font-size:9px;letter-spacing:1.2px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
     /* giant inline titles (the toolbar writes up to 200px) stay dramatic
@@ -575,6 +654,8 @@ CSS = r'''  :root{
     }
     .canvas img.small{width:140px}
     .canvas img.medium{width:100%}
+    .canvas table{display:block;overflow-x:auto}
+    .canvas th,.canvas td{font-size:13.5px;padding:6px 8px}
     .canvas .t-giant{font-size:26px;line-height:1.25}
     .canvas .t-huge{font-size:22px}
     .canvas .gallery{flex-direction:column}
@@ -583,6 +664,17 @@ CSS = r'''  :root{
     .contactform{margin:22px 0 0;padding:16px 14px}
   }
 '''
+
+
+# Structured data: who we are, for search engines. Plain string (not an
+# f-string) so the JSON braces survive untouched.
+LD_ORG = (
+    '<script type="application/ld+json">{"@context":"https://schema.org",'
+    '"@type":"Organization","name":"Flamingo and Cactus",'
+    f'"url":"https://{CUSTOM_DOMAIN}/",'
+    f'"logo":"https://{CUSTOM_DOMAIN}/favicon.png"}}'
+    "</script>"
+)
 
 
 STAR_TITLE = "Latest and greatest"
@@ -625,9 +717,21 @@ def place_form(body_html: str, form_html: str) -> tuple:
     return body_html, form_html
 
 
+def badge_slug(pages, name):
+    """Slug of the hidden page carrying this badge, or None.
+
+    Hidden pages without an explicit "badge" flag count as "star", so the
+    original single-hidden-page setup keeps working unchanged."""
+    return next((p["slug"] for p in pages
+                 if p.get("hidden") and p.get("badge", "star") == name), None)
+
+
 def star_slug(pages):
     """Slug of the hidden page the star links to, or None when there is none."""
-    return next((p["slug"] for p in pages if p.get("hidden")), None)
+    return badge_slug(pages, "star")
+
+
+GEM_TITLE = "Feedback"
 
 
 def star_html(pages):
@@ -638,6 +742,17 @@ def star_html(pages):
         f'<a class="star-badge" href="{html.escape(slug)}.html" title="{STAR_TITLE}">'
         f'<span class="star-title">{STAR_TITLE}</span>'
         f'<span class="star-sub">{STAR_SUB}</span></a>'
+    )
+
+
+def gem_html(pages):
+    slug = badge_slug(pages, "gem")
+    if not slug:
+        return ""
+    title = next((p["nav"] for p in pages if p["slug"] == slug), GEM_TITLE)
+    return (
+        f'<a class="gem-badge" href="{html.escape(slug)}.html" title="{html.escape(title)}">'
+        f'<span class="gem-title">{html.escape(title)}</span></a>'
     )
 
 
@@ -655,7 +770,10 @@ def nav_html(pages, current: str) -> str:
 
 
 def render_page(title: str, tagline: str, footer: str, theme: str,
-                pages, slug: str, body_html: str, logo_uri: str) -> str:
+                pages, slug: str, body_html: str, logo_uri: str,
+                description: str = "") -> str:
+    desc = description.strip() or tagline.strip() or title
+    canon = f"https://{CUSTOM_DOMAIN}/" if slug == "index" else f"https://{CUSTOM_DOMAIN}/{slug}.html"
     canvas = ""
     form_block = ""
     if any(p["slug"] == slug and p.get("form") for p in pages):
@@ -675,11 +793,19 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>{html.escape(title)} &mdash; Flamingo &amp; Cactus</title>\n"
+        f'<meta name="description" content="{html.escape(desc, quote=True)}">\n'
+        f'<link rel="canonical" href="{canon}">\n'
+        f'<meta property="og:title" content="{html.escape(title, quote=True)} &mdash; Flamingo &amp; Cactus">\n'
+        f'<meta property="og:description" content="{html.escape(desc, quote=True)}">\n'
+        f'<meta property="og:type" content="website">\n'
+        f'<meta property="og:url" content="{canon}">\n'
+        + LD_ORG + "\n"
         "<style>\n" + CSS + "\n</style>\n"
         "</head>\n"
         f'<body data-theme="{theme}">\n'
         '<div class="page">\n'
         f"{star_html(pages)}"
+        f"{gem_html(pages)}"
         "\n"
         '  <div class="masthead">\n'
         f'    <img src="{logo_uri}" alt="Flamingo and Cactus">\n'
@@ -703,7 +829,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "}catch(_){}"
         "try{"
         "var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;"
-        "var star=document.querySelector('a.star-badge');"
+        "var star=document.querySelector('a.star-badge, a.gem-badge');"
         "if(!star||!star.getAttribute('href'))return;"
         "star.addEventListener('click',function(e){"
         "var href=star.getAttribute('href');"
@@ -742,6 +868,7 @@ NOTFOUND = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found &mdash; Flamingo &amp; Cactus</title>
+<meta name="robots" content="noindex">
 <style>
 __CSS__
 </style>
@@ -778,13 +905,27 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
             (pages_dir / f"{p['slug']}.html").write_text(clean, encoding="utf-8")
         (out_dir / f"{p['slug']}.html").write_text(
             render_page(site["title"], site["tagline"], site["footer"],
-                        site["theme"], site["pages"], p["slug"], clean, logo_uri),
+                        site["theme"], site["pages"], p["slug"], clean, logo_uri,
+                        site.get("description", "")),
             encoding="utf-8")
     nf = NOTFOUND.replace("__CSS__", CSS).replace("__LOGO__", logo_uri)
     (out_dir / "404.html").write_text(nf, encoding="utf-8")
     shutil.copyfile(logo_path, out_dir / "favicon.png")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
     (out_dir / "CNAME").write_text(CUSTOM_DOMAIN + "\n", encoding="utf-8")
+    (out_dir / "robots.txt").write_text(
+        f"User-agent: *\nAllow: /\nSitemap: https://{CUSTOM_DOMAIN}/sitemap.xml\n",
+        encoding="utf-8")
+    listed = [p["slug"] for p in site["pages"] if not p.get("hidden")]
+    if "index" not in listed:
+        listed.insert(0, "index")
+    sitemap = ['<?xml version="1.0" encoding="UTF-8"?>',
+               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for slug in listed:
+        loc = f"https://{CUSTOM_DOMAIN}/" if slug == "index" else f"https://{CUSTOM_DOMAIN}/{slug}.html"
+        sitemap.append(f"<url><loc>{loc}</loc></url>")
+    sitemap.append("</urlset>")
+    (out_dir / "sitemap.xml").write_text("\n".join(sitemap) + "\n", encoding="utf-8")
 
     site_uploads = out_dir / "uploads"
     if site_uploads.exists():
@@ -838,7 +979,20 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         expect("fxspark" in idx and "pagequake" in idx and "veilspin" in idx,
                "star burst: sparks, shake and spiral veil present")
         warp_scripts = idx.lower().count("<script")
-        expect(warp_scripts == 1 and "star-warp" in idx.lower(), "only the star-warp script in built pages")
+        expect(warp_scripts == 2 and "star-warp" in idx.lower() and "ld+json" in idx.lower(),
+               "built pages carry only the star-warp + structured-data scripts")
+        expect('name="description"' in idx and html.escape(site["description"])[:40] in idx,
+               "every page carries the search snippet")
+        expect('rel="canonical" href="https://flamingoandcactus.com/"' in idx,
+               "home page canonical points at the domain root")
+        expect('property="og:title"' in idx and 'property="og:url"' in idx,
+               "open-graph tags present for link previews")
+        expect((tmp / "robots.txt").is_file(), "robots.txt built")
+        sm = (tmp / "sitemap.xml").read_text(encoding="utf-8") if (tmp / "sitemap.xml").is_file() else ""
+        expect("<loc>https://flamingoandcactus.com/</loc>" in sm, "sitemap lists home")
+        expect("<loc>https://flamingoandcactus.com/contact.html</loc>" in sm, "sitemap lists contact")
+        expect("flank" not in sm and "latest" not in sm and "feedback" not in sm,
+               "sitemap keeps unlisted pages unlisted")
         contact_built = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
         if any(p.get("form") for p in site["pages"]):
             expect('action="https://formsubmit.co/' in contact_built, "contact page posts to the form inbox")
@@ -848,7 +1002,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             expect('name="_honey"' in contact_built, "contact form carries a spam honeypot")
             expect("formsubmit.co" not in idx, "form appears only on the flagged page, not home")
             marked = render_page(site["title"], site["tagline"], site["footer"], site["theme"],
-                                 site["pages"], "contact", "<p>hi</p><p>[contact form]</p><p>bye</p>", "x")
+                                 site["pages"], "contact", "<p>hi</p><p>[contact form]</p><p>bye</p>", "x",
+                                 site.get("description", ""))
             expect("formsubmit.co" in marked and "[contact form]" not in marked,
                    "marker paragraph swaps in the live form")
             expect(marked.index("contactform") < marked.index("bye"),
@@ -872,7 +1027,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         for bad_href in ("//evil.com/x", "/../../etc/passwd", "javascript:alert(1)", "data:text/html,hi"):
             bad = sanitize(f'<a href="{bad_href}">Hi</a>')
             expect("href=" not in bad and "Hi" in bad, f"sanitizer drops hostile href {bad_href}")
-        for good_href in ("https://example.com/x", "flank/index.html", "index.html", "#"):
+        for good_href in ("https://example.com/x", "flank/index.html", "index.html", "#",
+                           "mailto:a@b.com", "tel:+16072056663"):
             good = sanitize(f'<a href="{good_href}">Hi</a>')
             expect(f'href="{good_href}"' in good, f"sanitizer keeps safe href {good_href}")
         # FIX 2-ish handled in flank check; FIX 3: 150px capped in CSS
@@ -896,6 +1052,11 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "sanitizer keeps centering as a class, drops the style")
         expect('class="ac"' in sanitize(centered),
                "centering survives a rebuild (second sanitize pass)")
+        right = sanitize('<p style="text-align: right">x</p>')
+        expect(right == '<p class="ar">x</p>',
+               "sanitizer keeps right-align as a class, drops the style")
+        expect(sanitize(right) == right,
+               "right-align survives a rebuild (second sanitize pass)")
         # text size / colour classes
         styled = sanitize('<p class="t-large c-red">Hi</p>')
         expect(styled == '<p class="t-large c-red">Hi</p>',
@@ -988,11 +1149,41 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         expect(".canvas .card" in CSS and ".canvas .t-giant" in CSS
                and ".canvas .t-tiny" in CSS,
                 "card + extended-size CSS present")
+        fonted = sanitize('<p style="font-family:Arial,Helvetica,sans-serif">Hi</p>')
+        expect(fonted == '<p style="font-family:Arial,Helvetica,sans-serif">Hi</p>',
+               "sanitizer keeps an allowlisted font stack on p")
+        expect(sanitize(fonted) == fonted,
+               "font stacks survive a second sanitize pass (byte-stable)")
+        quoted = sanitize('<p style="font-family: Georgia, \'Times New Roman\', serif">Hi</p>')
+        expect(quoted == '<p style="font-family:Georgia,Times New Roman,serif">Hi</p>',
+               "sanitizer canonicalises spaced/quoted stacks")
+        for bad_font in ("font-family:expression(alert(1))", "font-family:Comic Sans",
+                         "font-family:Arial;url(x)", "font-family:Georgia,serif,evil()"):
+            dropped = sanitize('<p style="%s">Hi</p>' % bad_font)
+            expect("font-family" not in dropped and "Hi" in dropped,
+                   "sanitizer drops hostile font " + bad_font)
+        tabled = sanitize('<table><tbody><tr><th>H</th></tr><tr><td>x</td></tr></tbody></table>')
+        expect(tabled == '<table><tbody><tr><th>H</th></tr><tr><td>x</td></tr></tbody></table>',
+               "sanitizer keeps plain tables")
+        expect(sanitize('<img src="uploads/a.png" class="secimg medium ileft">') ==
+               '<img class="secimg medium ileft" src="uploads/a.png" alt="">',
+               "sanitizer keeps image alignment classes")
+        expect(".canvas table" in CSS and ".canvas img.ileft" in CSS,
+               "table + image-alignment CSS present")
         star = star_html([{"slug": "a", "nav": "A"}, {"slug": "z", "nav": "Z", "hidden": True}])
         expect('href="z.html"' in star and "Latest and greatest" in star and "Click me" in star,
                 "star links the hidden page with its text")
         expect(star_html([{"slug": "a", "nav": "A"}]) == "",
                 "no star without a hidden page")
+        gem = gem_html([{"slug": "a", "nav": "A"}, {"slug": "f", "nav": "Feedback", "hidden": True, "badge": "gem"}])
+        expect('href="f.html"' in gem and "Feedback" in gem,
+                "gem badge links the gem-flagged hidden page")
+        expect(gem_html([{"slug": "a", "nav": "A"}]) == "",
+                "no gem badge without a gem-flagged page")
+        expect(gem_html([{"slug": "a", "nav": "A"}, {"slug": "z", "nav": "Z", "hidden": True}]) == "",
+                "a plain hidden page does not summon the gem badge")
+        expect('href="feedback.html"' in idx and "gem-badge" in idx,
+                "built home carries the gem badge to the feedback page")
         nohidden = nav_html([{"slug": "a", "nav": "A"}, {"slug": "b", "nav": "B"}, {"slug": "z", "nav": "Z", "hidden": True}], "a")
         expect("z.html" not in nohidden and ">A</span>" in nohidden and "b.html" in nohidden,
                 "hidden pages stay out of the nav")

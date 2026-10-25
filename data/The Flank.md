@@ -481,7 +481,7 @@
 - **Deposit of:** $0.00
 - **New balance:** $4,142.78
 - **Silver holdings:** 200g, 2.6oz
-- **Notes:** This went to PCBway to order the Lamoka1-DEV-Brain.
+- **Notes:** This went to PCBWay to order the Lamoka1-DEV-Brain.
 - **Transaction was made on:** 07/16/2026
 
 ---
@@ -492,7 +492,7 @@
 - **Deposit of:** $0.00
 - **New balance:** $4,142.41
 - **Silver holdings:** 200g, 2.6oz
-- **Notes:** This was an international routing fee from PCBway.
+- **Notes:** This was an international routing fee from PCBWay.
 - **Transaction was made on:** 07/16/2026
 
 ---
