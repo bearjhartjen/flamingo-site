@@ -92,7 +92,14 @@ def safe_upload_name(name: str) -> str:
 
 
 def live_base() -> str | None:
-    """Public GitHub Pages URL derived from the origin remote, if any."""
+    """Public URL of the published site: the custom domain when site/CNAME
+    exists, otherwise the GitHub Pages project URL from the origin remote."""
+    try:
+        cname = (SITE / "CNAME").read_text(encoding="utf-8").strip()
+        if cname and re.fullmatch(r"[A-Za-z0-9.-]+\.[A-Za-z]{2,}", cname):
+            return f"https://{cname}/"
+    except OSError:
+        pass
     try:
         out = subprocess.run(
             ["git", "config", "--get", "remote.origin.url"], cwd=str(ROOT),

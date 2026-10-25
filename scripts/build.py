@@ -10,10 +10,13 @@ Stdlib only. Idempotent: same inputs produce byte-identical output.
 Layout:
     data/site.json      settings (title, tagline, footer, theme) + page list
     data/pages/<slug>.html   one sanitized HTML fragment per page
+    data/The Flank.md   the ledger, synced from ~/Desktop/The Flank.md
     assets/logo.png     masthead logo (embedded as a data URI, like Flank)
     assets/uploads/     pictures dropped into pages (copied to site/uploads/)
     scripts/build.py    this script (also owns the HTML sanitizer)
-    site/               output: one .html per page, 404.html, favicon.png
+    scripts/build_flank.py  the hidden ledger generator (site/flank/)
+    site/               output: one .html per page, 404.html, favicon.png,
+                        CNAME, plus the unlisted flank/ directory
 """
 
 import argparse
@@ -22,6 +25,7 @@ import html
 import json
 import re
 import shutil
+import sys
 import tempfile
 from html.parser import HTMLParser
 from pathlib import Path
@@ -32,6 +36,10 @@ DEFAULT_PAGES = ROOT / "data" / "pages"
 DEFAULT_LOGO = ROOT / "assets" / "logo.png"
 DEFAULT_UPLOADS = ROOT / "assets" / "uploads"
 DEFAULT_OUT = ROOT / "site"
+
+# Custom domain for the published site. Written to site/CNAME on every
+# build so the domain survives rebuilds and gh-pages publishes.
+CUSTOM_DOMAIN = "flamingoandcactus.com"
 
 THEMES = ("classic", "parchment", "ink")
 SLUG_RE = re.compile(r"^[a-z0-9-]{1,40}$")
@@ -182,7 +190,12 @@ def _clean_href(href: str) -> str | None:
     h = (href or "").strip()
     if h.startswith(("http://", "https://", "mailto:", "#", "/")):
         return h
-    if re.fullmatch(r"[A-Za-z0-9_.-]+\.html", h):
+    # Plain page links (index.html) and one-or-more-level relative subpage
+    # links (flank/index.html). No "..", spaces, quotes or colons, so no
+    # directory escape and no scheme smuggling (javascript:, data:, ...).
+    if ".." in h:
+        return None
+    if re.fullmatch(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.html", h):
         return h
     return None
 
@@ -601,6 +614,7 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     (out_dir / "404.html").write_text(nf, encoding="utf-8")
     shutil.copyfile(logo_path, out_dir / "favicon.png")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
+    (out_dir / "CNAME").write_text(CUSTOM_DOMAIN + "\n", encoding="utf-8")
 
     site_uploads = out_dir / "uploads"
     if site_uploads.exists():
@@ -611,6 +625,18 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
             site_uploads.mkdir(parents=True, exist_ok=True)
             for f in files:
                 shutil.copyfile(f, site_uploads / f.name)
+
+    # The hidden ledger: data/The Flank.md -> site/flank/. Unlisted (not in
+    # the nav, not in site.json) — the Financials page button is the only
+    # link to it. Skipped with a warning when the ledger is absent so the
+    # main pages still build.
+    ledger_path = data_path.parent / "The Flank.md"
+    if ledger_path.is_file():
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import build_flank
+        build_flank.build(ledger_path, logo_path, out_dir / "flank")
+    else:
+        print(f"warning: ledger not found, skipping flank/: {ledger_path}")
 
     print(f"wrote {len(site['pages'])} page(s) to {out_dir}")
     return site
@@ -764,11 +790,40 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "sanitizer keeps new-tab buttons")
         notab = sanitize('<a href="https://example.com/x" target="_self">Hi</a>')
         expect("target=" not in notab, "sanitizer drops non-blank targets")
+        sub = sanitize('<p class="ac"><a href="flank/index.html" class="btn">The Flank</a></p>')
+        expect('href="flank/index.html"' in sub, "sanitizer keeps relative subpage links")
+        for bad_href in ("../secret.html", "flank/../../etc/passwd",
+                         "javascript:alert(1)", "data:text/html,hi"):
+            bad = sanitize(f'<a href="{bad_href}">Hi</a>')
+            expect("href=" not in bad and "Hi" in bad,
+                   f"sanitizer drops hostile href {bad_href}")
+        expect((tmp / "CNAME").read_text(encoding="utf-8").strip() == CUSTOM_DOMAIN,
+               "CNAME carries the custom domain")
+        flank_idx = tmp / "flank" / "index.html"
+        flank_about = tmp / "flank" / "about.html"
+        expect(flank_idx.is_file(), "site/flank/index.html built")
+        expect(flank_about.is_file(), "site/flank/about.html built")
+        if flank_idx.is_file():
+            flank_html = flank_idx.read_text(encoding="utf-8")
+            expect('href="../index.html"' in flank_html,
+                   "ledger links back to the main site relatively")
+            expect("bearjhartjen.github.io/Flank-ledger" not in flank_html,
+                   "ledger has no links to the old standalone site")
+            expect("const TX = [" in flank_html, "ledger embeds the transaction data")
+        if "sitenav" in idx:
+            nav_block = idx.split('<nav class="sitenav">')[1].split("</nav>")[0]
+            expect("flank" not in nav_block,
+                   "ledger stays out of the nav (unlisted page)")
         if not ok:
             raise SystemExit("check FAILED")
         print(f"check passed in {tmp}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+    # The ledger generator's own checks run against the real ledger.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import build_flank
+    build_flank.check(data_path.parent / "The Flank.md", logo_path)
 
 
 def main(argv=None):

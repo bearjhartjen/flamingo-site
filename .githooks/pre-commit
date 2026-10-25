@@ -20,7 +20,22 @@ BUILD="$ROOT/scripts/build.py"
 SITE="$ROOT/site"
 DATA="$ROOT/data"
 
-# 1. Rebuild the site. A failed build aborts the commit so a broken site is
+# 0. Sync the ledger. The authoritative copy lives on the Desktop, outside
+#    the repo; copy it in when it differs so one commit always carries the
+#    ledger and the matching site/flank/ build.
+SRC="$HOME/Desktop/The Flank.md"
+DST="$ROOT/data/The Flank.md"
+if [ -f "$SRC" ]; then
+  if [ ! -f "$DST" ] || ! cmp -s "$SRC" "$DST"; then
+    mkdir -p "$(dirname "$DST")"
+    cp "$SRC" "$DST"
+    printf 'pre-commit: synced "%s" -> data/The Flank.md\n' "$SRC"
+  fi
+else
+  printf 'pre-commit: "%s" not found; skipping ledger sync.\n' "$SRC"
+fi
+
+# 1. Rebuild the site (main pages plus site/flank/). A failed build aborts
 #    never published. (A missing build.py is a setup gap, not a build error,
 #    so it is reported and skipped rather than failing every commit.)
 if [ -f "$BUILD" ]; then
