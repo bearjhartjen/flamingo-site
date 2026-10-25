@@ -28,6 +28,10 @@
     {
       "slug": "events",
       "nav": "EVENTS"
+    },
+    {
+      "slug": "contact",
+      "nav": "Contact"
     }
   ]
 }
