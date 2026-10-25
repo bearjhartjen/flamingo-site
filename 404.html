@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found &mdash; Flamingo &amp; Cactus</title>
 <style>
   :root{
@@ -43,7 +44,6 @@
     background:var(--paper);
     color:var(--ink);
     font:16px/1.6 Georgia,"Times New Roman",Times,serif;
-    min-width:1120px;
     -webkit-font-smoothing:antialiased;
   }
   .page{max-width:860px;margin:0 auto;padding:26px 28px 64px}
@@ -138,6 +138,27 @@
   footer{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
+  }
+  img{max-width:100%;height:auto}
+  /* ---------- small screens: same site, reshaped ---------- */
+  @media (max-width:700px){
+    body{font-size:15px}
+    .page{padding:16px 14px 48px}
+    .masthead img{width:72px;height:72px}
+    h1{font-size:24px;letter-spacing:1.5px}
+    .tagline{font-size:13px}
+    nav.sitenav{font-size:11px}
+    nav.sitenav a{margin:0 7px}
+    .star-badge{top:12px;left:auto;right:10px;width:104px;height:104px}
+    .star-badge .star-title{font-size:9px;max-width:62%}
+    .star-badge .star-sub{display:none}
+    .canvas img.small{width:140px}
+    .canvas img.medium{width:100%}
+    .canvas .t-giant{font-size:26px;line-height:1.25}
+    .canvas .t-huge{font-size:22px}
+    .canvas .gallery{flex-direction:column}
+    .canvas .gallery img{width:100%}
+    .canvas .card{padding:14px 14px}
   }
 
 </style>

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flamingo and Cactus &mdash; Flamingo &amp; Cactus</title>
 <style>
   :root{
@@ -43,7 +44,6 @@
     background:var(--paper);
     color:var(--ink);
     font:16px/1.6 Georgia,"Times New Roman",Times,serif;
-    min-width:1120px;
     -webkit-font-smoothing:antialiased;
   }
   .page{max-width:860px;margin:0 auto;padding:26px 28px 64px}
@@ -139,6 +139,27 @@
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
   }
+  img{max-width:100%;height:auto}
+  /* ---------- small screens: same site, reshaped ---------- */
+  @media (max-width:700px){
+    body{font-size:15px}
+    .page{padding:16px 14px 48px}
+    .masthead img{width:72px;height:72px}
+    h1{font-size:24px;letter-spacing:1.5px}
+    .tagline{font-size:13px}
+    nav.sitenav{font-size:11px}
+    nav.sitenav a{margin:0 7px}
+    .star-badge{top:12px;left:auto;right:10px;width:104px;height:104px}
+    .star-badge .star-title{font-size:9px;max-width:62%}
+    .star-badge .star-sub{display:none}
+    .canvas img.small{width:140px}
+    .canvas img.medium{width:100%}
+    .canvas .t-giant{font-size:26px;line-height:1.25}
+    .canvas .t-huge{font-size:22px}
+    .canvas .gallery{flex-direction:column}
+    .canvas .gallery img{width:100%}
+    .canvas .card{padding:14px 14px}
+  }
 
 </style>
 </head>
@@ -160,7 +181,7 @@
   <div class="hr"></div>
 
   <div class="canvas">
-<h2 class="t-giant">Latest and greatest</h2><p>This is a hidden page. Only clicking the star will get you here.</p><div class="card"><h2>Current works</h2><p>We&#x27;ve placed the orders to get the Lamoka1/2 unit built for the upcoming </p></div>
+<h2 class="t-giant">Latest and greatest</h2><p>This is a hidden page. Only clicking the star will get you here.</p><div class="card"><h2>Headline </h2><p>We&#x27;ve placed the orders to get the Lamoka1/2 unit built for the upcoming <a href="events.html">craft fair</a>.</p></div>
   </div>
 </div>
 <script>/* star-warp: spin into a fullscreen whirlpool, then land. Arrival plays in reverse. */(function(){try{var flag='fcWarp';if(sessionStorage.getItem(flag)){sessionStorage.removeItem(flag);document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive')},900);}var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('a.star-badge'):null;if(!a||!a.getAttribute('href'))return;var href=a.getAttribute('href');if(href.charAt(0)==='#')return;e.preventDefault();if(instant){window.location.href=href;return;}try{sessionStorage.setItem(flag,'1')}catch(_){}a.classList.add('warp');document.body.classList.add('warping');setTimeout(function(){window.location.href=href},950);});}catch(_){}})();</script></body>
