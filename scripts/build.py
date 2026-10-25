@@ -67,6 +67,8 @@ def load_site(path: Path) -> dict:
         entry = {"slug": slug, "nav": str(p.get("nav", slug))[:60] or slug}
         if p.get("hidden"):
             entry["hidden"] = True
+        if p.get("form"):
+            entry["form"] = True
         clean_pages.append(entry)
     if "index" not in seen:
         clean_pages.insert(0, {"slug": "index", "nav": "Home"})
@@ -527,6 +529,15 @@ CSS = r'''  :root{
   body.arrive .page{animation:pagesettle .8s cubic-bezier(.2,1.4,.4,1)}
   @keyframes pagesettle{from{transform:scale(.9)}to{transform:scale(1)}}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
+  .contactform{max-width:560px;margin:26px auto 0;padding:20px 22px;border:1px solid var(--rule);border-radius:4px;background:var(--paper2)}
+  .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
+  .contactform label:first-of-type{margin-top:0}
+  .contactform .sub{display:block;font:italic 12px Georgia,serif;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:3px}
+  .contactform input[type=text],.contactform input[type=email],.contactform input[type=tel],.contactform textarea{display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:9px 10px;margin:0}
+  .contactform textarea{min-height:120px;resize:vertical}
+  .contactform input:focus,.contactform textarea:focus{outline:2px solid var(--link);outline-offset:-1px;border-color:var(--link)}
+  .contactform button{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
+  .contactform button:hover{opacity:.85}
   footer{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
@@ -569,12 +580,49 @@ CSS = r'''  :root{
     .canvas .gallery{flex-direction:column}
     .canvas .gallery img{width:100%}
     .canvas .card{padding:14px 14px}
+    .contactform{margin:22px 0 0;padding:16px 14px}
   }
 '''
 
 
 STAR_TITLE = "Latest and greatest"
 STAR_SUB = "Click me"
+
+# Inbox for the contact form. Submissions POST here and FormSubmit forwards
+# them to this address (first submission needs a one-time activation click
+# in the email FormSubmit sends). The address is already printed in plain
+# text on the contact page, so the form exposes nothing new.
+CONTACT_EMAIL = "flamingoncactusgroup@gmail.com"
+
+CONTACT_FORM_HTML = (
+  '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST">\n'
+  '  <input type="hidden" name="_subject" value="New message from the Flamingo and Cactus contact form">\n'
+  '  <input type="hidden" name="_template" value="table">\n'
+  '  <input type="text" name="_honey" style="display:none">\n'
+  '  <label for="cf-name">Your name<span class="sub">You can put &quot;Random&quot; if you would rather not say who you are.</span></label>\n'
+  '  <input type="text" id="cf-name" name="name" required maxlength="120" autocomplete="name" placeholder="e.g. Random">\n'
+  '  <label for="cf-contact">Email or phone<span class="sub">Optional &mdash; only if you want a reply.</span></label>\n'
+  '  <input type="text" id="cf-contact" name="contact" maxlength="160" autocomplete="email" placeholder="Optional">\n'
+  '  <label for="cf-note">Note</label>\n'
+  '  <textarea id="cf-note" name="note" required maxlength="5000" placeholder="Anything you want us to know&hellip;"></textarea>\n'
+  '  <button type="submit">Send it our way</button>\n'
+  "</form>"
+)
+
+
+def place_form(body_html: str, form_html: str) -> tuple:
+    """Swap a `[contact form]` marker paragraph for the form.
+
+    Returns (canvas_inner, leftover): when no marker matches, the canvas is
+    untouched and the form comes back as leftover so the caller can render
+    it after the canvas instead. The marker is plain page text, so it
+    survives the sanitizer and normal editing.
+    """
+    placed, n = re.subn(r"<p[^>]*>\s*\[contact form\]\s*</p>",
+                        lambda _: form_html, body_html, count=1)
+    if n:
+        return placed, ""
+    return body_html, form_html
 
 
 def star_slug(pages):
@@ -608,7 +656,17 @@ def nav_html(pages, current: str) -> str:
 
 def render_page(title: str, tagline: str, footer: str, theme: str,
                 pages, slug: str, body_html: str, logo_uri: str) -> str:
-    canvas = f'  <div class="canvas">\n{body_html}\n  </div>\n' if body_html else ""
+    canvas = ""
+    form_block = ""
+    if any(p["slug"] == slug and p.get("form") for p in pages):
+        # `[contact form]` typed anywhere in the page body marks the spot;
+        # without it the form lands after the whole page body.
+        placed, leftover = place_form(body_html, CONTACT_FORM_HTML)
+        canvas = f'  <div class="canvas">\n{placed}\n  </div>\n' if placed else ""
+        if leftover:
+            form_block = f"  {leftover}\n"
+    elif body_html:
+        canvas = f'  <div class="canvas">\n{body_html}\n  </div>\n'
     footer_block = f'  <footer>\n{html.escape(footer)}\n  </footer>\n' if footer.strip() else ""
     return (
         "<!DOCTYPE html>\n"
@@ -632,6 +690,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         '  <div class="hr"></div>\n'
         "\n"
         f"{canvas}"
+        f"{form_block}"
         f"{footer_block}"
         "</div>\n"
         "<script>/* star-warp: supernova whirlpool. Click bursts the star, shakes the page, then spirals out. */"
@@ -780,6 +839,20 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "star burst: sparks, shake and spiral veil present")
         warp_scripts = idx.lower().count("<script")
         expect(warp_scripts == 1 and "star-warp" in idx.lower(), "only the star-warp script in built pages")
+        contact_built = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
+        if any(p.get("form") for p in site["pages"]):
+            expect('action="https://formsubmit.co/' in contact_built, "contact page posts to the form inbox")
+            expect('name="name"' in contact_built and 'name="note"' in contact_built, "contact form asks for name + note")
+            expect("&quot;Random&quot;" in contact_built, "contact form notes Random is fine")
+            expect('name="contact"' in contact_built, "contact form has one optional email-or-phone field")
+            expect('name="_honey"' in contact_built, "contact form carries a spam honeypot")
+            expect("formsubmit.co" not in idx, "form appears only on the flagged page, not home")
+            marked = render_page(site["title"], site["tagline"], site["footer"], site["theme"],
+                                 site["pages"], "contact", "<p>hi</p><p>[contact form]</p><p>bye</p>", "x")
+            expect("formsubmit.co" in marked and "[contact form]" not in marked,
+                   "marker paragraph swaps in the live form")
+            expect(marked.index("contactform") < marked.index("bye"),
+                   "marker puts the form where it was typed, not at the end")
         expect("onclick" not in idx.lower(), "no event-handler attributes in built page")
         expect('body[data-theme="parchment"]' in idx, "parchment theme CSS present")
         expect('body[data-theme="ink"]' in idx, "ink theme CSS present")

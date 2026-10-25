@@ -288,14 +288,6 @@ CSS = r'''  :root{
 
   /* ---------- lock ---------- */
   table.locked tr.priv td.notes{filter:blur(5px);user-select:none;pointer-events:none}
-  .lockveil{
-    display:none;text-align:center;font:13px/1.6 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
-    background:var(--paper2);
-    border:1px solid var(--rule);border-radius:2px;
-    padding:8px 12px;margin:0 0 10px;
-  }
-  table.locked + .lockveil{display:block}
-  @media print{.lockveil{display:none}}
   .lockbox{margin-top:20px;text-align:center;font:13px "Helvetica Neue",Arial,sans-serif;color:var(--muted)}
   .lockbox input{
     font:14px Georgia,serif;color:var(--ink);background:#fff;text-align:center;letter-spacing:3px;
@@ -445,7 +437,6 @@ __CSS__
     </thead>
     <tbody id="rows"></tbody>
   </table>
-    <div class="lockveil" id="lockveil">The notes on __PRIVCOUNT__ transactions are blurred &mdash; they name real people.<br>Enter the code below to reveal them.</div>
   </div>
 
   <div class="lockbox" id="lockbox">
@@ -1022,8 +1013,8 @@ __CSS__
 
     <h2>Why some transaction notes are blurred</h2>
     <p>Most of the ledger is public, but the notes on __PRIVCOUNT__ transactions
-    load blurred, because they name real people. A banner under the table says
-    so, and the code box below it reveals those notes for that browser tab only
+    load blurred, because they name real people. The code box below the table
+    reveals those notes for that browser tab only
     &mdash; a fresh visit locks them again. This keeps casual visitors out, not
     someone reading the page source &mdash; the ledger data is still embedded
     in the page.</p>
@@ -1132,9 +1123,8 @@ def check(data_path: Path, logo_path: Path):
         expect("jsSha256" in index_html, "index.html has a pure-JS SHA-256 fallback (works over plain HTTP)")
         expect("This browser cannot check the code" not in index_html,
                "index.html never refuses to check the code")
-        expect('id="lockveil"' in index_html, "index.html has the blur-explainer veil")
-        expect("they name real people" in index_html, "the veil says why the notes are blurred")
-        expect("table.locked + .lockveil" in index_html, "the veil shows only while locked")
+        expect('id="lockveil"' not in index_html, "index.html has no blur-explainer veil")
+        expect("lockveil" not in index_html, "no veil markup, styles or selectors left on the page")
         expect(logo_path.name == "logo-flank.png", "ledger uses the black logo, not the color masthead")
         expect("b6568e6a00d2bd0444c92d1de175744c3e55b539f116538f83e96aa4ba5aab58" in index_html, "index.html stores the code as a hash")
         expect("73774" not in index_html, "index.html never contains the code in plaintext")

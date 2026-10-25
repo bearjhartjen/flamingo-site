@@ -31,7 +31,8 @@
     },
     {
       "slug": "contact",
-      "nav": "Contact"
+      "nav": "Contact",
+      "form": true
     }
   ]
 }

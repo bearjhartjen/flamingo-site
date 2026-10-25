@@ -220,6 +220,15 @@ def editor_page(site: dict, slug: str, body: str, live: str | None) -> bytes:
     site = dict(site)
     site["live"] = live
     logo_uri = site_build.logo_data_uri(LOGO)
+    has_form = any(p.get("slug") == slug and p.get("form") for p in site.get("pages", []))
+    # Inert preview of the live form. It sits outside #canvas (Save only
+    # posts the canvas), and page switches toggle it in renderAll.
+    inert = ""
+    if has_form:
+        inert = ('<div id="formpreview" contenteditable="false">'
+                 + site_build.CONTACT_FORM_HTML.replace("<form ", "<form onsubmit=\"return false;\" ", 1)
+                 + "</div>")
+    canvas_body, form_leftover = site_build.place_form(body, inert) if has_form else (body, "")
     page = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -311,6 +320,7 @@ __CSS__
   <nav class="sitenav" id="nav"></nav>
   <div class="hr"></div>
   <div class="canvas" id="canvas">__BODY__</div>
+  __FORMPREVIEW__
   <div id="hint">Blank page — press Edit and start typing, use the toolbar for blocks, or drop a picture in.</div>
   <footer id="foot"></footer>
 </div>
@@ -391,6 +401,8 @@ function renderAll(){
   });
   const cur = SITE.pages.find(p => p.slug === SLUG);
   $("#pagename").textContent = cur ? cur.nav : SLUG;
+  const fp = document.getElementById("formpreview");
+  if (fp) fp.style.display = (cur && cur.form) ? "" : "none";
   $("#foot").textContent = SITE.footer || "";
   $("#foot").style.display = SITE.footer ? "" : "none";
   const hiddenPage = SITE.pages.find(p => p.hidden);
@@ -1120,7 +1132,8 @@ histReset();
     page = page.replace("__TITLE_ESC__", html.escape(site["title"]))
     page = page.replace("__TAGLINE_ESC__", html.escape(site["tagline"]))
     page = page.replace("__THEME__", site["theme"])
-    page = page.replace("__BODY__", body)
+    page = page.replace("__BODY__", canvas_body)
+    page = page.replace("__FORMPREVIEW__", form_leftover)
     page = page.replace("__SITE_JSON__", json.dumps(site, ensure_ascii=False).replace("<", "\\u003c"))
     page = page.replace("__SLUG__", slug)
     return page.encode("utf-8")
