@@ -143,15 +143,27 @@
   /* ---------- small screens: same site, reshaped ---------- */
   @media (max-width:700px){
     body{font-size:15px}
-    .page{padding:16px 14px 48px}
+    .page{padding:16px 14px 48px;overflow-x:hidden}
     .masthead img{width:72px;height:72px}
-    h1{font-size:24px;letter-spacing:1.5px}
+    h1{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
     .tagline{font-size:13px}
-    nav.sitenav{font-size:11px}
-    nav.sitenav a{margin:0 7px}
-    .star-badge{top:12px;left:auto;right:10px;width:104px;height:104px}
-    .star-badge .star-title{font-size:9px;max-width:62%}
+    nav.sitenav{
+      display:flex;flex-wrap:wrap;justify-content:center;gap:2px 4px;
+      font-size:11px;line-height:2.1;
+    }
+    nav.sitenav a,nav.sitenav .cur{margin:0 8px;white-space:nowrap}
+    .star-badge{top:10px;left:10px;right:auto;width:104px;height:104px}
+    .star-badge .star-title{font-size:7px;max-width:62%;line-height:1.3;letter-spacing:.5px}
     .star-badge .star-sub{display:none}
+    .canvas{overflow-wrap:break-word}
+    .canvas *{overflow-wrap:anywhere}
+    /* giant inline titles (the toolbar writes up to 200px) stay dramatic
+       on phones instead of running off the screen */
+    .canvas [style*="font-size:4"],.canvas [style*="font-size:5"],
+    .canvas [style*="font-size:6"],.canvas [style*="font-size:7"],
+    .canvas [style*="font-size:8"],.canvas [style*="font-size:9"]{
+      font-size:min(11vw,40px) !important;line-height:1.15;
+    }
     .canvas img.small{width:140px}
     .canvas img.medium{width:100%}
     .canvas .t-giant{font-size:26px;line-height:1.25}
@@ -181,7 +193,7 @@
   <div class="hr"></div>
 
   <div class="canvas">
-<p class="ac"><span style="font-size:96px"><b><u>The Lamoka1/2</u></b></span></p><p>This is Flamingo &amp; Cactuses biggest and most advanced product yet, it will take a 11-14V input (Voltage divider on AIN0 feeds voltage level to our RP2354A MCU through the ADS7128), pass it all through a 2mΩ shunt (RCS1 feeding current data to our RP2354A MCU via a INA240A2DR component to AIN4) This CSP rail will go to a buck converter for our 5V rail (TPS62160DSGR) which powers the units fan and gets stepped down to 3v3 (AMS1117-3.3) for control components. Alongside 5V the CSP rail goes to a boost converter circuit controlled by an LM5122 (LM5122MHX/NOPB running its own current through a second 2mΩ Rsense1), this steps up to 21.75V (Voltage divider on AIN1 feeds voltage level to MCU through the ADS7128, set by 64.9k/3.79k), then that goes to a high current H-bridge (4x CSD19536KCS FETs driven from GPIO1-4 through 2x UCC27735 drivers, midpoints read back on AIN2/AIN3) which drives the 12V winding of our off-board VPT24-6670 transformer on BLUE/BROWN and comes out as 120V RMS AC on BLACK/RED to the outlet.</p><p><br></p><p style="font-size:15px"><span style="font-size:25px"><span style="font-size:96px"><b><u><br></u></b></span></span></p><p><b><u><br></u></b></p>
+<p class="ac"><span style="font-size:96px"><b><u>The Lamoka1/2</u></b></span></p><p>This is Flamingo &amp; Cactuses biggest and most advanced product yet, it will take a 11-14V input (Voltage divider on AIN0 feeds voltage level to our RP2354A MCU through the ADS7128), pass it all through a 2mΩ shunt (RCS1 feeding current data to our RP2354A MCU via a INA240A2DR component to AIN4) This CSP rail will go to a buck converter for our 5V rail (TPS62160DSGR) which powers the units fan and gets stepped down to 3v3 (AMS1117-3.3) for control components. Alongside 5V the CSP rail goes to a boost converter circuit controlled by an LM5122 (LM5122MHX/NOPB running its own current through a second 2mΩ Rsense1), this steps up to 21.75V (Voltage divider on AIN1 feeds voltage level to MCU through the ADS7128, set by 64.9k/3.79k), then that goes to a high current H-bridge (4x CSD19536KCS FETs driven from GPIO1-4 through 2x UCC27735 drivers, midpoints read back on AIN2/AIN3) which drives the 12V winding of our off-board VPT24-6670 transformer on BLUE/BROWN and comes out as 120V RMS AC on BLACK/RED to the outlet.</p>
   </div>
 </div>
 <script>/* star-warp: spin into a fullscreen whirlpool, then land. Arrival plays in reverse. */(function(){try{var flag='fcWarp';if(sessionStorage.getItem(flag)){sessionStorage.removeItem(flag);document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive')},900);}var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('a.star-badge'):null;if(!a||!a.getAttribute('href'))return;var href=a.getAttribute('href');if(href.charAt(0)==='#')return;e.preventDefault();if(instant){window.location.href=href;return;}try{sessionStorage.setItem(flag,'1')}catch(_){}a.classList.add('warp');document.body.classList.add('warping');setTimeout(function(){window.location.href=href},950);});}catch(_){}})();</script></body>

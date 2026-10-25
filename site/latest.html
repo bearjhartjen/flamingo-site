@@ -143,15 +143,27 @@
   /* ---------- small screens: same site, reshaped ---------- */
   @media (max-width:700px){
     body{font-size:15px}
-    .page{padding:16px 14px 48px}
+    .page{padding:16px 14px 48px;overflow-x:hidden}
     .masthead img{width:72px;height:72px}
-    h1{font-size:24px;letter-spacing:1.5px}
+    h1{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
     .tagline{font-size:13px}
-    nav.sitenav{font-size:11px}
-    nav.sitenav a{margin:0 7px}
-    .star-badge{top:12px;left:auto;right:10px;width:104px;height:104px}
-    .star-badge .star-title{font-size:9px;max-width:62%}
+    nav.sitenav{
+      display:flex;flex-wrap:wrap;justify-content:center;gap:2px 4px;
+      font-size:11px;line-height:2.1;
+    }
+    nav.sitenav a,nav.sitenav .cur{margin:0 8px;white-space:nowrap}
+    .star-badge{top:10px;left:10px;right:auto;width:104px;height:104px}
+    .star-badge .star-title{font-size:7px;max-width:62%;line-height:1.3;letter-spacing:.5px}
     .star-badge .star-sub{display:none}
+    .canvas{overflow-wrap:break-word}
+    .canvas *{overflow-wrap:anywhere}
+    /* giant inline titles (the toolbar writes up to 200px) stay dramatic
+       on phones instead of running off the screen */
+    .canvas [style*="font-size:4"],.canvas [style*="font-size:5"],
+    .canvas [style*="font-size:6"],.canvas [style*="font-size:7"],
+    .canvas [style*="font-size:8"],.canvas [style*="font-size:9"]{
+      font-size:min(11vw,40px) !important;line-height:1.15;
+    }
     .canvas img.small{width:140px}
     .canvas img.medium{width:100%}
     .canvas .t-giant{font-size:26px;line-height:1.25}
