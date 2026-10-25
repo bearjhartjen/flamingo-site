@@ -152,13 +152,12 @@
   .empty-msg{color:var(--muted);text-align:center;padding:26px;font-style:italic}
 
   /* ---------- lock ---------- */
-  table.locked td.notes{filter:blur(5px);user-select:none;pointer-events:none}
+  table.locked tr.priv td.notes{filter:blur(5px);user-select:none;pointer-events:none}
   .lockveil{
-    display:none;position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
-    text-align:center;font:13px/1.6 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
-    background:rgba(255,255,255,.9);
-    border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
-    padding:10px 12px;pointer-events:none;
+    display:none;text-align:center;font:13px/1.6 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
+    background:var(--paper2);
+    border:1px solid var(--rule);border-radius:2px;
+    padding:8px 12px;margin:0 0 10px;
   }
   table.locked + .lockveil{display:block}
   @media print{.lockveil{display:none}}
@@ -267,7 +266,9 @@
     <p>The silver spot flag at the top of the ledger page and the approximate
     value under Silver Holdings are fetched live in the browser from the free
     public feed at <code>api.gold-api.com</code> (no key, XAG/USD per troy
-    ounce), refreshed about once a minute. If the feed cannot be reached, the
+    ounce), refreshed about once a minute. The flag also stamps the time of
+    the last successful refresh, so it reads as alive even while the price
+    sits on one cent. If the feed cannot be reached, the
     page shows the last price it saw and says so.</p>
 
     <h2>The rest of the page</h2>
@@ -279,12 +280,13 @@
     as-is, for example from GitHub Pages. Only the live silver spot flag needs
     a connection; without one it shows the last price seen.</p>
 
-    <h2>Why the notes are blurred</h2>
-    <p>Only the Notes column loads blurred, because it names real people. A
-    banner across the table says so, and the code box below it reveals the
-    notes for that browser tab only — a fresh visit locks it again. This
-    keeps casual visitors out, not someone reading the page source &mdash;
-    the ledger data is still embedded in the page.</p>
+    <h2>Why some transaction notes are blurred</h2>
+    <p>Most of the ledger is public, but the notes on 26 transactions
+    load blurred, because they name real people. A banner under the table says
+    so, and the code box below it reveals those notes for that browser tab only
+    &mdash; a fresh visit locks them again. This keeps casual visitors out, not
+    someone reading the page source &mdash; the ledger data is still embedded
+    in the page.</p>
   </div>
 
   <footer>
