@@ -567,7 +567,7 @@ CSS = r'''  :root{
   .gem-badge .gem-title{display:block;max-width:80%;font:700 13px/1.4 "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase}
   @media (max-width:1250px){.gem-badge{top:20px;left:auto;right:56px}}
   @media print{.gem-badge{display:none}}
-  .star-badge.warp,.gem-badge.warp{animation:starwarp 1.05s cubic-bezier(.5,-0.1,.7,.4) forwards;z-index:1001}
+  .star-badge.warp,.gem-badge.warp{animation:starwarp 1.05s cubic-bezier(.5,-0.1,.7,.4) forwards;z-index:1001;will-change:transform}
   @keyframes starwarp{
     0%{transform:scale(1) rotate(0)}
     25%{transform:scale(1.6) rotate(200deg)}
@@ -592,9 +592,9 @@ CSS = r'''  :root{
   @keyframes fxring{to{transform:scale(60);opacity:0}}
   #fx .spark{position:absolute;left:var(--fx-x,50%);top:var(--fy,30%);width:10px;height:10px;margin:-5px;background:linear-gradient(135deg,#f7e08b,#c9a227);clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);animation:fxspark .75s cubic-bezier(.2,.7,.3,1) forwards}
   @keyframes fxspark{to{transform:translate(var(--dx),var(--dy)) rotate(540deg) scale(.2);opacity:0}}
-  body.warping::after{content:"";position:fixed;left:50%;top:50%;width:220vmax;height:220vmax;margin:-110vmax;z-index:1002;pointer-events:none;background:repeating-conic-gradient(from 0deg,#c9a227 0deg 10deg,#8a6a0f 10deg 20deg,#f3d97b 20deg 26deg);opacity:0;animation:veilspin 1s ease-in forwards}
+  body.warping::after{content:"";position:fixed;left:50%;top:50%;width:150vmax;height:150vmax;margin:-75vmax;z-index:1002;pointer-events:none;background:repeating-conic-gradient(from 0deg,#c9a227 0deg 10deg,#8a6a0f 10deg 20deg,#f3d97b 20deg 26deg);opacity:0;animation:veilspin 1s ease-in forwards}
   @keyframes veilspin{0%{opacity:0;transform:rotate(0) scale(.12)}35%{opacity:1}100%{opacity:1;transform:rotate(540deg) scale(1)}}
-  body.arrive::before{content:"";position:fixed;left:50%;top:50%;width:220vmax;height:220vmax;margin:-110vmax;z-index:998;pointer-events:none;background:repeating-conic-gradient(from 0deg,#c9a227 0deg 10deg,#8a6a0f 10deg 20deg,#f3d97b 20deg 26deg);animation:veilout .8s ease-out forwards}
+  body.arrive::before{content:"";position:fixed;left:50%;top:50%;width:150vmax;height:150vmax;margin:-75vmax;z-index:998;pointer-events:none;background:repeating-conic-gradient(from 0deg,#c9a227 0deg 10deg,#8a6a0f 10deg 20deg,#f3d97b 20deg 26deg);animation:veilout .8s ease-out forwards}
   @keyframes veilout{from{opacity:1;transform:rotate(540deg) scale(1)}to{opacity:0;transform:rotate(900deg) scale(.12);visibility:hidden}}
   body.arrive .page{animation:pagesettle .8s cubic-bezier(.2,1.4,.4,1)}
   @keyframes pagesettle{from{transform:scale(.9)}to{transform:scale(1)}}
@@ -610,7 +610,7 @@ CSS = r'''  :root{
   .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
   .contactform label:first-of-type{margin-top:0}
   .contactform .sub{display:block;font:italic 12px Georgia,serif;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:3px}
-  .contactform input[type=text],.contactform input[type=email],.contactform input[type=tel],.contactform textarea{display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:9px 10px;margin:0}
+  .contactform input[type=text],.contactform input[type=email],.contactform input[type=tel],.contactform input[type=file],.contactform textarea{display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:9px 10px;margin:0}
   .contactform textarea{min-height:120px;resize:vertical}
   .contactform input:focus,.contactform textarea:focus{outline:2px solid var(--link);outline-offset:-1px;border-color:var(--link)}
   .contactform button{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
@@ -624,6 +624,7 @@ CSS = r'''  :root{
   @media (max-width:700px){
     body{font-size:15px}
     .page{padding:16px 14px 48px;overflow-x:hidden}
+    .masthead{padding-top:140px}
     .masthead img{width:72px;height:72px}
     h1{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
     .tagline{font-size:13px}
@@ -687,7 +688,7 @@ STAR_SUB = "Click me"
 CONTACT_EMAIL = "flamingoncactusgroup@gmail.com"
 
 CONTACT_FORM_HTML = (
-  '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST">\n'
+  '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
   '  <input type="hidden" name="_subject" value="New message from the Flamingo and Cactus contact form">\n'
   '  <input type="hidden" name="_template" value="table">\n'
   '  <input type="text" name="_honey" style="display:none">\n'
@@ -697,6 +698,8 @@ CONTACT_FORM_HTML = (
   '  <input type="text" id="cf-contact" name="contact" maxlength="160" autocomplete="email" placeholder="Optional">\n'
   '  <label for="cf-note">Note</label>\n'
   '  <textarea id="cf-note" name="note" required maxlength="5000" placeholder="Anything you want us to know&hellip;"></textarea>\n'
+  '  <label for="cf-photo">Photo<span class="sub">Optional — a picture of what you are describing (under 10 MB).</span></label>\n'
+  '  <input type="file" id="cf-photo" name="attachment" accept="image/*">\n'
   '  <button type="submit">Send it our way</button>\n'
   "</form>"
 )
@@ -846,7 +849,8 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "var fl=document.createElement('div');fl.className='flash';fx.appendChild(fl);"
         "var i,ring,spark,ang,dist,sz;"
         "for(i=0;i<2;i++){ring=document.createElement('div');ring.className='ring'+(i?' r2':'');fx.appendChild(ring);}"
-        "for(i=0;i<14;i++){spark=document.createElement('div');spark.className='spark';"
+        "var nSpark=window.innerWidth<700?7:14;"
+        "for(i=0;i<nSpark;i++){spark=document.createElement('div');spark.className='spark';"
         "ang=Math.random()*Math.PI*2;dist=90+Math.random()*220;"
         "spark.style.setProperty('--dx',Math.cos(ang)*dist+'px');"
         "spark.style.setProperty('--dy',Math.sin(ang)*dist+'px');"
@@ -881,9 +885,6 @@ __CSS__
     <p class="tagline">Flamingo &amp; Cactus Group</p>
   </div>
   <div class="hr"></div>
-  <div class="canvas">
-<p class="ac">That page does not exist.</p><p class="ac"><a href="/" class="btn">Back to the front page</a></p>
-  </div>
 </div>
 </body>
 </html>
