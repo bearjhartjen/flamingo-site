@@ -64,6 +64,8 @@
     font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;
     text-transform:uppercase;color:var(--faint);
   }
+  a.spotflag{text-decoration:none;color:inherit;display:block}
+  a.spotflag:hover #spotflag-txt{text-decoration:underline}
   .spotflag .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#1c6b3a;margin-right:6px;vertical-align:1px}
   .spotflag.off .dot{background:var(--down)}
   .spotflag.old .dot{background:var(--faint)}
@@ -169,6 +171,7 @@
     text-transform:uppercase;color:var(--ink2);margin:26px 0 6px;
   }
   .prose p{margin:0 0 12px;color:var(--ink2)}
+  .prose a{color:var(--link)}
   .prose code{
     font:12.5px Consolas,"Liberation Mono",Menlo,monospace;
     background:var(--paper2);border:1px solid var(--rule2);border-radius:2px;padding:1px 4px;
@@ -257,7 +260,7 @@
     <h2>Where the live silver price comes from</h2>
     <p>The silver spot flag at the top of the ledger page and the approximate
     value under Silver Holdings are fetched live in the browser from the free
-    public feed at <code>api.gold-api.com</code> (no key, XAG/USD per troy
+    public feed at <a href="https://gold-api.com/">api.gold-api.com</a> (no key, XAG/USD per troy
     ounce), refreshed about once a minute. The flag also stamps the time of
     the last successful refresh, so it reads as alive even while the price
     sits on one cent. If the feed cannot be reached, the
