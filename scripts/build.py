@@ -137,7 +137,7 @@ def _clean_color(style: str | None) -> str | None:
 # one-decimal number of pixels in the inclusive range 8-200, with a literal
 # `px` suffix. Anything else (em/%/rem/ex, url(), expression(), quotes,
 # braces, huge numbers) is rejected so no CSS escape hatch survives.
-SIZE_VALUE_RE = re.compile(r"\d+(?:\.\d)?px")
+SIZE_VALUE_RE = re.compile(r"\d+(?:\.\d{1,2})?px", re.IGNORECASE)
 
 
 def _clean_size(style: str | None) -> str | None:
@@ -160,13 +160,17 @@ def _clean_size(style: str | None) -> str | None:
             continue
         if not SIZE_VALUE_RE.fullmatch(v):
             continue
-        n, _, frac = v[:-2].partition(".")  # strip the literal `px`
-        tens = int(n) * 10 + (int(frac) if frac else 0)
-        if not 80 <= tens <= 2000:  # 8px to 200px, inclusive
+        num_part = v[:-2]  # strip the literal `px` (any case)
+        try:
+            px = float(num_part)
+        except ValueError:
             continue
-        if frac and frac != "0":
-            return f"{int(n)}.{frac}px"
-        return f"{int(n)}px"
+        if not (8 <= px <= 200):  # 8px to 200px, inclusive
+            continue
+        if px == int(px):
+            return f"{int(px)}px"
+        s2 = f"{px:.2f}".rstrip("0").rstrip(".")
+        return s2 + "px"
     return None
 
 
@@ -188,13 +192,21 @@ def _style_attr(style: str | None) -> str:
 
 def _clean_href(href: str) -> str | None:
     h = (href or "").strip()
-    if h.startswith(("http://", "https://", "mailto:", "#", "/")):
-        return h
-    # Plain page links (index.html) and one-or-more-level relative subpage
-    # links (flank/index.html). No "..", spaces, quotes or colons, so no
-    # directory escape and no scheme smuggling (javascript:, data:, ...).
+    # Reject traversal up front, before any allowlist branch.
     if ".." in h:
         return None
+    if h.startswith(("http://", "https://", "mailto:")):
+        return h
+    if h.startswith("#"):
+        return h
+    # Absolute paths: only safe page paths (no empty segments, no "//").
+    if h.startswith("/"):
+        if h.startswith("//"):
+            return None
+        if h == "/" or re.fullmatch(r"/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.html", h):
+            return h
+        return None
+    # Plain page links (index.html) and relative subpage links (flank/index.html).
     if re.fullmatch(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.html", h):
         return h
     return None
@@ -212,12 +224,17 @@ class _Sanitize(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.out: list[str] = []
         self.open: list[str] = []
+        # parallel to self.open: the original source tag for each emitted
+        # element, so a close tag can be matched to its emitted counterpart
+        # even when the tag was remapped (e.g. a plain <div> emitted as <p>)
+        self.source_stack: list[str] = []
         # one entry per <span> start: True when the tag itself was emitted,
         # False when it was dropped for having no kept class (children stay)
         self.span_open: list[bool] = []
         self.drop_depth = 0
 
     def handle_starttag(self, tag, attrs):
+        orig = tag.lower()
         tag = tag.lower()
         if tag in DROP_WITH_CONTENT:
             self.drop_depth += 1
@@ -306,6 +323,7 @@ class _Sanitize(HTMLParser):
             self.out.append(f"<{tag}{extra}>")
         if tag != "span":
             self.open.append(tag)
+            self.source_stack.append(orig)
 
     def handle_endtag(self, tag):
         tag = tag.lower()
@@ -314,17 +332,27 @@ class _Sanitize(HTMLParser):
             return
         if self.drop_depth:
             return
-        if tag == "div":
-            tag = "div"  # matches the gallery div kept above
         if tag == "span":
             # closes the matching <span> start; </span> is emitted only when
             # the start tag itself was kept (see handle_starttag)
             if self.span_open and self.span_open.pop():
                 self.out.append("</span>")
             return
-        if tag in ALLOWED_TAGS and tag not in ("br", "hr", "img") and tag in self.open:
-            self.open.remove(tag)
-            self.out.append(f"</{tag}>")
+        # Match by the original source tag so remapped elements (e.g. a plain
+        # <div> emitted as <p>) close with the tag that was actually emitted.
+        idx = None
+        for i in range(len(self.source_stack) - 1, -1, -1):
+            if self.source_stack[i] == tag:
+                idx = i
+                break
+        if idx is None:
+            return
+        emitted = self.open[idx]
+        del self.source_stack[idx]
+        del self.open[idx]
+        if emitted in ("br", "hr", "img"):
+            return
+        self.out.append(f"</{emitted}>")
 
     def handle_data(self, data):
         if self.drop_depth:
@@ -525,7 +553,13 @@ CSS = r'''  :root{
        on phones instead of running off the screen */
     .canvas [style*="font-size:4"],.canvas [style*="font-size:5"],
     .canvas [style*="font-size:6"],.canvas [style*="font-size:7"],
-    .canvas [style*="font-size:8"],.canvas [style*="font-size:9"]{
+    .canvas [style*="font-size:8"],.canvas [style*="font-size:9"],
+    .canvas [style*="font-size:10"],.canvas [style*="font-size:11"],
+    .canvas [style*="font-size:12"],.canvas [style*="font-size:13"],
+    .canvas [style*="font-size:14"],.canvas [style*="font-size:15"],
+    .canvas [style*="font-size:16"],.canvas [style*="font-size:17"],
+    .canvas [style*="font-size:18"],.canvas [style*="font-size:19"],
+    .canvas [style*="font-size:200"]{
       font-size:min(11vw,40px) !important;line-height:1.15;
     }
     .canvas img.small{width:140px}
@@ -697,11 +731,10 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     if site_uploads.exists():
         shutil.rmtree(site_uploads)
     if uploads_dir.is_dir():
+        site_uploads.mkdir(parents=True, exist_ok=True)
         files = [f for f in sorted(uploads_dir.iterdir()) if f.is_file()]
-        if files:
-            site_uploads.mkdir(parents=True, exist_ok=True)
-            for f in files:
-                shutil.copyfile(f, site_uploads / f.name)
+        for f in files:
+            shutil.copyfile(f, site_uploads / f.name)
 
     # The hidden ledger: data/The Flank.md -> site/flank/. Unlisted (not in
     # the nav, not in site.json) — the Financials page button is the only
@@ -753,8 +786,28 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         if len(site["pages"]) > 1:
             for p in site["pages"]:
                 expect((tmp / f"{p['slug']}.html").is_file(), f"{p['slug']}.html built")
-                if p["slug"] != "index":
+                if p["slug"] != "index" and not p.get("hidden"):
                     expect(f'href="{p["slug"]}.html"' in idx, f"nav links to {p['slug']}")
+        # build artifacts
+        expect((tmp / "404.html").is_file(), "404.html built")
+        expect((tmp / "favicon.png").is_file(), "favicon.png built")
+        expect((tmp / ".nojekyll").is_file(), ".nojekyll built")
+        expect((tmp / "CNAME").is_file(), "CNAME built")
+        expect((tmp / "uploads").is_dir(), "site/uploads/ exists in build")
+
+        # FIX 1: hostile hrefs dropped, safe ones survive
+        for bad_href in ("//evil.com/x", "/../../etc/passwd", "javascript:alert(1)", "data:text/html,hi"):
+            bad = sanitize(f'<a href="{bad_href}">Hi</a>')
+            expect("href=" not in bad and "Hi" in bad, f"sanitizer drops hostile href {bad_href}")
+        for good_href in ("https://example.com/x", "flank/index.html", "index.html", "#"):
+            good = sanitize(f'<a href="{good_href}">Hi</a>')
+            expect(f'href="{good_href}"' in good, f"sanitizer keeps safe href {good_href}")
+        # FIX 2-ish handled in flank check; FIX 3: 150px capped in CSS
+        expect('font-size:15' in idx, "150px titles are capped on phones")
+        # FIX 4: div close balanced
+        divbalanced = sanitize('<div><p>x</p></div>')
+        expect(divbalanced.count("<p") == divbalanced.count("</p>"), "div close emits matching p close")
+
         nasty = ('<script>alert(1)</script><p onclick="x()">hi</p>'
                  '<img src="http://evil/x.png"><a href="javascript:1">z</a>'
                  '<div class="gallery"><img src="uploads/a.png"></div>')

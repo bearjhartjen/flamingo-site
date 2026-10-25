@@ -84,8 +84,14 @@ def rebuild() -> None:
     site_build.build(DATA, PAGES, LOGO, UPLOADS, SITE)
 
 
-def safe_upload_name(name: str) -> str:
+def safe_upload_name(name: str, mime: str | None = None) -> str:
     base = re.sub(r"[^A-Za-z0-9._-]+", "-", (name or "image.png")).strip("-.") or "image.png"
+    if mime:
+        if "." in base:
+            base = base.rsplit(".", 1)[0] or "image"
+        ext = {"png": ".png", "jpeg": ".jpg", "jpg": ".jpg", "gif": ".gif"}.get(
+            (mime or "").lower().split("/")[-1], ".png")
+        base = base + ext
     if "." not in base:
         base += ".png"
     return base[:80]
@@ -403,13 +409,22 @@ function renderAll(){
 async function openPage(slug){
   if (slug === SLUG) return;
   if (dirty && !confirm("Switch page without saving?")) return;
+  if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
   const j = await api("/api/page?slug=" + encodeURIComponent(slug));
   SLUG = slug; canvas.innerHTML = j.body; selImg = null;
   histReset();
   dirty = false; renderAll(); placeCaretStart();
   status.textContent = editing ? "editing — nothing saved yet" : "viewing";
 }
-function placeCaretStart(){ canvas.focus(); }
+function placeCaretStart(){
+  canvas.focus();
+  try {
+    const r = document.createRange();
+    r.selectNodeContents(canvas);
+    r.collapse(true);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  } catch (e) {}
+}
 ["in-title","in-tagline","in-footer","in-theme"].forEach(id => {
   $("#" + id).addEventListener("input", () => {
     readInputsToSite();
@@ -475,7 +490,7 @@ async function movePage(slug, dir){
 }
 $("#btn-logo").onclick = async () => {
   const inp = document.createElement("input");
-  inp.type = "file"; inp.accept = "image/png,image/jpeg";
+  inp.type = "file"; inp.accept = "image/png";
   inp.onchange = async () => {
     const f = inp.files[0]; if (!f) return;
     const du = await new Promise((res, rej) => {
@@ -508,6 +523,27 @@ function placeCaretAtEnd(el){
   const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
   const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
+function nodePath(root, node){
+  const path = [];
+  let cur = node;
+  while (cur && cur !== root && cur.parentNode) {
+    const parent = cur.parentNode;
+    const idx = Array.prototype.indexOf.call(parent.childNodes, cur);
+    if (idx < 0) return null;
+    path.unshift(idx);
+    cur = parent;
+  }
+  if (cur !== root) return null;
+  return path;
+}
+function nodeFromPath(root, path){
+  let cur = root;
+  for (const i of path) {
+    if (!cur || !cur.childNodes || i < 0 || i >= cur.childNodes.length) return null;
+    cur = cur.childNodes[i];
+  }
+  return cur;
+}
 /* ---------- text size + text color ----------
    Sizes are NUMERIC pixels: the toolbar writes inline style="font-size:NNpx"
    (integer, 8-200) and never a t-* class. Colors are the c-* classes or an
@@ -526,7 +562,7 @@ const COLOR_RE = /^c-/;
 const WHEEL_RE = /^#[0-9a-f]{6}$/i;   // native picker always yields #rrggbb
 // ---------- undo history: snapshots of the canvas ----------
 let hist = [], hi = -1, typeTimer = null;
-function histReset(){ hist = [canvas.innerHTML]; hi = 0; updateHistBtns(); }
+function histReset(){ if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; } hist = [canvas.innerHTML]; hi = 0; updateHistBtns(); }
 function pushHist(){
   const cur = canvas.innerHTML;
   if (hist[hi] === cur) return;
@@ -542,16 +578,67 @@ function updateHistBtns(){
   if (r) r.disabled = hi >= hist.length - 1;
 }
 function doUndo(){
+  if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; pushHist(); }
   if (hi <= 0) return;
+  // save a best-effort caret path before the DOM is replaced
+  let savedPath = null, savedOffset = 0;
+  const sel0 = getSelection();
+  if (sel0.rangeCount) {
+    const r0 = sel0.getRangeAt(0);
+    if (canvas.contains(r0.commonAncestorContainer)) {
+      savedPath = nodePath(canvas, r0.startContainer);
+      savedOffset = r0.startOffset;
+    }
+  }
   hi--; canvas.innerHTML = hist[hi];
-  canvas.focus(); placeCaretAtEnd(canvas);
+  canvas.focus();
+  let restored = false;
+  if (savedPath) {
+    const node = nodeFromPath(canvas, savedPath);
+    if (node) {
+      try {
+        const r = document.createRange();
+        const maxOff = (node.nodeType === 3) ? node.length : node.childNodes.length;
+        r.setStart(node, Math.min(savedOffset, maxOff));
+        r.collapse(true);
+        const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        restored = true;
+      } catch (e) { restored = false; }
+    }
+  }
+  if (!restored) placeCaretAtEnd(canvas);
   markDirty(); hint(); updateHistBtns();
   updateSizeNum();
 }
 function doRedo(){
+  if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; pushHist(); }
   if (hi >= hist.length - 1) return;
+  let savedPath = null, savedOffset = 0;
+  const sel0 = getSelection();
+  if (sel0.rangeCount) {
+    const r0 = sel0.getRangeAt(0);
+    if (canvas.contains(r0.commonAncestorContainer)) {
+      savedPath = nodePath(canvas, r0.startContainer);
+      savedOffset = r0.startOffset;
+    }
+  }
   hi++; canvas.innerHTML = hist[hi];
-  canvas.focus(); placeCaretAtEnd(canvas);
+  canvas.focus();
+  let restored = false;
+  if (savedPath) {
+    const node = nodeFromPath(canvas, savedPath);
+    if (node) {
+      try {
+        const r = document.createRange();
+        const maxOff = (node.nodeType === 3) ? node.length : node.childNodes.length;
+        r.setStart(node, Math.min(savedOffset, maxOff));
+        r.collapse(true);
+        const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        restored = true;
+      } catch (e) { restored = false; }
+    }
+  }
+  if (!restored) placeCaretAtEnd(canvas);
   markDirty(); hint(); updateHistBtns();
   updateSizeNum();
 }
@@ -567,7 +654,9 @@ function paintWheel(el, hex){
 }
 function applyWheelColor(hex){
   if (!WHEEL_RE.test(hex || "")) return;
-  const r = getRange(); if (!r) return;
+  let r = getRange();
+  if (!r) { r = activeRange(); if (r) restoreRange(r); }
+  if (!r) return;
   hex = hex.toLowerCase();
   if (r.collapsed) {
     const b = nodeBlock(r.startContainer);
@@ -770,7 +859,9 @@ $("#sizeNum").addEventListener("keydown", e => {
 $("#sizeNum").addEventListener("change", commitSizeNum);
 function applyColor(cls){
   if (cls && COLOR_CLASSES.indexOf(cls) < 0) return;
-  const r = getRange(); if (!r) return;
+  let r = getRange();
+  if (!r) { r = activeRange(); if (r) restoreRange(r); }
+  if (!r) return;
   if (r.collapsed) {                       // caret only: color the current block
     const b = nodeBlock(r.startContainer);
     if (b) setColor(b, cls);
@@ -959,12 +1050,13 @@ async function save(){
   // whole number of pixels between 8 and 200. The server re-validates both
   // properties, so anything hostile is dropped there too.
   canvas.querySelectorAll("[style]").forEach(el => {
+    const wasCentered = el.classList.contains("ac");
     const t = (el.style.textAlign || "").toLowerCase();
     const col = (el.style.color || "").trim();
     const fsz = (el.style.fontSize || "").trim();
     el.removeAttribute("style");
     el.classList.remove("ac");
-    if (t === "center") el.classList.add("ac");
+    if (t === "center" || (wasCentered && t === "")) el.classList.add("ac");
     const keep = [];
     const v = col.replace(/\\s+/g, "");
     if (/^(#[0-9a-f]{3,8}|[a-z]{3,30}|rgba?\\([0-9,.%/]+\\)|hsla?\\([0-9,.%/]+(?:deg|turn)?\\))$/i.test(v)
@@ -1029,7 +1121,7 @@ histReset();
     page = page.replace("__TAGLINE_ESC__", html.escape(site["tagline"]))
     page = page.replace("__THEME__", site["theme"])
     page = page.replace("__BODY__", body)
-    page = page.replace("__SITE_JSON__", json.dumps(site, ensure_ascii=False))
+    page = page.replace("__SITE_JSON__", json.dumps(site, ensure_ascii=False).replace("<", "\\u003c"))
     page = page.replace("__SLUG__", slug)
     return page.encode("utf-8")
 
@@ -1209,11 +1301,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"ok": True, "site": site, "note": note})
             if url.path == "/api/upload-image":
                 body = self._read_json()
-                name = safe_upload_name(str(body.get("name", "image.png")))
                 du = str(body.get("dataUri", ""))
                 m = re.fullmatch(r"data:image/(png|jpeg|gif);base64,([A-Za-z0-9+/=]+)", du)
                 if not m:
                     return self._json(400, {"error": "need a PNG/JPEG/GIF data URI"})
+                name = safe_upload_name(str(body.get("name", "image.png")), m.group(1))
                 raw = base64.b64decode(m.group(2))
                 if len(raw) > 5_000_000:
                     return self._json(400, {"error": "image too big (5 MB max)"})
@@ -1231,13 +1323,13 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/upload-logo":
                 body = self._read_json()
                 du = str(body.get("dataUri", ""))
-                m = re.fullmatch(r"data:image/(png|jpeg);base64,([A-Za-z0-9+/=]+)", du)
+                m = re.fullmatch(r"data:image/png;base64,([A-Za-z0-9+/=]+)", du)
                 if not m:
-                    return self._json(400, {"error": "need a PNG or JPEG data URI"})
-                raw = base64.b64decode(m.group(2))
+                    return self._json(400, {"error": "need a PNG data URI"})
+                raw = base64.b64decode(m.group(1))
                 if len(raw) > 5_000_000:
                     return self._json(400, {"error": "image too big (5 MB max)"})
-                if m.group(1) == "png" and raw[:8] != b"\x89PNG\r\n\x1a\n":
+                if raw[:8] != b"\x89PNG\r\n\x1a\n":
                     return self._json(400, {"error": "not a PNG"})
                 LOGO.write_bytes(raw)
                 rebuild()

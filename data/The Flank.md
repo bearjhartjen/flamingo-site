@@ -624,7 +624,7 @@
 - **Deposit of:** $0.00
 - **New balance:** $5,553.12
 - **Silver holdings:** 200g, 2.6oz
-- **Notes:** This withdrawal was the remaining homecoming dance money spent at the dance. This withdrawal was approved by Bear J. Hartjen.
+- **Notes:** This withdrawal was the remaining homecoming dance money spent at the dance on two waters. This withdrawal was approved by Bear J. Hartjen.
 - **Transaction was made on:** 10-10-2026
 
 ---
@@ -723,7 +723,7 @@
 - **Deposit of:** $0.00
 - **New balance:** $5,954.06
 - **Silver holdings:** 200g, 2.6oz
-- **Notes:** This withdrawal was by PCBWay for the Lamoka1/2 (additional fee). Approved by Bear J. Hartjen.
+- **Notes:** This withdrawal was an international routing fee with  PCBWay for the Lamoka1/2 (additional fee). Approved by Bear J. Hartjen.
 - **Transaction was made on:** 10-23-2026
 
 ---
@@ -745,5 +745,16 @@
 - **Deposit of:** $0.00
 - **New balance:** $5,886.41
 - **Silver holdings:** 200g, 2.6oz
-- **Notes:** This withdrawal was for Canva Flamingo and Cactus business cards. Approved by Bear J. Hartjen.
+- **Notes:** This withdrawal was for Canva, Flamingo and Cactus business cards. Approved by Bear J. Hartjen.
+- **Transaction was made on:** 10-24-2026
+
+---
+
+## Transaction 70
+
+- **Withdraw of:** $3.19
+- **Deposit of:** $0.00
+- **New balance:** $5,883.22
+- **Silver holdings:** 200g, 2.6oz
+- **Notes:** This withdrawal was to GoDaddy for the purchase of the domain flamingoandcactus.com. Approved by Bear J. Hartjen.
 - **Transaction was made on:** 10-24-2026

@@ -42,6 +42,10 @@ DEFAULT_DATA = ROOT / "data" / "The Flank.md"
 DEFAULT_LOGO = ROOT / "assets" / "logo-flank.png"
 DEFAULT_OUT = ROOT / "site" / "flank"
 
+# Transactions blurred until the code is entered. Everything else is public.
+PRIVATE_TX = frozenset({6, 18, 22, 24, 25, 27, 30, 31, 33, 34, 36, 39, 40, 44,
+                        48, 53, 54, 55, 56, 58, 59, 60, 61, 62, 65, 68})
+
 
 # --------------------------------------------------------------------------- logo
 def logo_data_uri(path: Path) -> str:
@@ -128,6 +132,7 @@ def parse_records(data_path: Path):
                 "date": iso,
                 "dateText": disp,
                 "empty": empty,
+                "private": num in PRIVATE_TX,
             }
         )
     filled = [r for r in records if not r["empty"]]
@@ -282,13 +287,12 @@ CSS = r'''  :root{
   .empty-msg{color:var(--muted);text-align:center;padding:26px;font-style:italic}
 
   /* ---------- lock ---------- */
-  table.locked td.notes{filter:blur(5px);user-select:none;pointer-events:none}
+  table.locked tr.priv td.notes{filter:blur(5px);user-select:none;pointer-events:none}
   .lockveil{
-    display:none;position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
-    text-align:center;font:13px/1.6 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
-    background:rgba(255,255,255,.9);
-    border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
-    padding:10px 12px;pointer-events:none;
+    display:none;text-align:center;font:13px/1.6 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
+    background:var(--paper2);
+    border:1px solid var(--rule);border-radius:2px;
+    padding:8px 12px;margin:0 0 10px;
   }
   table.locked + .lockveil{display:block}
   @media print{.lockveil{display:none}}
@@ -441,11 +445,11 @@ __CSS__
     </thead>
     <tbody id="rows"></tbody>
   </table>
-    <div class="lockveil" id="lockveil">Notes are blurred &mdash; they name real people.<br>Enter the code below to reveal them.</div>
+    <div class="lockveil" id="lockveil">The notes on __PRIVCOUNT__ transactions are blurred &mdash; they name real people.<br>Enter the code below to reveal them.</div>
   </div>
 
   <div class="lockbox" id="lockbox">
-    <div id="lockprompt">The transaction notes are locked. Enter the code to reveal them.</div>
+    <div id="lockprompt">Some transactions are locked. Enter the code to reveal them.</div>
     <input type="password" id="code" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="•••••">
     <button class="btn" id="lockbtn">Unlock</button>
     <div class="lockmsg" id="lockmsg"></div>
@@ -457,7 +461,7 @@ const TX = __DATA__;
 
 const num = v => typeof v === "number" ? v : null;
 const money = n => n === null || n === undefined
-  ? "&mdash;"
+  ? "\u2014"
   : "$" + n.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -477,7 +481,7 @@ const lastTx = TX[TX.length-1];
 document.getElementById("h-balance").textContent = money(totals.lastBalance);
 document.getElementById("h-balance-note").textContent =
   "as of " + (lastTx.dateText || "the last entry");
-document.getElementById("h-silver").textContent = totals.silver || "&mdash;";
+document.getElementById("h-silver").textContent = totals.silver || "\u2014";
 document.getElementById("note-silver").textContent = totals.silver || "none on record";
 
 document.getElementById("stats").innerHTML =
@@ -522,7 +526,9 @@ function renderSpot(price, mode, atMs){
   const p = money(price) + "/ozt";
   if (mode === "live"){
     flag.className = "spotflag";
-    txt.textContent = "Ag " + p + " \u00b7 live";
+    /* the clock time proves the refresh happened: spot can sit on one cent
+       for hours, and without it a faithful 60 s refresh reads as stuck */
+    txt.textContent = "Ag " + p + " \u00b7 live \u00b7 " + new Date().toLocaleTimeString();
   } else {
     flag.className = "spotflag " + (mode === "cached" ? "old" : "off");
     const age = atMs ? Math.max(0, Date.now() - atMs) : null;
@@ -778,12 +784,16 @@ const count = document.getElementById("count");
 function visible(){
   const term = q.value.trim().toLowerCase();
   const f = filter.value;
+  const locked = document.getElementById("ledger").classList.contains("locked");
   return TX.filter(t=>{
     if (f==="in"  && num(t.deposit)  === null) return false;
     if (f==="out" && num(t.withdraw) === null) return false;
     if ((f==="2025" || f==="2026") && !(t.date && t.date.startsWith(f))) return false;
     if (term){
-      const hay = [t.n,t.dateText,t.notes,t.silver,t.withdrawText,t.depositText,t.balanceText]
+      /* while locked, a private row's notes stay out of the search index,
+         so probing note text cannot confirm a blurred row exists */
+      const hay = [t.n,t.dateText,t.silver,t.withdrawText,t.depositText,t.balanceText]
+                  .concat((locked && t.private) ? [] : [t.notes])
                   .join(" ").toLowerCase();
       if (!hay.includes(term)) return false;
     }
@@ -806,7 +816,7 @@ function render(){
     const dCell = d === null
       ? (t.depositText ? '<span style="color:var(--gold)">' + esc(t.depositText) + "</span>" : "&mdash;")
       : '<span class="dep">' + money(d) + "</span>";
-    return "<tr>"
+    return '<tr' + (t.private ? ' class="priv"' : "") + ">"
       + '<td class="n">' + t.n + "</td>"
       + '<td class="date">' + esc(t.dateText || "—") + "</td>"
       + '<td class="r">' + wCell + "</td>"
@@ -824,7 +834,8 @@ document.getElementById("print").addEventListener("click", ()=>window.print());
 render();
 
 /* ------------------------------------------------------------------ lock
-   The transaction table loads blurred. The code typed at the bottom of the
+   Only the private transactions (see PRIVATE_TX in the builder) load
+   blurred; every other row is public. The code typed at the bottom of the
    page is SHA-256 hashed in the browser and compared against a stored hash,
    so the code itself never appears in the page source. Unlock lasts for
    this browser tab only (sessionStorage): a fresh visit locks again.
@@ -839,12 +850,13 @@ const lockmsg = document.getElementById("lockmsg");
 function setLocked(locked){
   lockTable.classList.toggle("locked", locked);
   lockprompt.textContent = locked
-    ? "The transaction notes are locked. Enter the code to reveal them."
+    ? "Some transactions are locked. Enter the code to reveal them."
     : "Unlocked for this visit.";
   lockbtn.textContent = locked ? "Unlock" : "Lock";
   codeInput.value = "";
   lockmsg.textContent = "";
   codeInput.style.display = locked ? "" : "none";
+  render();
 }
 
 async function sha256hex(s){
@@ -994,7 +1006,9 @@ __CSS__
     <p>The silver spot flag at the top of the ledger page and the approximate
     value under Silver Holdings are fetched live in the browser from the free
     public feed at <code>api.gold-api.com</code> (no key, XAG/USD per troy
-    ounce), refreshed about once a minute. If the feed cannot be reached, the
+    ounce), refreshed about once a minute. The flag also stamps the time of
+    the last successful refresh, so it reads as alive even while the price
+    sits on one cent. If the feed cannot be reached, the
     page shows the last price it saw and says so.</p>
 
     <h2>The rest of the page</h2>
@@ -1006,12 +1020,13 @@ __CSS__
     as-is, for example from GitHub Pages. Only the live silver spot flag needs
     a connection; without one it shows the last price seen.</p>
 
-    <h2>Why the notes are blurred</h2>
-    <p>Only the Notes column loads blurred, because it names real people. A
-    banner across the table says so, and the code box below it reveals the
-    notes for that browser tab only — a fresh visit locks it again. This
-    keeps casual visitors out, not someone reading the page source &mdash;
-    the ledger data is still embedded in the page.</p>
+    <h2>Why some transaction notes are blurred</h2>
+    <p>Most of the ledger is public, but the notes on __PRIVCOUNT__ transactions
+    load blurred, because they name real people. A banner under the table says
+    so, and the code box below it reveals those notes for that browser tab only
+    &mdash; a fresh visit locks them again. This keeps casual visitors out, not
+    someone reading the page source &mdash; the ledger data is still embedded
+    in the page.</p>
   </div>
 
   <footer>
@@ -1043,19 +1058,23 @@ def build(data_path: Path, logo_path: Path, out_dir: Path):
         raise SystemExit(f"no transactions found in {data_path}")
     print("last balance:", filled[-1]["balance"], "| last silver:", filled[-1]["silver"])
 
-    data_json = json.dumps(filled, separators=(",", ":"))
+    data_json = json.dumps(filled, separators=(",", ":")).replace("</", "<\\/")
     logo_uri = logo_data_uri(logo_path)
     print(f"logo embedded ({len(logo_uri) // 1024} KiB data URI)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    privcount = sum(1 for r in filled if r["private"])
+    print(f"private transactions: {privcount} of {len(filled)}")
+
     index_html = render(
-        INDEX, CSS=CSS, DATA=data_json, LOGO=logo_uri, COUNT=str(len(filled))
+        INDEX, CSS=CSS, DATA=data_json, LOGO=logo_uri, COUNT=str(len(filled)),
+        PRIVCOUNT=str(privcount),
     )
     (out_dir / "index.html").write_text(index_html, encoding="utf-8")
     print("wrote", out_dir / "index.html", f"{(out_dir / 'index.html').stat().st_size // 1024} KiB")
 
-    about_html = render(ABOUT, CSS=CSS, LOGO=logo_uri)
+    about_html = render(ABOUT, CSS=CSS, LOGO=logo_uri, PRIVCOUNT=str(privcount))
     (out_dir / "about.html").write_text(about_html, encoding="utf-8")
     print("wrote", out_dir / "about.html", f"{(out_dir / 'about.html').stat().st_size // 1024} KiB")
 
@@ -1106,7 +1125,9 @@ def check(data_path: Path, logo_path: Path):
         expect("api.gold-api.com/price/XAG" in index_html, "index.html fetches the live XAG feed")
         expect("HOLDINGS_OZT" in index_html, "index.html converts holdings to troy oz")
         expect('"leader"' in index_html, "index.html draws a leader line to the tooltip")
-        expect("table.locked td.notes" in index_html, "index.html blurs only the notes column when locked")
+        expect("table.locked tr.priv td.notes" in index_html, "index.html blurs private rows' notes when locked")
+        expect("table.locked td.notes{" not in index_html, "index.html no longer blurs the whole notes column")
+        expect("t.private" in index_html, "index.html flags private rows for the blur")
         expect("flankUnlocked" in index_html, "index.html keeps the unlock to the tab session")
         expect("jsSha256" in index_html, "index.html has a pure-JS SHA-256 fallback (works over plain HTTP)")
         expect("This browser cannot check the code" not in index_html,
@@ -1118,6 +1139,7 @@ def check(data_path: Path, logo_path: Path):
         expect("b6568e6a00d2bd0444c92d1de175744c3e55b539f116538f83e96aa4ba5aab58" in index_html, "index.html stores the code as a hash")
         expect("73774" not in index_html, "index.html never contains the code in plaintext")
         expect("scripts/build_flank.py" in about_html, "about.html names the build script")
+        expect("Why some transaction notes are blurred" in about_html, "about.html explains the per-transaction blur")
         expect('href="index.html"' in about_html, "about.html links back to index.html")
         expect("US dollar holdings" in about_html, "about.html states the dollar-only scope")
         expect(
@@ -1134,6 +1156,9 @@ def check(data_path: Path, logo_path: Path):
         if m:
             tx = json.loads(m.group(1))
             expect(len(tx) == n, f"embedded ledger parses back to {n} records")
+            priv = sorted(t["n"] for t in tx if t.get("private"))
+            expect(priv == sorted(PRIVATE_TX),
+                   f"embedded data flags the {len(PRIVATE_TX)} private transactions")
 
         if not ok:
             raise SystemExit("check FAILED")
