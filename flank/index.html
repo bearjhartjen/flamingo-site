@@ -153,14 +153,6 @@
 
   /* ---------- lock ---------- */
   table.locked tr.priv td.notes{filter:blur(5px);user-select:none;pointer-events:none}
-  .lockveil{
-    display:none;text-align:center;font:13px/1.6 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
-    background:var(--paper2);
-    border:1px solid var(--rule);border-radius:2px;
-    padding:8px 12px;margin:0 0 10px;
-  }
-  table.locked + .lockveil{display:block}
-  @media print{.lockveil{display:none}}
   .lockbox{margin-top:20px;text-align:center;font:13px "Helvetica Neue",Arial,sans-serif;color:var(--muted)}
   .lockbox input{
     font:14px Georgia,serif;color:var(--ink);background:#fff;text-align:center;letter-spacing:3px;
@@ -301,7 +293,6 @@
     </thead>
     <tbody id="rows"></tbody>
   </table>
-    <div class="lockveil" id="lockveil">The notes on 26 transactions are blurred &mdash; they name real people.<br>Enter the code below to reveal them.</div>
   </div>
 
   <div class="lockbox" id="lockbox">
