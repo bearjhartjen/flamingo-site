@@ -714,10 +714,13 @@ function wrapSpan(r, cls){
   return s;
 }
 // Run fn over the size target(s) of the current selection: a collapsed caret
-// sizes its whole block, a selection reaching across blocks sizes every block
-// it touches, and a selection inside one block paints the nearest span (or
-// wraps a bare one) so only that run of text changes. Each element is sized
-// from its own effective size, so a mixed-size selection keeps its spread.
+// sizes the span it sits in (or the block when there is none) so the element
+// changed is the one the size box is reading out — sizing the block while an
+// inner span holds a bigger size looks like nothing happens. A selection
+// reaching across blocks sizes every block it touches, and a selection
+// inside one block paints the nearest span (or wraps a bare one) so only
+// that run of text changes. Each element is sized from its own effective
+// size, so a mixed-size selection keeps its spread.
 function eachSizeTarget(fn){
   let r = getRange();
   if (!r) {
@@ -725,7 +728,9 @@ function eachSizeTarget(fn){
     if (r) restoreRange(r);          // focus left the canvas: put the range back
   }
   if (!r) return;
-  if (r.collapsed) {                       // caret only: size the current block
+  if (r.collapsed) {                       // caret only: size the span, else the block
+    const s = nearestSpan(r);
+    if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize) unwrapSpan(s); return; }
     const b = nodeBlock(r.startContainer);
     if (b) fn(b);
     return;

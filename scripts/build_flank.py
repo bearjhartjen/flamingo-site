@@ -39,7 +39,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 DEFAULT_DATA = ROOT / "data" / "The Flank.md"
-DEFAULT_LOGO = ROOT / "assets" / "logo.png"
+DEFAULT_LOGO = ROOT / "assets" / "logo-flank.png"
 DEFAULT_OUT = ROOT / "site" / "flank"
 
 
@@ -156,9 +156,9 @@ CSS = r'''  :root{
     background:var(--paper);
     color:var(--ink);
     font:15px/1.55 Georgia,"Times New Roman",Times,serif;
-    min-width:1120px;               /* desktop only */
     -webkit-font-smoothing:antialiased;
   }
+  img{max-width:100%;height:auto}
   .page{max-width:1080px;margin:0 auto;padding:26px 28px 64px}
 
   /* ---------- main-site link ---------- */
@@ -207,8 +207,8 @@ CSS = r'''  :root{
   .stats b{color:var(--ink2);font-weight:600}
 
   /* ---------- chart ---------- */
-  .chartwrap{position:relative;margin:6px 0 4px}
-  svg.chart{display:block;width:100%}
+  .chartwrap{position:relative;margin:6px 0 4px;overflow-x:auto}
+  svg.chart{display:block;width:100%;min-width:640px}
   .candle-up{fill:var(--upfill);stroke:var(--up);stroke-width:1.4}
   .candle-dn{fill:var(--down);stroke:var(--down);stroke-width:1.4}
   .wick{stroke:#55585c;stroke-width:1}
@@ -261,7 +261,8 @@ CSS = r'''  :root{
   .count{margin-left:auto;font:13px "Helvetica Neue",Arial,sans-serif;color:var(--muted)}
 
   /* ---------- table ---------- */
-  table{width:100%;border-collapse:collapse;font-size:14px}
+  .tablewrap{position:relative;overflow-x:auto}
+  table{width:100%;min-width:720px;border-collapse:collapse;font-size:14px}
   thead th{
     font:11.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.3px;text-transform:uppercase;
     color:var(--ink);text-align:left;padding:8px 10px;border-bottom:2px solid var(--ink);
@@ -282,6 +283,15 @@ CSS = r'''  :root{
 
   /* ---------- lock ---------- */
   table.locked td.notes{filter:blur(5px);user-select:none;pointer-events:none}
+  .lockveil{
+    display:none;position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+    text-align:center;font:13px/1.6 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
+    background:rgba(255,255,255,.9);
+    border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+    padding:10px 12px;pointer-events:none;
+  }
+  table.locked + .lockveil{display:block}
+  @media print{.lockveil{display:none}}
   .lockbox{margin-top:20px;text-align:center;font:13px "Helvetica Neue",Arial,sans-serif;color:var(--muted)}
   .lockbox input{
     font:14px Georgia,serif;color:var(--ink);background:#fff;text-align:center;letter-spacing:3px;
@@ -315,8 +325,27 @@ CSS = r'''  :root{
   }
   footer a{color:var(--link)}
 
+  /* ---------- small screens: same ledger, reshaped ---------- */
+  @media (max-width:700px){
+    body{font-size:14px}
+    .page{padding:16px 12px 48px}
+    .masthead img{width:72px;height:72px}
+    h1{font-size:24px;letter-spacing:1.5px}
+    .headline{padding:14px 0 2px}
+    .headline .v{font-size:30px}
+    .headline .item{margin-bottom:18px}
+    .spotflag{font-size:10px}
+    .legend{flex-wrap:wrap;gap:10px 16px}
+    .toolbar{gap:8px}
+    input[type=search]{min-width:0;flex:1 1 100%}
+    select{flex:1 1 auto}
+    .count{margin-left:0;width:100%;text-align:right}
+    .mainsite{top:8px;left:8px;font-size:11px;padding:6px 9px}
+    td.notes{font-size:12.5px}
+  }
+
   @media print{
-    body{background:#fff;min-width:0;font-size:11pt}
+    body{background:#fff;font-size:11pt}
     .page{max-width:none;padding:0}
     .toolbar,.chartwrap,.caption,.btn{display:none}
     thead th{position:static}
@@ -327,6 +356,7 @@ INDEX = r'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Flank Ledger &mdash; Flamingo &amp; Cactus</title>
 <style>
 __CSS__
@@ -396,6 +426,7 @@ __CSS__
     <span class="count" id="count">__COUNT__ shown of __COUNT__</span>
   </div>
 
+  <div class="tablewrap">
   <table id="ledger" class="locked">
     <thead>
        <tr>
@@ -410,6 +441,8 @@ __CSS__
     </thead>
     <tbody id="rows"></tbody>
   </table>
+    <div class="lockveil" id="lockveil">Notes are blurred &mdash; they name real people.<br>Enter the code below to reveal them.</div>
+  </div>
 
   <div class="lockbox" id="lockbox">
     <div id="lockprompt">The transaction notes are locked. Enter the code to reveal them.</div>
@@ -629,7 +662,7 @@ const MA = CANDLES.map((c,i)=>{
   lo = Math.max(0, lo-pad); hi = hi+pad;
 
   function draw(){
-    const W = Math.max(720, svg.parentElement.clientWidth);
+    const W = Math.max(640, svg.parentElement.clientWidth);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.setAttribute("width", W);
     svg.setAttribute("height", H);
@@ -815,19 +848,71 @@ function setLocked(locked){
 }
 
 async function sha256hex(s){
-  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-  return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  if (window.crypto && crypto.subtle){
+    try {
+      const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+      return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    } catch(e){ /* fall through to the pure-JS version */ }
+  }
+  return jsSha256(s);
+}
+
+/* Pure-JS SHA-256, used when crypto.subtle is unavailable. Plain HTTP is
+   not a secure context, so browsers withhold the WebCrypto API there and
+   the check above would always fail on an http:// page. This computes the
+   same digest without it. */
+function jsSha256(str){
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const bytes = unescape(encodeURIComponent(str));
+  const bitLen = bytes.length * 8;
+  let msg = bytes + "\x80";
+  while (msg.length % 64 !== 56) msg += "\x00";
+  msg += String.fromCharCode(0, 0, 0, 0,
+    (bitLen >>> 24) & 255, (bitLen >>> 16) & 255, (bitLen >>> 8) & 255, bitLen & 255);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  const blocks = Math.ceil(msg.length / 64);
+  for (let b = 0; b < blocks; b++){
+    const w = new Array(64);
+    for (let t = 0; t < 16; t++){
+      const o = b * 64 + t * 4;
+      w[t] = (msg.charCodeAt(o) << 24) | (msg.charCodeAt(o + 1) << 16) |
+             (msg.charCodeAt(o + 2) << 8) | msg.charCodeAt(o + 3);
+    }
+    for (let t = 16; t < 64; t++){
+      const s0 = rotr(w[t-15], 7) ^ rotr(w[t-15], 18) ^ (w[t-15] >>> 3);
+      const s1 = rotr(w[t-2], 17) ^ rotr(w[t-2], 19) ^ (w[t-2] >>> 10);
+      w[t] = (w[t-16] + s0 + w[t-7] + s1) | 0;
+    }
+    let [a, b0, c, d, e, f, g, h] = H;
+    for (let t = 0; t < 64; t++){
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[t] + w[t]) | 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const mj = (a & b0) ^ (a & c) ^ (b0 & c);
+      const t2 = (S0 + mj) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b0; b0 = a; a = (t1 + t2) | 0;
+    }
+    H = H.map((v, i) => (v + [a, b0, c, d, e, f, g, h][i]) | 0);
+  }
+  const hex = H.map(v => ("00000000" + (v >>> 0).toString(16)).slice(-8)).join("");
+  return hex;
 }
 
 async function tryUnlock(){
   lockmsg.textContent = "";
-  if (!window.crypto || !crypto.subtle){
-    lockmsg.textContent = "This browser cannot check the code.";
-    return;
-  }
   let hex = "";
   try { hex = await sha256hex(codeInput.value.trim()); }
-  catch(e){ lockmsg.textContent = "This browser cannot check the code."; return; }
+  catch(e){ lockmsg.textContent = "Wrong code."; return; }
+  if (!hex){ lockmsg.textContent = "Wrong code."; return; }
   if (hex === CODE_HASH){
     try { sessionStorage.setItem("flankUnlocked","1"); } catch(e){}
     setLocked(false);
@@ -859,6 +944,7 @@ ABOUT = r'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>About &mdash; The Flank Ledger</title>
 <style>
 __CSS__
@@ -921,11 +1007,11 @@ __CSS__
     a connection; without one it shows the last price seen.</p>
 
     <h2>Why the notes are blurred</h2>
-    <p>Only the Notes column loads blurred, because it names real people.
-    Scroll to the bottom of the ledger page and enter the code
-    to reveal it; it stays revealed for that browser tab only, and a fresh
-    visit locks it again. This keeps casual visitors out, not someone reading
-    the page source &mdash; the ledger data is still embedded in the page.</p>
+    <p>Only the Notes column loads blurred, because it names real people. A
+    banner across the table says so, and the code box below it reveals the
+    notes for that browser tab only — a fresh visit locks it again. This
+    keeps casual visitors out, not someone reading the page source &mdash;
+    the ledger data is still embedded in the page.</p>
   </div>
 
   <footer>
@@ -1013,12 +1099,22 @@ def check(data_path: Path, logo_path: Path):
         expect("Unrecorded" in index_html, "index.html keeps the Unrecorded gap flagging")
         expect("9</option>" not in index_html and "2026" in index_html, "index.html keeps the filter dropdown")
         expect("spotflag" in index_html, "index.html has the silver spot flag")
+        expect("width=device-width" in index_html, "ledger scales on phones (viewport meta)")
+        expect("@media (max-width:" in index_html, "ledger reshapes on small screens")
+        expect("overflow-x:auto" in index_html.replace(" ", ""), "wide chart/table scroll on small screens")
         expect("h-silver-val" in index_html, "index.html has the holdings value line")
         expect("api.gold-api.com/price/XAG" in index_html, "index.html fetches the live XAG feed")
         expect("HOLDINGS_OZT" in index_html, "index.html converts holdings to troy oz")
         expect('"leader"' in index_html, "index.html draws a leader line to the tooltip")
         expect("table.locked td.notes" in index_html, "index.html blurs only the notes column when locked")
         expect("flankUnlocked" in index_html, "index.html keeps the unlock to the tab session")
+        expect("jsSha256" in index_html, "index.html has a pure-JS SHA-256 fallback (works over plain HTTP)")
+        expect("This browser cannot check the code" not in index_html,
+               "index.html never refuses to check the code")
+        expect('id="lockveil"' in index_html, "index.html has the blur-explainer veil")
+        expect("they name real people" in index_html, "the veil says why the notes are blurred")
+        expect("table.locked + .lockveil" in index_html, "the veil shows only while locked")
+        expect(logo_path.name == "logo-flank.png", "ledger uses the black logo, not the color masthead")
         expect("b6568e6a00d2bd0444c92d1de175744c3e55b539f116538f83e96aa4ba5aab58" in index_html, "index.html stores the code as a hash")
         expect("73774" not in index_html, "index.html never contains the code in plaintext")
         expect("scripts/build_flank.py" in about_html, "about.html names the build script")

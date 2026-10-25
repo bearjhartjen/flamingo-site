@@ -384,7 +384,6 @@ CSS = r'''  :root{
     background:var(--paper);
     color:var(--ink);
     font:16px/1.6 Georgia,"Times New Roman",Times,serif;
-    min-width:1120px;
     -webkit-font-smoothing:antialiased;
   }
   .page{max-width:860px;margin:0 auto;padding:26px 28px 64px}
@@ -480,6 +479,27 @@ CSS = r'''  :root{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
   }
+  img{max-width:100%;height:auto}
+  /* ---------- small screens: same site, reshaped ---------- */
+  @media (max-width:700px){
+    body{font-size:15px}
+    .page{padding:16px 14px 48px}
+    .masthead img{width:72px;height:72px}
+    h1{font-size:24px;letter-spacing:1.5px}
+    .tagline{font-size:13px}
+    nav.sitenav{font-size:11px}
+    nav.sitenav a{margin:0 7px}
+    .star-badge{top:12px;left:auto;right:10px;width:104px;height:104px}
+    .star-badge .star-title{font-size:9px;max-width:62%}
+    .star-badge .star-sub{display:none}
+    .canvas img.small{width:140px}
+    .canvas img.medium{width:100%}
+    .canvas .t-giant{font-size:26px;line-height:1.25}
+    .canvas .t-huge{font-size:22px}
+    .canvas .gallery{flex-direction:column}
+    .canvas .gallery img{width:100%}
+    .canvas .card{padding:14px 14px}
+  }
 '''
 
 
@@ -525,6 +545,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         '<html lang="en">\n'
         "<head>\n"
         '<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>{html.escape(title)} &mdash; Flamingo &amp; Cactus</title>\n"
         "<style>\n" + CSS + "\n</style>\n"
         "</head>\n"
@@ -571,6 +592,7 @@ NOTFOUND = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found &mdash; Flamingo &amp; Cactus</title>
 <style>
 __CSS__
@@ -634,7 +656,11 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     if ledger_path.is_file():
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import build_flank
-        build_flank.build(ledger_path, logo_path, out_dir / "flank")
+        flank_logo = build_flank.DEFAULT_LOGO
+        if not flank_logo.is_file():
+            print(f"warning: flank logo not found, reusing main logo: {flank_logo}")
+            flank_logo = logo_path
+        build_flank.build(ledger_path, flank_logo, out_dir / "flank")
     else:
         print(f"warning: ledger not found, skipping flank/: {ledger_path}")
 
@@ -656,7 +682,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         idx = (tmp / "index.html").read_text(encoding="utf-8")
         expect(len(idx) > 0, "index.html non-empty")
         expect(html.escape(site["title"]) in idx, "title present")
-        expect("min-width:1120px" in idx, "desktop-only floor kept")
+        expect("viewport" in idx and "width=device-width" in idx, "pages scale on phones (viewport meta)")
+        expect("@media (max-width:" in idx, "pages reshape on small screens")
         warp_scripts = idx.lower().count("<script")
         expect(warp_scripts == 1 and "star-warp" in idx.lower(), "only the star-warp script in built pages")
         expect("onclick" not in idx.lower(), "no event-handler attributes in built page")
@@ -820,10 +847,10 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    # The ledger generator's own checks run against the real ledger.
+    # The ledger generator's own checks run against the real ledger + logo.
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import build_flank
-    build_flank.check(data_path.parent / "The Flank.md", logo_path)
+    build_flank.check(data_path.parent / "The Flank.md", build_flank.DEFAULT_LOGO)
 
 
 def main(argv=None):
