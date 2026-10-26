@@ -303,6 +303,10 @@ EDITOR_CSS = site_build.CSS + r'''
   #imgInspector{display:none;align-items:center;gap:4px}
   #imgInspector input{width:150px;font-size:11px;padding:4px 6px;border:1px solid #999;border-radius:2px}
   .editing #imgInspector.on{display:flex}
+  .editing a.bigbtn{cursor:move}
+  .canvas a.bigbtn.sel{outline:3px solid #1c4fd8;outline-offset:3px}
+  .canvas a.bigbtn.dragging{opacity:.85;box-shadow:0 18px 40px rgba(0,0,0,.3)}
+  .editing a.bigbtn{user-select:none}
   .editing [data-ed]{outline:1px dashed #1c4fd8;outline-offset:4px;min-height:1em}
   .editing #canvas{outline-offset:8px;min-height:45vh}
   .editing [data-ed]:focus,.editing #canvas:focus{outline:2px solid #1c4fd8}
@@ -442,6 +446,7 @@ __CSS__
   <div class="toolgroup"><span class="groupname">Links</span>
   <button data-cmd="link">Link</button>
   <button data-cmd="button">Button</button>
+  <button data-cmd="bigbtn" title="Huge clickable button box — drag it anywhere">Big button</button>
   <button data-cmd="unlink">Unlink</button>
   <span id="linkStat" title="Put the caret in linked text to see where it goes">no link</span>
   </div>
@@ -563,6 +568,26 @@ __CSS__
     <p><b>4. Save and publish.</b> Save writes the editable source and stages the built site. Commit and push in GitKraken to publish.</p>
     <p class="dlg-note">Shortcuts: Ctrl+S save · Ctrl+Z undo · Ctrl+Y redo · Alt+↑/↓ move a block. A draft is saved in this browser while you edit. If custom CSS hides the editor, open /?no-css=1.</p>
     <div class="dlg-actions"><button type="button" class="primary" id="helpClose">Got it</button></div>
+  </div>
+</div>
+<div class="ld-back" id="bigbtndlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="bigbtnTitle">
+    <h3 id="bigbtnTitle">Big button</h3>
+    <p class="dlg-note">A huge rounded box the visitor can click anywhere on. Drag it anywhere on the page while editing.</p>
+    <label class="dlg-field">Words on the box<input id="bigbtnText" maxlength="120" autocomplete="off" placeholder="e.g. Contact us"></label>
+    <label class="dlg-field">Goes to<input id="bigbtnUrl" inputmode="url" maxlength="500" autocomplete="off" placeholder="Pick a page below, or paste https://…"></label>
+    <div class="ld-hint" id="bigbtnHint"></div>
+    <div class="ld-pages" id="bigbtnPages"></div>
+    <div class="dlg-row">
+      <label>Box color <input type="color" id="bigbtnBg" value="#1c4fd8"></label>
+      <label>Text color <input type="color" id="bigbtnFg" value="#ffffff"></label>
+    </div>
+    <label class="ld-check"><input type="checkbox" id="bigbtnBlank"> Open in a new tab</label>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="bigbtnApply">Apply</button>
+      <button type="button" class="danger" id="bigbtnRemove">Remove box</button>
+      <button type="button" id="bigbtnCancel">Cancel</button>
+    </div>
   </div>
 </div>
 <div id="blockbar" hidden aria-label="Selected block actions">
@@ -1090,6 +1115,7 @@ document.addEventListener("keydown", e => {
   else if (!$("#mediaDlg").hidden) { $("#mediaDlg").hidden = true; mediaTarget = null; mediaRange = null; }
   else if (!$("#pageDlg").hidden) { $("#pageDlg").hidden = true; pageSettingsSlug = null; }
   else if (!$("#sourceDlg").hidden) $("#sourceDlg").hidden = true;
+  else if (!$("#bigbtndlg").hidden) closeBigDialog();
   else if (!$("#draftDlg").hidden) settleDraft("later");
   else if (!$("#unsavedDlg").hidden) settleUnsaved("stay");
 });
@@ -1965,6 +1991,158 @@ linkDlg.addEventListener("keydown", e => {
   if (e.key === "Enter" && !linkApply.disabled) { e.preventDefault(); applyLink(); }
   else if (e.key === "Escape") { e.preventDefault(); closeLinkDialog(); }
 });
+/* ---------- big button box: huge clickable block, dragged in edit mode ----------
+   One element: <a class="bigbtn" href="…" style="…">WORDS</a>. In edit mode
+   the whole box drags (mousedown+move) and a plain click opens its dialog;
+   in view mode it is an ordinary link the visitor can click anywhere on. */
+const bigDlg = $("#bigbtndlg"), bigTitle = $("#bigbtnTitle"),
+      bigText = $("#bigbtnText"), bigUrl = $("#bigbtnUrl"),
+      bigHint = $("#bigbtnHint"), bigPages = $("#bigbtnPages"),
+      bigBg = $("#bigbtnBg"), bigFg = $("#bigbtnFg"), bigBlank = $("#bigbtnBlank"),
+      bigApply = $("#bigbtnApply"), bigRemove = $("#bigbtnRemove"),
+      bigCancel = $("#bigbtnCancel");
+let bigTarget = null;   // the box being edited, or null for a fresh insert
+function bigbtnValidate(h){ const v = linkValidate(h); return v; }
+function refreshBigDialog(){
+  const v = bigbtnValidate(bigUrl.value);
+  bigApply.disabled = !v.ok;
+  bigHint.textContent = v.warn || v.msg || "";
+  bigHint.style.color = v.ok ? "#555" : "#b3261e";
+  const cur = bigUrl.value.trim();
+  bigPages.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.href === cur));
+}
+function cssColorToHex(v){
+  const m = /^rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)$/.exec((v || "").trim());
+  if (!m) return /^#[0-9a-f]{6}$/i.test((v || "").trim()) ? v.trim().toLowerCase() : null;
+  return "#" + [m[1], m[2], m[3]].map(n => (+n).toString(16).padStart(2, "0")).join("");
+}
+function openBigbtnDialog(target){
+  if (!editing) { status.textContent = "Press Edit before working with button boxes"; return; }
+  bigTarget = target || null;
+  bigTitle.textContent = bigTarget ? "Edit button box" : "Insert button box";
+  if (bigTarget) {
+    bigText.value = (bigTarget.textContent || "").trim().slice(0, 120);
+    bigUrl.value = bigTarget.getAttribute("href") || "";
+    const st = bigTarget.style;
+    bigBg.value = cssColorToHex(st.backgroundColor) || "#1c4fd8";
+    bigFg.value = cssColorToHex(st.color) || "#ffffff";
+    bigBlank.checked = bigTarget.getAttribute("target") === "_blank";
+  } else {
+    bigText.value = "";
+    bigUrl.value = "";
+    bigBg.value = "#1c4fd8"; bigFg.value = "#ffffff";
+    bigBlank.checked = false;
+  }
+  bigRemove.style.display = bigTarget ? "" : "none";
+  bigPages.innerHTML = "";
+  SITE.pages.forEach(p => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = (p.hidden ? "☆ " : "") + p.nav;
+    b.dataset.href = p.slug + ".html";
+    b.onclick = () => { bigUrl.value = b.dataset.href; bigUrl.focus(); refreshBigDialog(); };
+    bigPages.appendChild(b);
+  });
+  refreshBigDialog();
+  bigDlg.hidden = false;
+  bigText.focus();
+}
+function closeBigDialog(){
+  bigDlg.hidden = true; bigTarget = null;
+  if (editing) { canvas.focus(); const r = activeRange(); if (r) restoreRange(r); }
+}
+function applyBig(){
+  const v = bigbtnValidate(bigUrl.value);
+  if (!v.ok) { refreshBigDialog(); return; }
+  const href = bigUrl.value.trim();
+  const words = bigText.value.trim() || "Button";
+  const bg = /^#[0-9a-f]{6}$/i.test(bigBg.value) ? bigBg.value.toLowerCase() : "#1c4fd8";
+  const fg = /^#[0-9a-f]{6}$/i.test(bigFg.value) ? bigFg.value.toLowerCase() : "#ffffff";
+  const blank = bigBlank.checked;
+  if (bigTarget && canvas.contains(bigTarget)) {
+    bigTarget.textContent = words;
+    bigTarget.setAttribute("href", href);
+    // rebuild the style but PRESERVE the dragged geometry
+    const st = bigTarget.style;
+    const geo = [];
+    if (st.position === "absolute") geo.push("position:absolute");
+    const mg = (st.margin || "").replace(/\\s+/g, "");
+    if (st.position === "absolute" && (mg === "0px" || mg === "0")) geo.push("margin:0px");
+    ["left", "top", "width", "height"].forEach(prop => {
+      const m = /^(-?\\d+(?:\\.\\d{1,2})?)px$/.exec((st[prop] || "").replace(/\\s+/g, ""));
+      if (m) geo.push(prop + ":" + String(Math.round(+m[1] * 100) / 100) + "px");
+    });
+    bigTarget.setAttribute("style", geo.join(";")
+      + (geo.length ? ";" : "") + "background-color:" + bg + ";color:" + fg);
+    if (blank) { bigTarget.setAttribute("target", "_blank"); bigTarget.setAttribute("rel", "noopener"); }
+    else { bigTarget.removeAttribute("target"); bigTarget.removeAttribute("rel"); }
+  } else {
+    // fresh insert: a block-level box after the caret's block (or at the end)
+    const a = document.createElement("a");
+    a.className = "bigbtn"; a.href = href;
+    a.setAttribute("style", "background-color:" + bg + ";color:" + fg);
+    a.textContent = words;
+    if (blank) { a.setAttribute("target", "_blank"); a.setAttribute("rel", "noopener"); }
+    const r = activeRange();
+    const block = r ? nodeBlock(r.startContainer) : null;
+    const top = block ? topBlock(block) : null;
+    if (top && top.parentNode === canvas) top.parentNode.insertBefore(a, top.nextSibling);
+    else canvas.appendChild(a);
+  }
+  closeBigDialog();
+  pushHist(); markDirty(); hint(); imgButtons();
+}
+function removeBig(){
+  if (bigTarget && canvas.contains(bigTarget)) { bigTarget.remove(); pushHist(); markDirty(); hint(); }
+  closeBigDialog();
+}
+bigApply.onclick = applyBig;
+bigRemove.onclick = removeBig;
+bigCancel.onclick = closeBigDialog;
+bigText.oninput = refreshBigDialog;
+bigUrl.oninput = refreshBigDialog;
+bigBg.oninput = refreshBigDialog;   // colors apply on Apply, dialog just validates
+bigDlg.addEventListener("mousedown", e => { if (e.target === bigDlg) closeBigDialog(); });
+bigDlg.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !bigApply.disabled) { e.preventDefault(); applyBig(); }
+  else if (e.key === "Escape") { e.preventDefault(); closeBigDialog(); }
+});
+/* dragging a big button box */
+let bigDrag = null;
+canvas.addEventListener("mousedown", e => {
+  if (!editing) return;
+  const el = e.target.closest && e.target.closest("a.bigbtn");
+  if (!el) return;
+  e.preventDefault();   // no text selection, no native link drag
+  const cr = canvas.getBoundingClientRect(), er = el.getBoundingClientRect();
+  bigDrag = {el, moved:false, x0:e.clientX, y0:e.clientY,
+             offX:e.clientX - er.left, offY:e.clientY - er.top,
+             cw:cr.width, ch:cr.height, cl:cr.left, ct:cr.top,
+             w:er.width, h:er.height};
+});
+document.addEventListener("mousemove", e => {
+  if (!bigDrag) return;
+  const dx = e.clientX - bigDrag.x0, dy = e.clientY - bigDrag.y0;
+  if (!bigDrag.moved && Math.abs(dx) + Math.abs(dy) > 4) {
+    bigDrag.moved = true;
+    bigDrag.el.classList.add("dragging");
+    bigDrag.el.style.position = "absolute";
+    bigDrag.el.style.margin = "0px";
+  }
+  if (!bigDrag.moved) return;
+  const x = Math.max(0, Math.min(bigDrag.cw - bigDrag.w, e.clientX - bigDrag.cl - bigDrag.offX));
+  const y = Math.max(0, Math.min(bigDrag.ch - bigDrag.h, e.clientY - bigDrag.ct - bigDrag.offY));
+  bigDrag.el.style.left = Math.round(x) + "px";
+  bigDrag.el.style.top = Math.round(y) + "px";
+});
+document.addEventListener("mouseup", e => {
+  if (!bigDrag) return;
+  const el = bigDrag.el, moved = bigDrag.moved;
+  el.classList.remove("dragging");
+  bigDrag = null;
+  if (moved) { pushHist(); markDirty(); }
+  else openBigbtnDialog(el);   // a plain click edits the box
+});
 // full color wheel: live-paints any color as the selection changes
 $("#colorwheel").addEventListener("input", e => {
   if (!editing) return;
@@ -1996,6 +2174,7 @@ $("#toolbar").addEventListener("click", e => {
   else if (c === "redo") doRedo();
   else if (c === "clear") { document.execCommand("removeFormat"); clearSizeColor(); }
   else if (c === "unlink") document.execCommand("unlink");
+  else if (c === "bigbtn") { openBigbtnDialog(null); return; }
   else if (c === "link") openLinkDialog("link");
   else if (c === "button") openLinkDialog("btn");
   else if (c === "media") { openMediaLibrary(); return; }
@@ -2174,7 +2353,31 @@ async function save(){
   // page cleaner. The canonical form is
   // style="color:X;background-color:Y;font-size:Zpx;font-family:W;line-height:L;letter-spacing:T" — anything else is dropped.
   // The server re-validates every property, so nothing hostile survives there.
+  canvas.querySelectorAll("a.bigbtn[style]").forEach(el => {
+    // the button box: geometry + colors in the server's canonical order
+    const st = el.style;
+    const keep = [];
+    if (st.position === "absolute") keep.push("position:absolute");
+    const mg = (st.margin || "").replace(/\\s+/g, "");
+    if (st.position === "absolute" && (mg === "0px" || mg === "0")) keep.push("margin:0px");
+    [["left",-100,5000],["top",-100,5000],["width",40,2000],["height",40,2000]].forEach(([prop,lo,hi]) => {
+      const raw = (st[prop] || "").trim();
+      const m = /^(-?\\d+(?:\\.\\d{1,2})?)px$/.exec(raw.replace(/\\s+/g, ""));
+      if (m && +m[1] >= lo && +m[1] <= hi) {
+        keep.push(prop + ":" + String(Math.round(+m[1] * 100) / 100) + "px");
+      }
+    });
+    const col = (st.color || "").trim().replace(/\\s+/g, "");
+    if (col && !/url|expression|javascript/i.test(col)) keep.push("color:" + col);
+    const bgc = (st.backgroundColor || "").trim().replace(/\\s+/g, "");
+    if (bgc && !/url|expression|javascript/i.test(bgc)) keep.push("background-color:" + bgc);
+    const fsz = (st.fontSize || "").trim();
+    const f = /^(\\d{1,3})px$/.exec(fsz.replace(/\\s+/g, ""));
+    if (f && +f[1] >= SIZE_MIN && +f[1] <= SIZE_MAX) keep.push("font-size:" + (+f[1]) + "px");
+    el.setAttribute("style", keep.join(";"));
+  });
   canvas.querySelectorAll("[style]").forEach(el => {
+    if (el.classList.contains("bigbtn")) return;   // handled above
     const wasCentered = el.classList.contains("ac");
     const wasRight = el.classList.contains("ar");
     const t = (el.style.textAlign || "").toLowerCase();

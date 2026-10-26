@@ -415,6 +415,63 @@ def _style_attr(style: str | None) -> str:
     return f' style="{";".join(parts)}"' if parts else ""
 
 
+# Geometry for the big button box: strict px lengths on a strict range, so
+# dragging a box anywhere can never smuggle anything but a position through.
+_LEN_PX_RE = re.compile(r"-?\d+(?:\.\d{1,2})?px", re.IGNORECASE)
+
+
+def _clean_len_px(style: str | None, prop: str, lo: int, hi: int) -> str | None:
+    """Return one canonical px declaration (prop:value) from a style attribute."""
+    if not style:
+        return None
+    for decl in style.split(";"):
+        p, sep, val = decl.partition(":")
+        if not sep or p.strip().lower() != prop:
+            continue
+        v = re.sub(r"\s+", "", val)
+        if any(bad in v.lower() for bad in (
+                "url", "expression", "javascript", "<", ">", '"', "'", "{", "}")):
+            continue
+        if not _LEN_PX_RE.fullmatch(v):
+            continue
+        try:
+            px = float(v[:-2])
+        except ValueError:
+            continue
+        if not (lo <= px <= hi):
+            continue
+        if px == int(px):
+            return f"{prop}:{int(px)}px"
+        s2 = f"{px:.2f}".rstrip("0").rstrip(".")
+        return f"{prop}:{s2}px"
+    return None
+
+
+def _style_attr_box(style: str | None) -> str:
+    """Canonical style for a.bigbtn: geometry first, then the text properties.
+
+    position may only be the literal `absolute` (dragging), margin only the
+    literal `0px` (dragging cancels the auto-centering). Everything else is
+    the same validated set as _style_attr, in the same order after geometry.
+    """
+    parts = []
+    decls = [d.strip().lower() for d in (style or "").split(";")]
+    for d in decls:
+        if d == "position:absolute":
+            parts.append("position:absolute")
+        elif d in ("margin:0px", "margin:0"):
+            parts.append("margin:0px")
+    for prop, lo, hi in (("left", -100, 5000), ("top", -100, 5000),
+                         ("width", 40, 2000), ("height", 40, 2000)):
+        g = _clean_len_px(style, prop, lo, hi)
+        if g:
+            parts.append(g)
+    text = _style_attr(style)
+    if text:
+        parts.append(text[len(' style="'):-1])
+    return f' style="{";".join(parts)}"' if parts else ""
+
+
 def _clean_href(href: str) -> str | None:
     h = (href or "").strip()
     # Reject traversal up front, before any allowlist branch.
@@ -485,12 +542,13 @@ class _Sanitize(HTMLParser):
             href = _clean_href(ad.get("href", ""))
             if not href:
                 return
-            cls = " ".join(c for c in ad.get("class", "").split() if c == "btn")
+            cls = " ".join(c for c in ad.get("class", "").split() if c in ("btn", "bigbtn"))
             cls_attr = f' class="{cls}"' if cls else ""
+            style_attr = _style_attr_box(ad.get("style", "")) if cls == "bigbtn" else ""
             # new tabs: only a literal _blank target survives, always with noopener
             tgt_attr = ' target="_blank"' if ad.get("target", "") == "_blank" else ""
             rel_attr = ' rel="noopener"' if tgt_attr else ""
-            self.out.append(f'<a href="{html.escape(href, quote=True)}"{cls_attr}{tgt_attr}{rel_attr}>')
+            self.out.append(f'<a href="{html.escape(href, quote=True)}"{cls_attr}{tgt_attr}{rel_attr}{style_attr}>')
         elif tag == "img":
             src = _clean_src(ad.get("src", ""))
             if not src:
@@ -603,14 +661,14 @@ def sanitize(fragment: str) -> str:
 # ---------------------------------------------------------------------------
 
 CSS = r'''  :root{
-    --paper:#ffffff;
-    --paper2:#fbfaf7;
+    --paper:#faf3e6;
+    --paper2:#f5ecd9;
     --ink:#141414;
     --ink2:#3d3d3d;
     --muted:#6b6b6b;
     --faint:#8c8c8c;
-    --rule:#c9c9c9;
-    --rule2:#e3e1da;
+    --rule:#c9c2b4;
+    --rule2:#e8e2d6;
     --link:#0b2a8c;
   }
   body[data-theme="parchment"]{
@@ -647,7 +705,7 @@ CSS = r'''  :root{
     --link:#d3b8ff;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}
   body{
     background:var(--paper);
     color:var(--ink);
@@ -671,7 +729,7 @@ CSS = r'''  :root{
   nav.sitenav .cur{color:var(--ink);margin:0 12px;border-bottom:2px solid var(--ink);padding-bottom:2px}
   .hr{height:2px;background:var(--ink);margin:0}
   .hr.thin{height:1px;background:var(--rule)}
-  .canvas{color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
+  .canvas{position:relative;color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
   .canvas:empty{padding:0}
   .canvas p{margin:0 0 12px}
   .canvas .ac{text-align:center}
@@ -712,6 +770,20 @@ CSS = r'''  :root{
     color:var(--ink);text-decoration:none;
     font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;
   }
+  /* the big draggable button box: a huge rounded clickable block.
+     Colors, size and (when dragged) position come from a validated inline
+     style; without one it flows centered like a normal block. */
+  .canvas a.bigbtn{
+    display:flex;align-items:center;justify-content:center;
+    width:fit-content;max-width:100%;min-width:280px;min-height:84px;
+    margin:28px auto;padding:26px 60px;
+    border-radius:18px;background:#1c4fd8;color:#fff;
+    text-align:center;text-decoration:none;
+    font:700 26px "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;
+    box-shadow:0 10px 24px rgba(0,0,0,.18);
+    transition:transform .15s ease;
+  }
+  .canvas a.bigbtn:hover{transform:scale(1.03)}
   .canvas img.secimg{display:block;height:auto;margin:12px 0;border:1px solid var(--rule2)}
   .canvas img.small{width:220px}
   .canvas img.medium{width:420px}
@@ -725,7 +797,7 @@ CSS = r'''  :root{
   .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
   .star-badge{
-    position:fixed;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
+    position:absolute;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     background:radial-gradient(circle at 35% 30%,#f3d97b,#c9a227 58%,#a37f14);
     color:#3a2d00;text-decoration:none;text-align:center;
@@ -741,7 +813,7 @@ CSS = r'''  :root{
   @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
   .gem-badge{
-    position:fixed;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
+    position:absolute;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
     display:flex;align-items:center;justify-content:center;
     background:linear-gradient(135deg,#8fbef5,#1c4fd8 58%,#0b2a8c);
     color:#fff;text-decoration:none;text-align:center;
@@ -918,7 +990,7 @@ CONTACT_FORM_HTML = (
   'var zone=document.createElement("button");zone.type="button";zone.className="dropzone";zone.id="cf-drop";'
   'zone.setAttribute("aria-labelledby","cf-files-label cf-drop-instructions");'
   'var instructions=document.createElement("span");instructions.id="cf-drop-instructions";'
-  'instructions.textContent=window.matchMedia&&window.matchMedia("(hover:none)").matches?"Tap to browse, or paste files here.":"Drop files here, paste them, or click to browse.";zone.appendChild(instructions);'
+  'instructions.textContent=window.matchMedia&&window.matchMedia("(hover:none)").matches?"Tap to browse and attach files.":"Drop files here or click to browse.";zone.appendChild(instructions);'
   'var lst=document.createElement("ul");lst.className="filelist";lst.id="cf-files";'
   'inp.parentNode.insertBefore(zone,inp.nextSibling);zone.parentNode.insertBefore(lst,zone.nextSibling);'
   'form.appendChild(picker);var all=[],extras=[],MAX_BYTES=10000000;'
@@ -1509,6 +1581,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "midnight dark-purple palette present in CSS")
         expect('id="theme-toggle"' in idx,
                "every built page carries the dark-mode toggle")
+        expect("-webkit-text-size-adjust:100%" in idx and "text-size-adjust:100%" in idx,
+               "mobile text autosizing is locked off (no font boosting) on every page")
         expect(all(r in idx for r in base_rules),
                "size/color CSS reaches the built page")
         card = sanitize('<div class="card"><h2 class="t-giant">T</h2><p>x</p></div>')
@@ -1592,6 +1666,25 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             sf = sanitize('<p style="font-family:%s">Hi</p>' % stack)
             expect(sf == '<p style="font-family:%s">Hi</p>' % stack and sanitize(sf) == sf,
                    "sanitizer keeps new stack " + stack.split(",")[0])
+        # big button box: class, safe href, validated geometry survive
+        bb = sanitize('<a class="bigbtn" href="contact.html" '
+                      'style="position:absolute;left:120px;top:40px;width:300px;height:90px;'
+                      'margin:0px;background-color:#1c4fd8;color:#fff">Go</a>')
+        expect(bb == '<a href="contact.html" class="bigbtn" '
+                     'style="position:absolute;margin:0px;left:120px;top:40px;width:300px;'
+                     'height:90px;color:#fff;background-color:#1c4fd8">Go</a>',
+               "bigbtn keeps href, class and canonical geometry+color style")
+        expect(sanitize(bb) == bb, "bigbtn survives a second sanitize pass")
+        bbflow = sanitize('<a class="bigbtn" href="contact.html">Contact us</a>')
+        expect('class="bigbtn"' in bbflow and "style=" not in bbflow,
+               "bigbtn without a style keeps no style attribute (flows centered)")
+        for bad_geom in ("left:url(x)", "top:expression(1)", "width:99999px",
+                         "height:-10px", "position:relative", "margin:10px"):
+            dropped = sanitize('<a class="bigbtn" href="x.html" style="%s">Go</a>' % bad_geom)
+            expect("style=" not in dropped and "Go" in dropped,
+                   f"bigbtn drops hostile geometry {bad_geom}")
+        expect(".canvas a.bigbtn" in CSS and "position:relative" in CSS,
+               "bigbtn CSS present and canvas anchors absolute children")
         tabled = sanitize('<table><tbody><tr><th>H</th></tr><tr><td>x</td></tr></tbody></table>')
         expect(tabled == '<table><tbody><tr><th>H</th></tr><tr><td>x</td></tr></tbody></table>',
                "sanitizer keeps plain tables")
