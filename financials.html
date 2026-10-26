@@ -45,6 +45,17 @@
     --rule2:#35312a;
     --link:#9db8ff;
   }
+  body[data-theme="midnight"]{
+    --paper:#0d0a14;
+    --paper2:#161021;
+    --ink:#ece5f7;
+    --ink2:#cfc3e8;
+    --muted:#9d90b8;
+    --faint:#6f6488;
+    --rule:#33264d;
+    --rule2:#241b38;
+    --link:#d3b8ff;
+  }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
@@ -89,6 +100,10 @@
   body[data-theme="ink"] .canvas .c-blue{color:#9db8ff}
   body[data-theme="ink"] .canvas .c-green{color:#7ee2a8}
   body[data-theme="ink"] .canvas .c-gold{color:#d29922}
+  body[data-theme="midnight"] .canvas .c-red{color:#ff9d9d}
+  body[data-theme="midnight"] .canvas .c-blue{color:#b3a6ff}
+  body[data-theme="midnight"] .canvas .c-green{color:#8fe6ae}
+  body[data-theme="midnight"] .canvas .c-gold{color:#e3b83b}
   .canvas h2{
     font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;
     text-transform:uppercase;color:var(--ink2);margin:26px 0 8px;
@@ -202,6 +217,13 @@
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
   }
+  footer .themetoggle{
+    display:inline-block;margin:10px 0 0;padding:7px 16px;
+    border:1px solid var(--rule);border-radius:2px;background:transparent;
+    color:var(--muted);cursor:pointer;
+    font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;
+  }
+  footer .themetoggle:hover{color:var(--ink);border-color:var(--ink);}
   img{max-width:100%;height:auto}
   /* ---------- small screens: same site, reshaped ---------- */
   @media (max-width:700px){
@@ -249,9 +271,10 @@
   }
   @media (hover:none){.contactform .dropzone{padding:18px 14px}}
 
+
 </style>
 </head>
-<body data-theme="classic">
+<body data-theme="classic" data-star-animation="portal">
 <div class="page">
 <a class="star-badge" href="latest.html" title="Latest and greatest"><span class="star-title">Latest and greatest</span><span class="star-sub">Click me</span></a><a class="gem-badge" href="feedback.html" title="Feedback"><span class="gem-title">Feedback</span></a>
   <div class="masthead">
@@ -272,6 +295,9 @@
   <div class="canvas">
 <p class="ac"><a href="flank/index.html" class="btn">The Flank</a></p><p>The button above will take you to the Flank ledger, which provides every transaction with Flamingo &amp; Cactus. We have this published publicly to provide complete transparency which is the defining principle Flamingo and Cactus is built on.</p><p><br></p><p>In The Flank Ledger some transaction notes columns are blurred out, this is to protect Bear J. Hartjen&#x27;s personal interactions with family and friends. To bypass this blocker on the website, entering a passcode at the bottom of the page will unlock everything. </p>
   </div>
+  <footer>
+  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>
+  </footer>
 </div>
-<script>/* starburst: golden portal. Badge pops, a canvas starburst fires, the page fades — then go. Arrival is a soft flash and rise. All transform, opacity and canvas only. */(function(){try{var flag='fcWarp';if(sessionStorage.getItem(flag)){sessionStorage.removeItem(flag);var afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive');if(afl.parentNode)afl.parentNode.removeChild(afl);},700);}}catch(_){}try{var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;var star=document.querySelector('a.star-badge, a.gem-badge');if(!star||!star.getAttribute('href'))return;star.addEventListener('click',function(e){var href=star.getAttribute('href');if(!href||href.charAt(0)==='#')return;e.preventDefault();if(instant){window.location.href=href;return;}if(star.classList.contains('warp'))return;var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var fx=document.createElement('div');fx.id='fx';fx.style.setProperty('--fx-x',x+'px');fx.style.setProperty('--fx-y',y+'px');var fl=document.createElement('div');fl.className='flash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var cols=['#fffbe8','#f7e08b','#c9a227','#e8c84a','#8a6a0f'];var N=W<700?26:60,P=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=2+Math.random()*6;P.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,r:3+Math.random()*6,rot:Math.random()*Math.PI*2,vr:(Math.random()-.5)*.3,age:0,life:35+Math.random()*30,c:cols[(Math.random()*cols.length)|0]});}var ring={age:0,life:30};function drawStar(s){cx2.beginPath();for(var k=0;k<10;k++){var rr=k%2?s.r*.45:s.r,aa=s.rot+k*Math.PI/5;cx2[k?'lineTo':'moveTo'](s.x+Math.cos(aa)*rr,s.y+Math.sin(aa)*rr);}cx2.closePath();}var t0=performance.now();(function frame(){var alive=false,j,s;cx2.clearRect(0,0,W,H);for(j=0;j<P.length;j++){s=P[j];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.985;s.vy=s.vy*.985+.06;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.fillStyle=s.c;drawStar(s);cx2.fill();}if(ring.age<ring.life){ring.age++;alive=true;var rp=ring.age/ring.life;cx2.globalAlpha=(1-rp)*.8;cx2.strokeStyle='#f3d97b';cx2.lineWidth=4*(1-rp)+1;cx2.beginPath();cx2.arc(x,y,8+rp*Math.max(W,H)*.35,0,Math.PI*2);cx2.stroke();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1500)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();var go=false;function nav(){if(go)return;go=true;window.location.href=href;}setTimeout(nav,550);setTimeout(nav,1200);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2500);});}catch(_){}})();</script></body>
+<script>/* starburst: golden portal. Badge pops, a canvas starburst fires, the page fades — then go. Arrival is a soft flash and rise. All transform, opacity and canvas only. */(function(){try{var flag='fcWarp';try{var themeDef=document.body.dataset.theme||'classic';var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}var themeBtn=document.getElementById('theme-toggle');var themeLabel=function(){if(themeBtn)themeBtn.textContent=(document.body.dataset.theme==='midnight')?'Light mode':'Dark mode';};themeLabel();if(themeBtn)themeBtn.addEventListener('click',function(){var next=(document.body.dataset.theme==='midnight')?themeDef:'midnight';document.body.dataset.theme=next;try{localStorage.setItem('fc-theme',next);}catch(_){}themeLabel();});}catch(_){}if(sessionStorage.getItem(flag)){sessionStorage.removeItem(flag);var afl=null;if((document.body.dataset.starAnimation||'portal')==='portal'){afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);}if((document.body.dataset.starAnimation||'portal')!=='none'){document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}}}catch(_){}try{var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;var star=document.querySelector('a.star-badge, a.gem-badge');if(!star||!star.getAttribute('href'))return;star.addEventListener('click',function(e){var href=star.getAttribute('href');var mode=document.body.dataset.starAnimation||'portal';if(!href||href.charAt(0)==='#')return;e.preventDefault();if(instant||mode==='none'){window.location.href=href;return;}if(star.classList.contains('warp'))return;if(mode==='fade'){try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');setTimeout(function(){window.location.href=href;},320);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');try{sessionStorage.removeItem(flag)}catch(_){}},3000);return;}var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var fx=document.createElement('div');fx.id='fx';fx.style.setProperty('--fx-x',x+'px');fx.style.setProperty('--fx-y',y+'px');var fl=document.createElement('div');fl.className='flash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var cols=['#fffbe8','#f7e08b','#c9a227','#e8c84a','#8a6a0f'];var N=W<700?26:60,P=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=2+Math.random()*6;P.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,r:3+Math.random()*6,rot:Math.random()*Math.PI*2,vr:(Math.random()-.5)*.3,age:0,life:35+Math.random()*30,c:cols[(Math.random()*cols.length)|0]});}var ring={age:0,life:30};function drawStar(s){cx2.beginPath();for(var k=0;k<10;k++){var rr=k%2?s.r*.45:s.r,aa=s.rot+k*Math.PI/5;cx2[k?'lineTo':'moveTo'](s.x+Math.cos(aa)*rr,s.y+Math.sin(aa)*rr);}cx2.closePath();}var t0=performance.now();(function frame(){var alive=false,j,s;cx2.clearRect(0,0,W,H);for(j=0;j<P.length;j++){s=P[j];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.985;s.vy=s.vy*.985+.06;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.fillStyle=s.c;drawStar(s);cx2.fill();}if(ring.age<ring.life){ring.age++;alive=true;var rp=ring.age/ring.life;cx2.globalAlpha=(1-rp)*.8;cx2.strokeStyle='#f3d97b';cx2.lineWidth=4*(1-rp)+1;cx2.beginPath();cx2.arc(x,y,8+rp*Math.max(W,H)*.35,0,Math.PI*2);cx2.stroke();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1500)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();var go=false;function nav(){if(go)return;go=true;window.location.href=href;}setTimeout(nav,550);setTimeout(nav,1200);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2500);});}catch(_){}})();</script></body>
 </html>
