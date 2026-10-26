@@ -13,14 +13,14 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Flamingo and Cactus","url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/favicon.png"}</script>
 <style>
   :root{
-    --paper:#ffffff;
-    --paper2:#fbfaf7;
+    --paper:#faf3e6;
+    --paper2:#f5ecd9;
     --ink:#141414;
     --ink2:#3d3d3d;
     --muted:#6b6b6b;
     --faint:#8c8c8c;
-    --rule:#c9c9c9;
-    --rule2:#e3e1da;
+    --rule:#c9c2b4;
+    --rule2:#e8e2d6;
     --link:#0b2a8c;
   }
   body[data-theme="parchment"]{
@@ -57,7 +57,7 @@
     --link:#d3b8ff;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}
   body{
     background:var(--paper);
     color:var(--ink);
@@ -81,7 +81,7 @@
   nav.sitenav .cur{color:var(--ink);margin:0 12px;border-bottom:2px solid var(--ink);padding-bottom:2px}
   .hr{height:2px;background:var(--ink);margin:0}
   .hr.thin{height:1px;background:var(--rule)}
-  .canvas{color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
+  .canvas{position:relative;color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
   .canvas:empty{padding:0}
   .canvas p{margin:0 0 12px}
   .canvas .ac{text-align:center}
@@ -122,6 +122,20 @@
     color:var(--ink);text-decoration:none;
     font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;
   }
+  /* the big draggable button box: a huge rounded clickable block.
+     Colors, size and (when dragged) position come from a validated inline
+     style; without one it flows centered like a normal block. */
+  .canvas a.bigbtn{
+    display:flex;align-items:center;justify-content:center;
+    width:fit-content;max-width:100%;min-width:280px;min-height:84px;
+    margin:28px auto;padding:26px 60px;
+    border-radius:18px;background:#1c4fd8;color:#fff;
+    text-align:center;text-decoration:none;
+    font:700 26px "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;
+    box-shadow:0 10px 24px rgba(0,0,0,.18);
+    transition:transform .15s ease;
+  }
+  .canvas a.bigbtn:hover{transform:scale(1.03)}
   .canvas img.secimg{display:block;height:auto;margin:12px 0;border:1px solid var(--rule2)}
   .canvas img.small{width:220px}
   .canvas img.medium{width:420px}
@@ -135,7 +149,7 @@
   .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
   .star-badge{
-    position:fixed;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
+    position:absolute;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     background:radial-gradient(circle at 35% 30%,#f3d97b,#c9a227 58%,#a37f14);
     color:#3a2d00;text-decoration:none;text-align:center;
@@ -151,7 +165,7 @@
   @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
   .gem-badge{
-    position:fixed;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
+    position:absolute;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
     display:flex;align-items:center;justify-content:center;
     background:linear-gradient(135deg,#8fbef5,#1c4fd8 58%,#0b2a8c);
     color:#fff;text-decoration:none;text-align:center;
@@ -309,7 +323,7 @@
   <p class="filehint" id="cf-filehint">No files yet.</p>
   <noscript><p class="filehint">With JavaScript off, send one file per message.</p></noscript>
   <button type="submit">Send it our way</button>
-</form><script>(function(){try{var inp=document.getElementById("cf-photo"),hint=document.getElementById("cf-filehint"),form=inp&&inp.form;if(!inp||!hint||!form)return;function stampTime(){try{var st=document.getElementById("cf-sentat");if(st)st.value=new Date().toString();}catch(_){}}stampTime();function setFiles(target,files){try{var dt=new DataTransfer();for(var i=0;i<files.length;i++)dt.items.add(files[i]);target.files=dt.files;if(!target.files||target.files.length!==files.length)return false;for(var j=0;j<files.length;j++)if(target.files[j].name!==files[j].name||target.files[j].size!==files[j].size)return false;return true;}catch(_){return false;}}if(typeof DataTransfer==="undefined"||typeof File==="undefined"||!setFiles(inp,[new File(["check"],"fc-upload-check.txt",{type:"text/plain"})])){try{inp.value="";}catch(_){}hint.textContent="This browser can send one file per message. Update it to enable multi-file upload.";return;}try{inp.value="";}catch(_){}inp.className="filepick";inp.multiple=true;inp.setAttribute("tabindex","-1");inp.setAttribute("aria-hidden","true");var picker=document.createElement("input");picker.type="file";picker.id="cf-file-picker";picker.multiple=true;picker.className="filepick";picker.tabIndex=-1;picker.setAttribute("aria-hidden","true");var zone=document.createElement("button");zone.type="button";zone.className="dropzone";zone.id="cf-drop";zone.setAttribute("aria-labelledby","cf-files-label cf-drop-instructions");var instructions=document.createElement("span");instructions.id="cf-drop-instructions";instructions.textContent=window.matchMedia&&window.matchMedia("(hover:none)").matches?"Tap to browse, or paste files here.":"Drop files here, paste them, or click to browse.";zone.appendChild(instructions);var lst=document.createElement("ul");lst.className="filelist";lst.id="cf-files";inp.parentNode.insertBefore(zone,inp.nextSibling);zone.parentNode.insertBefore(lst,zone.nextSibling);form.appendChild(picker);var all=[],extras=[],MAX_BYTES=10000000;function mb(n){return (n/1000000).toFixed(1)+" MB";}function sync(){return setFiles(inp,all);}function failToNative(msg){all=[];for(var i=0;i<extras.length;i++)if(extras[i].parentNode)extras[i].parentNode.removeChild(extras[i]);extras=[];try{inp.value="";picker.value="";}catch(_){}inp.multiple=false;inp.className="";inp.removeAttribute("tabindex");inp.removeAttribute("aria-hidden");picker.disabled=true;zone.hidden=true;lst.hidden=true;hint.textContent=msg;hint.classList.add("over");}function render(){var t=0,i;lst.innerHTML="";for(i=0;i<all.length;i++)(function(f,ix){t+=f.size;var li=document.createElement("li"),nm=document.createElement("span"),b=document.createElement("button");nm.textContent=f.name+" ("+mb(f.size)+")";li.appendChild(nm);b.type="button";b.textContent="Remove";b.setAttribute("aria-label","Remove "+f.name);b.onclick=function(){all.splice(ix,1);sync();render();};li.appendChild(b);lst.appendChild(li);})(all[i],i);var over=t>MAX_BYTES;hint.textContent=!all.length?"No files yet.":all.length+(all.length===1?" file, ":" files, ")+mb(t)+" of 10 MB.";hint.classList.toggle("over",over);return !over;}function add(fs){for(var i=0;i<fs.length;i++)all.push(fs[i]);if(!sync()){failToNative("This browser could not safely combine files. Use the file picker and send one file per message.");return false;}render();return true;}zone.addEventListener("click",function(){picker.click();});zone.addEventListener("dragover",function(e){if(e.dataTransfer&&e.dataTransfer.types&&e.dataTransfer.types.indexOf("Files")>=0){e.preventDefault();zone.classList.add("over");}});zone.addEventListener("dragleave",function(){zone.classList.remove("over");});zone.addEventListener("drop",function(e){e.preventDefault();zone.classList.remove("over");var d=e.dataTransfer;if(d&&d.files&&d.files.length)add(d.files);});form.addEventListener("paste",function(e){var d=e.clipboardData;if(d&&d.files&&d.files.length){e.preventDefault();add(d.files);}});picker.addEventListener("change",function(){if(picker.files&&picker.files.length)add(picker.files);try{picker.value="";}catch(_){}});form.addEventListener("submit",function(e){stampTime();if(!render()){e.preventDefault();hint.textContent="Those files are over 10 MB in total — remove one and try again.";return;}for(var x=0;x<extras.length;x++)if(extras[x].parentNode)extras[x].parentNode.removeChild(extras[x]);extras=[];if(all.length){if(!setFiles(inp,[all[0]])){e.preventDefault();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}inp.multiple=false;for(var xi=1;xi<all.length;xi++){var ni=document.createElement("input");ni.type="file";ni.name="attachment_"+(xi+1);ni.className="filepick filepick-extra";ni.tabIndex=-1;ni.setAttribute("aria-hidden","true");if(!setFiles(ni,[all[xi]])){e.preventDefault();failToNative("This browser could not prepare every file. Use the file picker and send one file per message.");return;}form.appendChild(ni);extras.push(ni);}}var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=true;btn.textContent="Sending…";}});window.addEventListener("pageshow",function(){var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=false;btn.textContent="Send it our way";}});render();}catch(_){}})();</script><p><br></p><p>Our plain written contact information:</p><p>Email: <a href="mailto:Flamingoncactusgroup@gmail.com">Flamingoncactusgroup@gmail.com</a></p><p>Phone (voicemail or text only): <a href="tel:+16072056663">607-205-6663</a></p>
+</form><script>(function(){try{var inp=document.getElementById("cf-photo"),hint=document.getElementById("cf-filehint"),form=inp&&inp.form;if(!inp||!hint||!form)return;function stampTime(){try{var st=document.getElementById("cf-sentat");if(st)st.value=new Date().toString();}catch(_){}}stampTime();function setFiles(target,files){try{var dt=new DataTransfer();for(var i=0;i<files.length;i++)dt.items.add(files[i]);target.files=dt.files;if(!target.files||target.files.length!==files.length)return false;for(var j=0;j<files.length;j++)if(target.files[j].name!==files[j].name||target.files[j].size!==files[j].size)return false;return true;}catch(_){return false;}}if(typeof DataTransfer==="undefined"||typeof File==="undefined"||!setFiles(inp,[new File(["check"],"fc-upload-check.txt",{type:"text/plain"})])){try{inp.value="";}catch(_){}hint.textContent="This browser can send one file per message. Update it to enable multi-file upload.";return;}try{inp.value="";}catch(_){}inp.className="filepick";inp.multiple=true;inp.setAttribute("tabindex","-1");inp.setAttribute("aria-hidden","true");var picker=document.createElement("input");picker.type="file";picker.id="cf-file-picker";picker.multiple=true;picker.className="filepick";picker.tabIndex=-1;picker.setAttribute("aria-hidden","true");var zone=document.createElement("button");zone.type="button";zone.className="dropzone";zone.id="cf-drop";zone.setAttribute("aria-labelledby","cf-files-label cf-drop-instructions");var instructions=document.createElement("span");instructions.id="cf-drop-instructions";instructions.textContent=window.matchMedia&&window.matchMedia("(hover:none)").matches?"Tap to browse and attach files.":"Drop files here or click to browse.";zone.appendChild(instructions);var lst=document.createElement("ul");lst.className="filelist";lst.id="cf-files";inp.parentNode.insertBefore(zone,inp.nextSibling);zone.parentNode.insertBefore(lst,zone.nextSibling);form.appendChild(picker);var all=[],extras=[],MAX_BYTES=10000000;function mb(n){return (n/1000000).toFixed(1)+" MB";}function sync(){return setFiles(inp,all);}function failToNative(msg){all=[];for(var i=0;i<extras.length;i++)if(extras[i].parentNode)extras[i].parentNode.removeChild(extras[i]);extras=[];try{inp.value="";picker.value="";}catch(_){}inp.multiple=false;inp.className="";inp.removeAttribute("tabindex");inp.removeAttribute("aria-hidden");picker.disabled=true;zone.hidden=true;lst.hidden=true;hint.textContent=msg;hint.classList.add("over");}function render(){var t=0,i;lst.innerHTML="";for(i=0;i<all.length;i++)(function(f,ix){t+=f.size;var li=document.createElement("li"),nm=document.createElement("span"),b=document.createElement("button");nm.textContent=f.name+" ("+mb(f.size)+")";li.appendChild(nm);b.type="button";b.textContent="Remove";b.setAttribute("aria-label","Remove "+f.name);b.onclick=function(){all.splice(ix,1);sync();render();};li.appendChild(b);lst.appendChild(li);})(all[i],i);var over=t>MAX_BYTES;hint.textContent=!all.length?"No files yet.":all.length+(all.length===1?" file, ":" files, ")+mb(t)+" of 10 MB.";hint.classList.toggle("over",over);return !over;}function add(fs){for(var i=0;i<fs.length;i++)all.push(fs[i]);if(!sync()){failToNative("This browser could not safely combine files. Use the file picker and send one file per message.");return false;}render();return true;}zone.addEventListener("click",function(){picker.click();});zone.addEventListener("dragover",function(e){if(e.dataTransfer&&e.dataTransfer.types&&e.dataTransfer.types.indexOf("Files")>=0){e.preventDefault();zone.classList.add("over");}});zone.addEventListener("dragleave",function(){zone.classList.remove("over");});zone.addEventListener("drop",function(e){e.preventDefault();zone.classList.remove("over");var d=e.dataTransfer;if(d&&d.files&&d.files.length)add(d.files);});form.addEventListener("paste",function(e){var d=e.clipboardData;if(d&&d.files&&d.files.length){e.preventDefault();add(d.files);}});picker.addEventListener("change",function(){if(picker.files&&picker.files.length)add(picker.files);try{picker.value="";}catch(_){}});form.addEventListener("submit",function(e){stampTime();if(!render()){e.preventDefault();hint.textContent="Those files are over 10 MB in total — remove one and try again.";return;}for(var x=0;x<extras.length;x++)if(extras[x].parentNode)extras[x].parentNode.removeChild(extras[x]);extras=[];if(all.length){if(!setFiles(inp,[all[0]])){e.preventDefault();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}inp.multiple=false;for(var xi=1;xi<all.length;xi++){var ni=document.createElement("input");ni.type="file";ni.name="attachment_"+(xi+1);ni.className="filepick filepick-extra";ni.tabIndex=-1;ni.setAttribute("aria-hidden","true");if(!setFiles(ni,[all[xi]])){e.preventDefault();failToNative("This browser could not prepare every file. Use the file picker and send one file per message.");return;}form.appendChild(ni);extras.push(ni);}}var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=true;btn.textContent="Sending…";}});window.addEventListener("pageshow",function(){var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=false;btn.textContent="Send it our way";}});render();}catch(_){}})();</script><p><br></p><p>Our plain written contact information:</p><p>Email: <a href="mailto:Flamingoncactusgroup@gmail.com">Flamingoncactusgroup@gmail.com</a></p><p>Phone (voicemail or text only): <a href="tel:+16072056663">607-205-6663</a></p>
   </div>
   <footer>
   <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>

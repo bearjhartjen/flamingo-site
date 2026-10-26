@@ -13,14 +13,14 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Flamingo and Cactus","url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/favicon.png"}</script>
 <style>
   :root{
-    --paper:#ffffff;
-    --paper2:#fbfaf7;
+    --paper:#faf3e6;
+    --paper2:#f5ecd9;
     --ink:#141414;
     --ink2:#3d3d3d;
     --muted:#6b6b6b;
     --faint:#8c8c8c;
-    --rule:#c9c9c9;
-    --rule2:#e3e1da;
+    --rule:#c9c2b4;
+    --rule2:#e8e2d6;
     --link:#0b2a8c;
   }
   body[data-theme="parchment"]{
@@ -57,7 +57,7 @@
     --link:#d3b8ff;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}
   body{
     background:var(--paper);
     color:var(--ink);
@@ -81,7 +81,7 @@
   nav.sitenav .cur{color:var(--ink);margin:0 12px;border-bottom:2px solid var(--ink);padding-bottom:2px}
   .hr{height:2px;background:var(--ink);margin:0}
   .hr.thin{height:1px;background:var(--rule)}
-  .canvas{color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
+  .canvas{position:relative;color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
   .canvas:empty{padding:0}
   .canvas p{margin:0 0 12px}
   .canvas .ac{text-align:center}
@@ -122,6 +122,20 @@
     color:var(--ink);text-decoration:none;
     font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;
   }
+  /* the big draggable button box: a huge rounded clickable block.
+     Colors, size and (when dragged) position come from a validated inline
+     style; without one it flows centered like a normal block. */
+  .canvas a.bigbtn{
+    display:flex;align-items:center;justify-content:center;
+    width:fit-content;max-width:100%;min-width:280px;min-height:84px;
+    margin:28px auto;padding:26px 60px;
+    border-radius:18px;background:#1c4fd8;color:#fff;
+    text-align:center;text-decoration:none;
+    font:700 26px "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;
+    box-shadow:0 10px 24px rgba(0,0,0,.18);
+    transition:transform .15s ease;
+  }
+  .canvas a.bigbtn:hover{transform:scale(1.03)}
   .canvas img.secimg{display:block;height:auto;margin:12px 0;border:1px solid var(--rule2)}
   .canvas img.small{width:220px}
   .canvas img.medium{width:420px}
@@ -135,7 +149,7 @@
   .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
   .star-badge{
-    position:fixed;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
+    position:absolute;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     background:radial-gradient(circle at 35% 30%,#f3d97b,#c9a227 58%,#a37f14);
     color:#3a2d00;text-decoration:none;text-align:center;
@@ -151,7 +165,7 @@
   @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
   .gem-badge{
-    position:fixed;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
+    position:absolute;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
     display:flex;align-items:center;justify-content:center;
     background:linear-gradient(135deg,#8fbef5,#1c4fd8 58%,#0b2a8c);
     color:#fff;text-decoration:none;text-align:center;
@@ -293,7 +307,7 @@
   <div class="hr"></div>
 
   <div class="canvas">
-<p class="ac"><br></p><div class="card"><h2>Have a different view?</h2><p>We&#x27;d really really like to hear your perspective.</p></div><p><br></p>
+<p class="ac"><br></p><div class="card"><h2>Have a different view?</h2><p>We&#x27;d love to hear your perspective.</p></div><a href="contact.html" class="bigbtn" style="background-color:#1c4fd8">Contact us</a><p><br></p>
   </div>
   <footer>
   <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>
