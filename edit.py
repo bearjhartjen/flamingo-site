@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -37,6 +38,13 @@ SITE = ROOT / "site"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import build as site_build  # noqa: E402
+
+
+# Serializes the read-modify-write mutating endpoints. The server is
+# threaded, and two overlapping saves (e.g. Ctrl+S during a still-running
+# page-settings POST) would otherwise silently lose one of the updates.
+# Reentrant so a locked handler can safely call another locked helper.
+_MUTEX = threading.RLock()
 
 
 def read_site() -> dict:
@@ -123,33 +131,59 @@ def slugify(nav: str) -> str:
     return slug
 
 
+def unique_slug(nav: str, taken: set[str]) -> str:
+    base = slugify(nav)
+    if base not in taken:
+        return base
+    stem = base[:30].rstrip("-") or "page"
+    i = 2
+    while True:
+        suffix = f"-{i}"
+        candidate = stem[:40 - len(suffix)].rstrip("-") + suffix
+        if candidate not in taken:
+            return candidate
+        i += 1
+
+
 EDITOR_CSS = site_build.CSS + r'''
   #app{display:flex;align-items:stretch;min-height:100vh}
   #side{
-    width:232px;flex:0 0 232px;background:#141414;color:#eee;
+    width:280px;flex:0 0 280px;background:#141414;color:#eee;
     font:13px "Helvetica Neue",Arial,sans-serif;
     padding:14px 12px;display:flex;flex-direction:column;gap:8px;
     position:sticky;top:0;height:100vh;overflow:auto;
   }
   #side .side-h{
+    display:flex;align-items:center;justify-content:space-between;
     font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#999;margin:8px 2px 2px;
   }
+  #side .side-h button{background:transparent;border:1px solid #555;border-radius:3px;color:#ccc;padding:3px 8px;cursor:pointer;font:11px "Helvetica Neue",Arial,sans-serif;text-transform:none;letter-spacing:0}
+  #side .side-h button:hover{background:#333;color:#fff}
   #side ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
   #side li{
-    display:flex;align-items:center;gap:4px;border-radius:3px;padding:5px 6px;
+    display:flex;align-items:center;gap:3px;border-radius:3px;padding:4px 5px;min-height:34px;
   }
   #side li.cur{background:#2c2c2c}
-  #side li .nm{flex:1;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #side li.cur.unsaved .nm::after{content:"  ●";color:#e2b84b;font-size:10px}
+  #side li .nm{flex:1;min-width:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #side li.cur .nm{font-weight:700}
   #side li button{
-    background:none;border:none;color:#999;cursor:pointer;font-size:13px;padding:0 4px;
+    background:none;border:1px solid transparent;border-radius:3px;color:#aaa;cursor:pointer;
+    font:12px "Helvetica Neue",Arial,sans-serif;padding:3px 5px;min-width:25px;min-height:25px;
   }
-  #side li button:hover{color:#fff}
+  #side li button:hover{color:#fff;border-color:#555;background:#292929}
+  #side li .dirtydot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e2b84b;margin-right:5px;vertical-align:middle}
+  #side li .page-kind{font-size:10px;color:#888;letter-spacing:.3px;margin-left:4px}
   #side label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#bbb;margin:0 2px}
-  #side input,#side select{
+  #side input,#side select,#side textarea{
     background:#222;border:1px solid #444;color:#eee;border-radius:2px;
-    font-size:13px;padding:5px 7px;width:100%;
+    font-size:13px;padding:6px 7px;width:100%;
   }
+  #side textarea{min-height:58px;resize:vertical;font:12px/1.4 "Helvetica Neue",Arial,sans-serif}
+  #side .side-help{font-size:11px;color:#888;line-height:1.4;margin:0 2px}
+  #side details.advanced-site{margin:4px 2px}
+  #side details.advanced-site summary{cursor:pointer;color:#bbb;font-size:11px;letter-spacing:.5px;padding:5px 0}
+  #side details.advanced-site[open] summary{color:#fff}
   #side .row{display:flex;gap:6px;margin:0 2px}
   #side .row button,#side .widebtn{
     flex:1;background:#fff;color:#141414;border:1px solid #fff;border-radius:2px;
@@ -172,6 +206,8 @@ EDITOR_CSS = site_build.CSS + r'''
   .editbar button.warn{background:#141414;color:#fff;border-color:#fff}
   .editbar button:disabled{opacity:.45;cursor:default}
   .editbar a{color:#fff}
+  .editbar a.barlink{display:inline-block;padding:6px 10px;border:1px solid #666;border-radius:2px;color:#fff;text-decoration:none;font:12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;text-transform:uppercase}
+  .editbar a.barlink:hover{background:#333}
   .editbar .status{color:#bbb;font-size:12.5px}
   .toolbar{
     display:none;gap:6px;align-items:center;flex-wrap:wrap;
@@ -179,6 +215,9 @@ EDITOR_CSS = site_build.CSS + r'''
     padding:8px 14px;position:sticky;top:39px;z-index:40;
     font:12px "Helvetica Neue",Arial,sans-serif;
   }
+  .toolgroup{display:flex;align-items:center;gap:5px;border-right:1px solid #d3d0c8;padding:0 8px 0 0;margin-right:2px}
+  .toolgroup:last-child{border-right:0}
+  .toolgroup .groupname{font:10px "Helvetica Neue",Arial,sans-serif;color:#666;text-transform:uppercase;letter-spacing:.8px;margin-right:2px;white-space:nowrap}
   .editing .toolbar{display:flex}
   .toolbar button{
     background:#fff;border:1px solid #999;border-radius:2px;
@@ -198,13 +237,23 @@ EDITOR_CSS = site_build.CSS + r'''
   .toolbar #sizeNum::-webkit-outer-spin-button,
   .toolbar #sizeNum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .toolbar #sizeNum:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
+  .toolbar #leadNum,.toolbar #trackNum{
+    width:52px;text-align:center;font-weight:700;font-size:12px;color:#141414;
+    background:#fff;border:1px solid #999;border-radius:2px;padding:3px 4px;
+    -moz-appearance:textfield;
+  }
+  .toolbar #leadNum::-webkit-outer-spin-button,
+  .toolbar #leadNum::-webkit-inner-spin-button,
+  .toolbar #trackNum::-webkit-outer-spin-button,
+  .toolbar #trackNum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .toolbar #leadNum:focus,.toolbar #trackNum:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
   .toolbar #fontSel{
     max-width:118px;font-size:12px;color:#141414;
     background:#fff;border:1px solid #999;border-radius:2px;padding:4px 2px;
   }
   .toolbar #fontSel:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
   /* the live-site star would sit under the dark page list: shift it right */
-  .star-badge{left:250px;top:120px;}
+  .star-badge{left:300px;top:120px;}
   .gem-badge{top:120px;}
   .toolbar input[type=color]{
     width:26px;height:22px;padding:1px;border:1px solid #999;border-radius:2px;
@@ -214,7 +263,7 @@ EDITOR_CSS = site_build.CSS + r'''
   #linkStat{font:12px "Helvetica Neue",Arial,sans-serif;color:#bbb;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ld-back{position:fixed;inset:0;background:rgba(20,20,20,.5);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:12vh 12px 12px}
   .ld-back[hidden]{display:none}
-  .ld-box{background:#fff;color:#141414;border-radius:4px;padding:16px 18px;width:440px;max-width:94vw;box-shadow:0 12px 40px rgba(0,0,0,.4);font:13px "Helvetica Neue",Arial,sans-serif}
+  .ld-box{background:#fff;color:#141414;border-radius:6px;padding:20px 22px;width:520px;max-width:94vw;max-height:80vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);font:13px "Helvetica Neue",Arial,sans-serif}
   .ld-box h3{margin:0 0 4px;font-size:14px;letter-spacing:.8px;text-transform:uppercase}
   .ld-box label{display:block;margin:10px 0 3px;font-size:12px;color:#444}
   .ld-box input[type=text]{width:100%;box-sizing:border-box;font-size:13px;padding:7px 9px;border:1px solid #999;border-radius:2px}
@@ -230,10 +279,37 @@ EDITOR_CSS = site_build.CSS + r'''
   #linkApply{background:#141414;color:#fff;border:1px solid #141414}
   #linkApply:disabled{opacity:.4;cursor:default}
   #linkCancel,#linkRemove{background:#fff;color:#141414;border:1px solid #999}
+  .ld-box .dlg-field{display:flex;flex-direction:column;gap:4px;margin:12px 0}
+  .ld-box .dlg-field input,.ld-box .dlg-field select,.ld-box .dlg-field textarea{box-sizing:border-box;width:100%;border:1px solid #aaa;border-radius:3px;padding:8px 9px;font:14px "Helvetica Neue",Arial,sans-serif;color:#141414;background:#fff}
+  .ld-box .dlg-field textarea{min-height:68px;resize:vertical}
+  .ld-box textarea.html-source{min-height:360px;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;tab-size:2}
+  .ld-box .dlg-row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
+  .ld-box .dlg-row label{display:flex;align-items:center;gap:7px;margin:0;color:#333}
+  .dlg-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+  .dlg-actions button{border:1px solid #888;border-radius:3px;background:#fff;color:#141414;padding:8px 12px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
+  .dlg-actions button.primary{background:#141414;color:#fff;border-color:#141414}
+  .dlg-actions button.danger{color:#a1261e;border-color:#a1261e;margin-left:auto}
+  .dlg-note{font-size:12px;color:#666;line-height:1.45;margin:8px 0}
+  .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-top:12px}
+  .media-item{border:1px solid #ccc;border-radius:4px;background:#fff;padding:6px;cursor:pointer;text-align:left;color:#222;min-width:0}
+  .media-item:hover,.media-item:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
+  .media-item img{display:block;width:100%;height:78px;object-fit:contain;background:#f3f3f3}
+  .media-item span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;margin-top:5px}
+  #blockbar{position:fixed;z-index:90;display:flex;gap:4px;padding:4px;background:#141414;border:1px solid #555;border-radius:4px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+  #blockbar[hidden]{display:none}
+  #blockbar button{border:0;border-radius:3px;background:#333;color:#fff;padding:5px 8px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
+  #blockbar button:hover{background:#1c4fd8}
+  #blockbar button.danger:hover{background:#a1261e}
+  #imgInspector{display:none;align-items:center;gap:4px}
+  #imgInspector input{width:150px;font-size:11px;padding:4px 6px;border:1px solid #999;border-radius:2px}
+  .editing #imgInspector.on{display:flex}
   .editing [data-ed]{outline:1px dashed #1c4fd8;outline-offset:4px;min-height:1em}
   .editing #canvas{outline-offset:8px;min-height:45vh}
   .editing [data-ed]:focus,.editing #canvas:focus{outline:2px solid #1c4fd8}
   .canvas img.sel{outline:3px solid #1c4fd8}
+  .editing .form-placeholder{padding:12px 14px;border:1px dashed #1c4fd8;background:#f4f7ff;color:#29447a;border-radius:4px;font:13px "Helvetica Neue",Arial,sans-serif}
+  #formpreview{max-width:560px;margin:14px auto 0;opacity:.82}
+  #formpreview::before{content:"CONTACT FORM PREVIEW";display:block;margin:0 0 4px;color:#777;font:10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-align:center}
   #hint{
     display:none;color:var(--faint);font-style:italic;
     padding:8px 0 40px;pointer-events:none;
@@ -241,19 +317,23 @@ EDITOR_CSS = site_build.CSS + r'''
 '''
 
 
-def editor_page(site: dict, slug: str, body: str, live: str | None) -> bytes:
+def editor_page(site: dict, slug: str, body: str, live: str | None,
+                apply_custom_css: bool = True) -> bytes:
     site = dict(site)
     site["live"] = live
     logo_uri = site_build.logo_data_uri(LOGO)
-    has_form = any(p.get("slug") == slug and p.get("form") for p in site.get("pages", []))
-    # Inert preview of the live form. It sits outside #canvas (Save only
-    # posts the canvas), and page switches toggle it in renderAll.
-    inert = ""
-    if has_form:
-        inert = ('<div id="formpreview" contenteditable="false">'
-                 + site_build.CONTACT_FORM_HTML.replace("<form ", "<form onsubmit=\"return false;\" ", 1)
-                 + "</div>")
-    canvas_body, form_leftover = site_build.place_form(body, inert) if has_form else (body, "")
+    form_here = any(p.get("slug") == slug and p.get("form") for p in site.get("pages", []))
+    # Keep the source marker in the editable canvas; render a separate inert
+    # preview on every editor page so enabling the form takes effect live.
+    inert = ('<div id="formpreview" contenteditable="false">'
+             + site_build.CONTACT_FORM_HTML.replace("<form ", "<form onsubmit=\"return false;\" ", 1)
+             + "</div>")
+    if form_here:
+        marker = '<p data-form-marker="contact" class="form-placeholder" contenteditable="false">Contact form goes here — preview below</p>'
+        canvas_body, _ = site_build.place_form(body, marker)
+        form_leftover = inert
+    else:
+        canvas_body, form_leftover = body, inert
     page = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -262,23 +342,39 @@ def editor_page(site: dict, slug: str, body: str, live: str | None) -> bytes:
 <style>
 __CSS__
 </style>
+<style id="site-custom-css">__CUSTOM_CSS__</style>
 </head>
-<body data-theme="__THEME__">
+<body data-theme="__THEME__" data-star-animation="__STAR_ANIMATION__">
 <div id="app">
 <aside id="side">
-  <div class="side-h">Pages</div>
+  <div class="side-h"><span>Pages</span><button id="btn-help" title="Show editor help">Help</button></div>
   <ul id="pagelist"></ul>
   <div class="row"><button id="btn-addpage">+ Page</button></div>
   <div class="side-h">Site</div>
   <label>Title<input id="in-title"></label>
   <label>Tagline<input id="in-tagline"></label>
+  <label>Search description<textarea id="in-description" maxlength="300" placeholder="A short description shown in search and link previews"></textarea></label>
   <label>Footer line<input id="in-footer"></label>
   <label>Theme<select id="in-theme">
     <option value="classic">Classic</option>
     <option value="parchment">Parchment</option>
     <option value="ink">Ink</option>
+    <option value="midnight">Midnight</option>
+  </select></label>
+  <label>Star transition<select id="in-star-animation">
+    <option value="portal">Golden burst</option>
+    <option value="fade">Soft fade</option>
+    <option value="none">No animation</option>
   </select></label>
   <div class="row"><button id="btn-logo">Logo…</button></div>
+  <details class="advanced-site">
+    <summary>Advanced design</summary>
+    <label>Custom CSS<textarea id="in-css" maxlength="20000" rows="8" placeholder="Example: @media (max-width: 700px) { .star-badge { width: 120px; } }"></textarea></label>
+    <p class="side-help">CSS changes the live design. Use Preview before publishing. Scripts and remote imports are blocked.</p>
+    <p class="side-help">If your CSS hides the editor, open <code>http://127.0.0.1:8767/?no-css=1</code> to recover it.</p>
+    <p class="side-help" id="customCssError" hidden>Remote imports and off-site CSS URLs are blocked. Use an image from uploads/ instead.</p>
+    <p class="side-help" id="customCssDisabled" hidden>Custom CSS preview is disabled for recovery. Remove <code>?no-css=1</code> from the address to re-enable it.</p>
+  </details>
   <div class="side-h">Check</div>
   <a id="link-built" href="#" target="_blank" rel="noopener">view built page</a>
   <a id="link-live" href="#" target="_blank" rel="noopener">view live site</a>
@@ -288,23 +384,29 @@ __CSS__
   <span><b>Builder</b> — <span id="pagename"></span></span>
   <span class="status" id="status">viewing</span>
   <span class="spacer"></span>
+  <button id="btn-page-settings" title="Page title, visibility, badge and contact form">Page settings</button>
   <button id="btn-edit">Edit</button>
   <button id="btn-save" disabled>Save</button>
+  <a id="btn-preview" href="#" target="_blank" rel="noopener" class="barlink">Preview</a>
   <button id="btn-quit" class="warn">Quit</button>
 </div>
 <div class="toolbar" id="toolbar">
+  <div class="toolgroup"><span class="groupname">Edit</span>
   <button data-cmd="undo" id="btn-undo" title="Undo (Ctrl+Z)" disabled>Undo</button>
   <button data-cmd="redo" id="btn-redo" title="Redo (Ctrl+Y)" disabled>Redo</button>
-  <span class="sep"></span>
   <button data-cmd="bold"><b>B</b></button>
   <button data-cmd="italic"><i>I</i></button>
   <button data-cmd="underline"><u>U</u></button>
+  </div>
+  <div class="toolgroup"><span class="groupname">Text</span>
   <button data-cmd="h2">Heading</button>
   <button data-cmd="h3">Subhead</button>
   <button data-cmd="p">Text</button>
   <button data-cmd="smaller" title="Smaller text">A-</button>
   <button data-cmd="bigger" title="Bigger text">A+</button>
   <input type="number" id="sizeNum" min="8" max="200" title="Font size in px">
+  <input type="number" id="leadNum" min="1" max="3" step="0.1" title="Line height (1.0–3.0)">
+  <input type="number" id="trackNum" min="-5" max="30" step="0.5" title="Letter spacing in px">
   <select id="fontSel" title="Font">
     <option value="">Font: default</option>
     <option value='Georgia,Times New Roman,serif' data-first="georgia">Serif (Georgia)</option>
@@ -312,18 +414,22 @@ __CSS__
     <option value='Times New Roman,Times,serif' data-first="timesnewroman">Times</option>
     <option value='Courier New,Courier,monospace' data-first="couriernew">Mono (Courier)</option>
     <option value='Verdana,Geneva,sans-serif' data-first="verdana">Verdana</option>
-    <option value='Trebuchet MS,Verdana,sans-serif' data-first="trebuchetms">Trebuchet</option>
+  <option value='Trebuchet MS,Verdana,sans-serif' data-first="trebuchetms">Trebuchet</option>
     <option value='Palatino Linotype,Palatino,serif' data-first="palatinolinotype">Palatino</option>
+    <option value='Helvetica Neue,Helvetica,Arial,sans-serif' data-first="helveticaneue">Clean (Helvetica)</option>
+    <option value='Tahoma,Geneva,sans-serif' data-first="tahoma">Sans (Tahoma)</option>
+    <option value='Garamond,Georgia,serif' data-first="garamond">Book (Garamond)</option>
   </select>
-  <span class="sep"></span>
+  </div>
+  <div class="toolgroup"><span class="groupname">Layout</span>
   <button data-cmd="ul">Bullets</button>
   <button data-cmd="ol">Numbers</button>
   <button data-cmd="quote">Quote</button>
-  <span class="sep"></span>
   <button data-cmd="left">Left</button>
   <button data-cmd="center">Center</button>
   <button data-cmd="right">Right</button>
-  <span class="sep"></span>
+  </div>
+  <div class="toolgroup"><span class="groupname">Color</span>
   <button data-cmd="color" data-color="" title="Default color">Auto</button>
   <button data-cmd="color" data-color="c-muted" class="swatch" title="Muted" style="background:#7a7a7a"></button>
   <button data-cmd="color" data-color="c-red" class="swatch" title="Red" style="background:#c0392b"></button>
@@ -331,23 +437,34 @@ __CSS__
   <button data-cmd="color" data-color="c-green" class="swatch" title="Green" style="background:#2e8b57"></button>
   <button data-cmd="color" data-color="c-gold" class="swatch" title="Gold" style="background:#c9a227"></button>
   <input type="color" id="colorwheel" title="Any color — full wheel" value="#c0392b">
-  <span class="sep"></span>
+  <input type="color" id="hlwheel" title="Highlight color — full wheel" value="#f3d97b">
+  </div>
+  <div class="toolgroup"><span class="groupname">Links</span>
   <button data-cmd="link">Link</button>
   <button data-cmd="button">Button</button>
   <button data-cmd="unlink">Unlink</button>
   <span id="linkStat" title="Put the caret in linked text to see where it goes">no link</span>
-  <span class="sep"></span>
+  </div>
+  <div class="toolgroup"><span class="groupname">Insert</span>
   <button data-cmd="image">Picture</button>
   <button data-cmd="gallery">Gallery</button>
+  <button data-cmd="media">Media library</button>
   <button data-cmd="divider">Divider</button>
   <button data-cmd="section" title="Insert a nice section panel">Section</button>
   <button data-cmd="table" title="Insert a 2x2 table">Table</button>
+  <button data-cmd="form" id="btn-form-marker" title="Place the contact form at the cursor">Form location</button>
+  </div>
+  <div class="toolgroup"><span class="groupname">Image</span>
   <button data-cmd="small" disabled>Small</button>
   <button data-cmd="medium" disabled>Medium</button>
   <button data-cmd="full" disabled>Full</button>
   <button data-cmd="delimg" disabled>Remove</button>
-  <span class="sep"></span>
+  <div id="imgInspector"><label for="imgAlt">Alt</label><input id="imgAlt" type="text" maxlength="200" placeholder="Describe the image"><button type="button" id="btn-replace-img">Replace</button></div>
+  </div>
+  <div class="toolgroup"><span class="groupname">Style</span>
   <button data-cmd="clear">Clear style</button>
+  <button type="button" id="btn-html-source">HTML source</button>
+  </div>
 </div>
 <div class="ld-back" id="linkdlg" hidden>
   <div class="ld-box" role="dialog" aria-label="Link editor">
@@ -366,6 +483,93 @@ __CSS__
       <button id="linkCancel" type="button">Cancel</button>
     </div>
   </div>
+</div>
+<div class="ld-back" id="pageDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="pageDlgTitle">
+    <h3 id="pageDlgTitle">Page settings</h3>
+    <p class="dlg-note">Control how this page appears in the menu and browser. The URL stays <code id="pageSlug"></code>.</p>
+    <label class="dlg-field">Menu name<input id="pageNav" maxlength="60"></label>
+    <label class="dlg-field">Browser tab title<input id="pageTitle" maxlength="300" placeholder="Use site title"></label>
+    <label class="dlg-field">Search description<textarea id="pageDescription" maxlength="300" placeholder="Use the site description"></textarea></label>
+    <div class="dlg-row">
+      <label><input type="checkbox" id="pageHidden"> Hide from the main menu</label>
+      <label><input type="checkbox" id="pageForm"> Show the contact form on this page</label>
+    </div>
+    <label class="dlg-field">Badge on this page<select id="pageBadge"><option value="">None (visible page)</option><option value="none">No badge (hidden page)</option><option value="star">Latest and greatest star</option><option value="gem">Feedback badge</option></select></label>
+    <p class="dlg-note">Badge pages are hidden from the menu automatically. The contact form appears on a page only when enabled here.</p>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="pageApply">Save page settings</button>
+      <button type="button" id="pageDuplicate">Duplicate page…</button>
+      <button type="button" id="pageCancel">Cancel</button>
+      <button type="button" class="danger" id="pageDelete">Delete page</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="sourceDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="sourceTitle">
+    <h3 id="sourceTitle">Page HTML</h3>
+    <p class="dlg-note">Advanced editing for this page only. The cleaner allows safe text, links, images and layout tags; scripts, forms and unsupported markup are removed before preview/save.</p>
+    <label class="dlg-field">HTML<textarea class="html-source" id="sourceHtml" spellcheck="false"></textarea></label>
+    <p class="dlg-note" id="sourceHint"></p>
+    <div class="dlg-actions"><button type="button" class="primary" id="sourceApply">Clean and preview</button><button type="button" id="sourceCancel">Cancel</button></div>
+  </div>
+</div>
+<div class="ld-back" id="addPageDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="addPageTitle">
+    <h3 id="addPageTitle">New page</h3>
+    <label class="dlg-field">Menu name<input id="newPageName" maxlength="60" placeholder="e.g. About"></label>
+    <label class="dlg-field">Start with<select id="newPageStarter"><option value="blank">Blank page</option><option value="copy">Copy the current page</option></select></label>
+    <p class="dlg-note">The page is saved immediately. Add your words in the preview, then Save.</p>
+    <div class="dlg-actions"><button type="button" class="primary" id="newPageCreate">Create page</button><button type="button" id="newPageCancel">Cancel</button></div>
+  </div>
+</div>
+<div class="ld-back" id="unsavedDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="unsavedTitle">
+    <h3 id="unsavedTitle">Unsaved changes</h3>
+    <p class="dlg-note">Save your edits before leaving this page? A local draft is kept in this browser until you save or discard it.</p>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="unsavedSave">Save and continue</button>
+      <button type="button" class="danger" id="unsavedDiscard">Discard edits</button>
+      <button type="button" id="unsavedCancel">Stay here</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="draftDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="draftTitle">
+    <h3 id="draftTitle">Unsaved browser draft</h3>
+    <p class="dlg-note">A draft from <span id="draftWhen"></span> is available for this page.</p>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="draftRestore">Restore draft</button>
+      <button type="button" class="danger" id="draftDiscard">Discard draft</button>
+      <button type="button" id="draftLater">Not now</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="mediaDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="mediaDlgTitle">
+    <h3 id="mediaDlgTitle">Media library</h3>
+    <p class="dlg-note">Choose an image already uploaded to this site, or upload a new one.</p>
+    <div class="ld-btns"><button id="mediaUpload" type="button">Upload image</button><button id="mediaClose" type="button">Close</button></div>
+    <div id="mediaGrid" class="media-grid"></div>
+    <p id="mediaEmpty" class="dlg-note" hidden>No uploaded images yet.</p>
+  </div>
+</div>
+<div class="ld-back" id="helpDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <h3 id="helpTitle">Using the site editor</h3>
+    <p><b>1. Pick a page.</b> Use the Pages list to switch pages. Use Page settings to rename, hide, add a badge or enable the contact form.</p>
+    <p><b>2. Edit the preview.</b> Press Edit, then click text and type. Use the labeled toolbar groups to format text and add pictures, links, sections and tables.</p>
+    <p><b>3. Manage content.</b> Hover a page block for move, duplicate and delete controls. Select an image to change its size, alignment or alt text.</p>
+    <p><b>4. Save and publish.</b> Save writes the editable source and stages the built site. Commit and push in GitKraken to publish.</p>
+    <p class="dlg-note">Shortcuts: Ctrl+S save · Ctrl+Z undo · Ctrl+Y redo · Alt+↑/↓ move a block. A draft is saved in this browser while you edit. If custom CSS hides the editor, open /?no-css=1.</p>
+    <div class="dlg-actions"><button type="button" class="primary" id="helpClose">Got it</button></div>
+  </div>
+</div>
+<div id="blockbar" hidden aria-label="Selected block actions">
+  <button type="button" data-block-action="up" title="Move block up">↑</button>
+  <button type="button" data-block-action="down" title="Move block down">↓</button>
+  <button type="button" data-block-action="duplicate">Duplicate</button>
+  <button type="button" class="danger" data-block-action="delete">Delete</button>
 </div>
 <div class="page" id="page">
   <a class="star-badge" id="starBadge" href="#" title="Open the hidden page"><span class="star-title">Latest and greatest</span><span class="star-sub">Click me</span></a>
@@ -388,11 +592,24 @@ __CSS__
 <script>
 let SITE = __SITE_JSON__;
 let SLUG = "__SLUG__";
-let editing = false, dirty = false, selImg = null, galleryMode = false;
+const CUSTOM_CSS_PREVIEW_ENABLED = __CUSTOM_CSS_ENABLED__;
+let editing = false, dirty = false, selImg = null, galleryMode = false, replaceTarget = null, mediaTarget = null, mediaRange = null;
+let editRevision = 0;
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const canvas = $("#canvas"), status = $("#status"),
       btnEdit = $("#btn-edit"), btnSave = $("#btn-save"), filepick = $("#filepick");
+let saving = false, draftTimer = null, unsavedResolve = null, pageSettingsSlug = null;
+let draftResolve = null;
+let newPageSource = null;
+const draftKey = slug => "fc-site-draft:" + slug;
+const LAST_PAGE_KEY = "fc-site-last-page";
+function globalSettings(site){
+  return {title:site.title || "", tagline:site.tagline || "", description:site.description || "",
+          footer:site.footer || "", theme:site.theme || "classic", custom_css:site.custom_css || "",
+          star_animation:site.star_animation || "portal"};
+}
+let serverSiteSnapshot = JSON.stringify(globalSettings(SITE));
 
 async function api(path, payload){
   const o = {method: payload === undefined ? "GET" : "POST"};
@@ -402,35 +619,138 @@ async function api(path, payload){
   if (!r.ok) throw new Error(j.error || r.status);
   return j;
 }
+function replaceSite(next){ SITE = Object.assign({}, next, {live:SITE.live}); serverSiteSnapshot = JSON.stringify(globalSettings(SITE)); }
+async function previewCurrent(e){
+  if (e) e.preventDefault();
+  const tab = window.open("about:blank", "_blank");
+  if (!tab) { status.textContent = "Allow popups to open the page preview"; return; }
+  if (dirty && !(await confirmLeave())) { tab.close(); return; }
+  tab.opener = null;
+  tab.location.replace("/built?slug=" + encodeURIComponent(SLUG));
+}
 function setEditing(on){
   editing = on;
+  if (!on && typeof blockbar !== "undefined") blockbar.hidden = true;
   document.body.classList.toggle("editing", on);
   canvas.contentEditable = on ? "true" : "false";
   $$("[data-ed]").forEach(el => el.contentEditable = on ? "true" : "false");
   btnEdit.textContent = on ? "Viewing" : "Edit";
   updateSaveBtn();
-  if (dirty) status.textContent = "edited — press Save";
+  if (dirty) status.textContent = "Unsaved changes — Save to stage";
   else status.textContent = on ? "editing — nothing saved yet" : "viewing";
   hint();
 }
 function updateSaveBtn(){
-  btnSave.disabled = !(editing || dirty);
+  btnSave.disabled = saving || !(editing || dirty);
+}
+function writeDraft(){
+  clearTimeout(draftTimer);
+  if (!dirty) return;
+  draftTimer = setTimeout(persistDraft, 350);
+}
+function persistDraft(){
+  if (!dirty) return;
+  try {
+    localStorage.setItem(draftKey(SLUG), JSON.stringify({
+      body: canvas.innerHTML,
+        site: globalSettings(SITE), siteBase:serverSiteSnapshot,
+      savedAt: Date.now()
+    }));
+  } catch (e) { status.textContent = "Unsaved changes — browser draft storage is full"; }
+}
+function clearDraft(slug=SLUG){
+  clearTimeout(draftTimer);
+  try { localStorage.removeItem(draftKey(slug)); } catch (e) {}
 }
 function markDirty(msg){
   dirty = true;
+  editRevision++;
   updateSaveBtn();
-  status.textContent = msg || "edited — press Save";
+  const currentRow = $("#pagelist li.cur"); if (currentRow) currentRow.classList.add("unsaved");
+  status.textContent = msg || "Unsaved changes — Save to stage";
+  writeDraft();
 }
+function askUnsaved(){
+  return new Promise(resolve => { unsavedResolve = resolve; $("#unsavedDlg").hidden = false; });
+}
+function settleUnsaved(choice){
+  $("#unsavedDlg").hidden = true;
+  const resolve = unsavedResolve; unsavedResolve = null;
+  if (resolve) resolve(choice);
+}
+$("#unsavedSave").onclick = () => settleUnsaved("save");
+$("#unsavedDiscard").onclick = () => settleUnsaved("discard");
+$("#unsavedCancel").onclick = () => settleUnsaved("stay");
+async function discardCurrentDraft(){
+  clearDraft(SLUG);
+  const [site, page] = await Promise.all([
+    api("/api/site"), api("/api/page?slug=" + encodeURIComponent(SLUG))
+  ]);
+  editRevision++; replaceSite(site); canvas.innerHTML = page.body; dirty = false; selImg = null; syncFormMarker();
+  syncFormMarker(); histReset(); renderAll(); updateSaveBtn(); imgButtons();
+  status.textContent = "Edits discarded — showing the saved page";
+}
+async function confirmLeave(){
+  if (saving) { status.textContent = "Save is still running — wait before switching pages"; return false; }
+  if (!dirty) return true;
+  writeDraft();
+  const choice = await askUnsaved();
+  if (choice === "stay") return false;
+  if (choice === "save") { await save(); return !dirty; }
+  try { await discardCurrentDraft(); return true; }
+  catch (err) { status.textContent = "could not discard draft: " + err.message; return false; }
+}
+function askDraftChoice(when){
+  return new Promise(resolve => {
+    draftResolve = resolve;
+    $("#draftWhen").textContent = when;
+    $("#draftDlg").hidden = false;
+  });
+}
+function settleDraft(choice){
+  $("#draftDlg").hidden = true;
+  const resolve = draftResolve; draftResolve = null;
+  if (resolve) resolve(choice);
+}
+$("#draftRestore").onclick = () => settleDraft("restore");
+$("#draftDiscard").onclick = () => settleDraft("discard");
+$("#draftLater").onclick = () => settleDraft("later");
+async function restoreDraft(){
+  let draft;
+  try { draft = JSON.parse(localStorage.getItem(draftKey(SLUG)) || "null"); }
+  catch (e) { clearDraft(SLUG); return false; }
+  if (!draft || typeof draft.body !== "string") return false;
+  const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : "earlier";
+  const choice = await askDraftChoice(when);
+  if (choice === "later") return false;
+  if (choice === "discard") { clearDraft(SLUG); return false; }
+  canvas.innerHTML = draft.body; selImg = null; replaceTarget = null;
+  const siteSettingsCurrent = !!draft.siteBase && draft.siteBase === serverSiteSnapshot;
+  if (draft.site && siteSettingsCurrent) SITE = Object.assign({}, SITE, draft.site);
+  dirty = true; ensureExitBlock(); renderAll(); histReset(); updateSaveBtn();
+  status.textContent = siteSettingsCurrent ? "Draft restored — review it, then Save to stage"
+                                          : "Page draft restored; newer saved site settings kept";
+  return true;
+}
+window.addEventListener("beforeunload", e => {
+  if (!dirty) return;
+  clearTimeout(draftTimer); persistDraft(); e.preventDefault(); e.returnValue = "";
+});
 function hint(){
   $("#hint").style.display =
     (editing && !canvas.innerText.trim() && !canvas.querySelector("img")) ? "block" : "none";
 }
 function renderAll(){
   document.body.dataset.theme = SITE.theme;
+  document.body.dataset.starAnimation = SITE.star_animation || "portal";
+  applyCustomCssPreview();
   document.querySelector('[data-ed="title"]').innerText = SITE.title;
   document.querySelector('[data-ed="tagline"]').innerText = SITE.tagline;
   $("#in-title").value = SITE.title; $("#in-tagline").value = SITE.tagline;
+  $("#in-description").value = SITE.description || "";
   $("#in-footer").value = SITE.footer || ""; $("#in-theme").value = SITE.theme;
+  $("#in-star-animation").value = SITE.star_animation || "portal";
+  $("#in-css").value = SITE.custom_css || "";
   const nav = $("#nav"); nav.innerHTML = "";
   const visPages = SITE.pages.filter(p => !p.hidden);
   if (visPages.length > 1) visPages.forEach(p => {
@@ -446,26 +766,30 @@ function renderAll(){
   const ul = $("#pagelist"); ul.innerHTML = "";
   SITE.pages.forEach(p => {
     const li = document.createElement("li");
-    if (p.slug === SLUG) li.className = "cur";
-    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = (p.hidden ? "\u2605 " : "") + p.nav;
+    if (p.slug === SLUG) li.className = "cur" + (dirty ? " unsaved" : "");
+    const nm = document.createElement("span"); nm.className = "nm";
+    const badge = p.badge === "gem" ? "◇ " : (p.hidden && p.badge !== "none" ? "★ " : "");
+    nm.textContent = badge + p.nav;
     nm.title = p.slug + ".html" + (p.hidden ? " (hidden page, not in the menu)" : ""); nm.onclick = () => openPage(p.slug);
     li.appendChild(nm);
-    const up = document.createElement("button"); up.textContent = "↑"; up.title = "move up";
-    up.onclick = () => movePage(p.slug, -1); li.appendChild(up);
-    const dn = document.createElement("button"); dn.textContent = "↓"; dn.title = "move down";
-    dn.onclick = () => movePage(p.slug, 1); li.appendChild(dn);
-    if (p.slug !== "index") {
-      const rn = document.createElement("button"); rn.textContent = "✎"; rn.title = "rename";
-      rn.onclick = () => renamePage(p.slug, p.nav); li.appendChild(rn);
-      const del = document.createElement("button"); del.textContent = "×"; del.title = "delete page";
-      del.onclick = () => deletePage(p.slug, p.nav); li.appendChild(del);
+    if (p.form || (p.hidden && p.badge === "none")) {
+      const kind = document.createElement("span"); kind.className = "page-kind";
+      kind.textContent = p.form ? "form" : "hidden"; li.appendChild(kind);
     }
+    const up = document.createElement("button"); up.textContent = "↑"; up.title = "Move page up"; up.setAttribute("aria-label", "Move " + p.nav + " up");
+    up.onclick = () => movePage(p.slug, -1); li.appendChild(up);
+    const dn = document.createElement("button"); dn.textContent = "↓"; dn.title = "Move page down"; dn.setAttribute("aria-label", "Move " + p.nav + " down");
+    dn.onclick = () => movePage(p.slug, 1); li.appendChild(dn);
+    const settings = document.createElement("button"); settings.textContent = "⚙"; settings.title = "Page settings";
+    settings.setAttribute("aria-label", "Settings for " + p.nav); settings.onclick = () => openPageSettings(p.slug); li.appendChild(settings);
     ul.appendChild(li);
   });
   const cur = SITE.pages.find(p => p.slug === SLUG);
   $("#pagename").textContent = cur ? cur.nav : SLUG;
+  $("#btn-page-settings").disabled = !cur;
   const fp = document.getElementById("formpreview");
   if (fp) fp.style.display = (cur && cur.form) ? "" : "none";
+  const fm = $("#btn-form-marker"); if (fm) fm.disabled = !(cur && cur.form);
   $("#foot").textContent = SITE.footer || "";
   $("#foot").style.display = SITE.footer ? "" : "none";
   const starPage = SITE.pages.find(p => p.hidden && (p.badge || "star") === "star");
@@ -478,6 +802,7 @@ function renderAll(){
     if (gemPage) gemBadge.querySelector(".gem-title").textContent = gemPage.nav;
   }
   $("#link-built").href = "/built?slug=" + encodeURIComponent(SLUG);
+  $("#btn-preview").href = "/built?slug=" + encodeURIComponent(SLUG);
   const liveA = $("#link-live");
   if (SITE.live) {
     liveA.style.display = "";
@@ -488,20 +813,62 @@ function renderAll(){
   hint();
   updateLinkStat();
   updateFontSel();
+  imgButtons();
+}
+$("#link-built").addEventListener("click", previewCurrent);
+$("#btn-preview").addEventListener("click", previewCurrent);
+function decorateFormMarker(){
+  const current = SITE.pages.find(p => p.slug === SLUG);
+  if (!current || !current.form) return;
+  const existing = canvas.querySelector('[data-form-marker="contact"]');
+  if (existing) {
+    existing.classList.add("form-placeholder"); existing.contentEditable = "false";
+    existing.textContent = "Contact form goes here — preview below"; return;
+  }
+  const p = Array.from(canvas.querySelectorAll("p")).find(el => el.textContent.trim() === "[contact form]");
+  if (!p) return;
+  p.dataset.formMarker = "contact"; p.classList.add("form-placeholder");
+  p.contentEditable = "false"; p.textContent = "Contact form goes here — preview below";
+}
+function syncFormMarker(){
+  const current = SITE.pages.find(p => p.slug === SLUG);
+  if (current && current.form) { decorateFormMarker(); return; }
+  const existing = canvas.querySelector('[data-form-marker="contact"]');
+  const marker = existing || Array.from(canvas.querySelectorAll("p")).find(el => el.textContent.trim() === "[contact form]");
+  if (marker) {
+    marker.dataset.formMarker = "contact"; marker.classList.add("form-placeholder");
+    marker.contentEditable = "false"; marker.textContent = "Contact form is off — enable it in Page settings to publish it";
+  }
+}
+function bodyForSave(){
+  const copy = canvas.cloneNode(true);
+  const page = SITE.pages.find(p => p.slug === SLUG);
+  let kept = false;
+  Array.from(copy.querySelectorAll('[data-form-marker="contact"],p')).forEach(node => {
+    const isMarker = node.dataset.formMarker === "contact"
+      || (node.tagName === "P" && node.textContent.trim() === "[contact form]");
+    if (!isMarker) return;
+    if (page && page.form && !kept) {
+      const p = document.createElement("p"); p.textContent = "[contact form]"; node.replaceWith(p); kept = true;
+    } else node.remove();
+  });
+  return copy.innerHTML;
 }
 async function openPage(slug){
   if (slug === SLUG) return;
-  if (dirty && !confirm("Switch page without saving?")) return;
+  if (!(await confirmLeave())) return;
   if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
   let j;
   try {
     j = await api("/api/page?slug=" + encodeURIComponent(slug));
   } catch (err) { status.textContent = "could not open page: " + err.message; return; }
-  SLUG = slug; canvas.innerHTML = j.body; selImg = null;
+  SLUG = slug; canvas.innerHTML = j.body; selImg = null; syncFormMarker();
+  try { localStorage.setItem(LAST_PAGE_KEY, SLUG); } catch (e) {}
   ensureExitBlock();
   histReset();
   dirty = false; renderAll(); updateSaveBtn(); placeCaretStart();
-  status.textContent = editing ? "editing — nothing saved yet" : "viewing";
+  const restored = await restoreDraft();
+  if (!restored) status.textContent = editing ? "editing — nothing saved yet" : "viewing";
 }
 function placeCaretStart(){
   canvas.focus();
@@ -512,7 +879,7 @@ function placeCaretStart(){
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
   } catch (e) {}
 }
-["in-title","in-tagline","in-footer","in-theme"].forEach(id => {
+["in-title","in-tagline","in-description","in-footer","in-theme","in-star-animation","in-css"].forEach(id => {
   $("#" + id).addEventListener("input", () => {
     readInputsToSite();
     // focus is in the sidebar, so rewriting the canvas copy is safe
@@ -528,11 +895,39 @@ const ED_TO_INPUT = {title: "in-title", tagline: "in-tagline"};
 function readInputsToSite(){
   SITE.title = $("#in-title").value;
   SITE.tagline = $("#in-tagline").value;
+  SITE.description = $("#in-description").value;
   SITE.footer = $("#in-footer").value;
   SITE.theme = $("#in-theme").value;
+  SITE.star_animation = $("#in-star-animation").value;
+  SITE.custom_css = $("#in-css").value;
   document.body.dataset.theme = SITE.theme;
+  document.body.dataset.starAnimation = SITE.star_animation || "portal";
+  applyCustomCssPreview();
   $("#foot").textContent = SITE.footer;
   $("#foot").style.display = SITE.footer ? "" : "none";
+}
+function customCssAllowed(css){
+  let plain = String(css || "").replace(/\\/\\*[\\s\\S]*?\\*\\//g, "");
+  plain = plain.replace(/\\\\([0-9a-fA-F]{1,6})\\\\s?/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)));
+  plain = plain.replace(/\\\\(.)/g, "$1");
+  if (/<\\/style|@\\s*import\\b|image-set\\s*\\(/i.test(plain)) return false;
+  const re = /url\\(\\s*(?:(["])(.*?)\\1|([^)]*))\\s*\\)/gi;
+  let match, count = 0;
+  while ((match = re.exec(plain)) !== null) {
+    count++;
+    const target = (match[2] || match[3] || "").trim();
+    if (!/^\\/?uploads\\/[A-Za-z0-9._/-]+$/i.test(target) || target.includes("..")) return false;
+  }
+  return count === (plain.match(/url\\s*\\(/gi) || []).length;
+}
+function applyCustomCssPreview(){
+  const style = $("#site-custom-css");
+  const warning = $("#customCssError");
+  const disabled = $("#customCssDisabled");
+  const allowed = customCssAllowed(SITE.custom_css || "");
+  if (style) style.textContent = CUSTOM_CSS_PREVIEW_ENABLED && allowed ? (SITE.custom_css || "") : "";
+  if (warning) warning.hidden = allowed || !CUSTOM_CSS_PREVIEW_ENABLED;
+  if (disabled) disabled.hidden = CUSTOM_CSS_PREVIEW_ENABLED;
 }
 document.addEventListener("input", e => {
   const ed = e.target.closest && e.target.closest("#canvas,[data-ed]");
@@ -545,56 +940,159 @@ document.addEventListener("input", e => {
 });
 btnEdit.onclick = () => setEditing(!editing);
 
-$("#btn-addpage").onclick = async () => {
-  if (dirty && !confirm("Add a page without saving this one?")) return;
-  const nav = prompt("Name for the new page:", "New page");
-  if (!nav) return;
-  if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
-  let j;
-  try {
-    j = await api("/api/pages/add", {nav});
-  } catch (err) { status.textContent = "could not add page: " + err.message; return; }
-  SITE = j.site; dirty = false;
-  let b;
-  try {
-    b = await api("/api/page?slug=" + encodeURIComponent(j.slug));
-  } catch (err) { status.textContent = "page added but it could not be loaded: " + err.message; renderAll(); updateSaveBtn(); return; }
-  SLUG = j.slug; canvas.innerHTML = b.body; renderAll(); updateSaveBtn();
-  histReset();
-  status.textContent = "page added — it is already saved";
-};
-async function renamePage(slug, old){
-  if (dirty && !confirm("Rename without saving this page?")) return;
-  const nav = prompt("Menu name:", old);
-  if (!nav || nav === old) return;
-  try {
-    SITE = (await api("/api/pages/rename", {slug, nav})).site;
-  } catch (err) { status.textContent = "rename failed: " + err.message; return; }
-  dirty = false; renderAll(); updateSaveBtn(); status.textContent = "page renamed — saved";
+function openNewPageDialog(source=SLUG, mode="blank", name=""){
+  newPageSource = source;
+  $("#newPageName").value = name;
+  $("#newPageStarter").value = mode;
+  $("#addPageDlg").hidden = false;
+  $("#newPageName").focus();
 }
-async function deletePage(slug, nav){
-  if (dirty && !confirm("Delete without saving this page?")) return;
-  if (!confirm('Delete the page "' + nav + '"? This cannot be undone.')) return;
+$("#btn-addpage").onclick = async () => {
+  if (!(await confirmLeave())) return;
+  openNewPageDialog(SLUG, "blank", "");
+};
+$("#newPageCancel").onclick = () => {
+  $("#addPageDlg").hidden = true; newPageSource = null;
+  if (pageSettingsSlug) $("#pageDlg").hidden = false;
+};
+$("#newPageCreate").onclick = async () => {
+  const nav = $("#newPageName").value.trim();
+  if (!nav) { $("#newPageName").focus(); status.textContent = "Enter a menu name for the page"; return; }
   if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
   try {
-    SITE = (await api("/api/pages/delete", {slug})).site;
-  } catch (err) { status.textContent = "delete failed: " + err.message; return; }
+    const copy = $("#newPageStarter").value === "copy";
+    const j = copy ? await api("/api/pages/duplicate", {slug:newPageSource || SLUG, nav})
+                   : await api("/api/pages/add", {nav});
+    let body = j.body;
+    if (body === undefined) {
+      try { body = (await api("/api/page?slug=" + encodeURIComponent(j.slug))).body; }
+      catch (err) { replaceSite(j.site); renderAll(); status.textContent = "Page created, but could not load it: " + err.message; return; }
+    }
+    replaceSite(j.site); SLUG = j.slug;
+    try { localStorage.setItem(LAST_PAGE_KEY, SLUG); } catch (e) {}
+    canvas.innerHTML = body || ""; dirty = false; selImg = null; replaceTarget = null; clearDraft(SLUG); syncFormMarker(); ensureExitBlock();
+    histReset(); renderAll(); updateSaveBtn(); placeCaretStart();
+    $("#addPageDlg").hidden = true; $("#pageDlg").hidden = true;
+    newPageSource = null; pageSettingsSlug = null;
+    status.textContent = (copy ? "Page copied" : "Blank page created") + " and staged — add your content, then Save";
+  } catch (err) { status.textContent = "could not create page: " + err.message; }
+};
+async function deletePage(slug, nav){
+  if (dirty && !(await confirmLeave())) return false;
+  if (!confirm('Delete the page "' + nav + '"? This cannot be undone.')) return false;
+  if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
+  try {
+    replaceSite((await api("/api/pages/delete", {slug})).site);
+  } catch (err) { status.textContent = "delete failed: " + err.message; return false; }
   if (SLUG === slug) {
     SLUG = "index";
+    try { localStorage.setItem(LAST_PAGE_KEY, SLUG); } catch (e) {}
     try {
-      canvas.innerHTML = (await api("/api/page?slug=index")).body;
-    } catch (err) { status.textContent = "page deleted but home could not load: " + err.message; dirty = false; renderAll(); updateSaveBtn(); return; }
+      canvas.innerHTML = (await api("/api/page?slug=index")).body; selImg = null; replaceTarget = null; syncFormMarker();
+    } catch (err) { status.textContent = "page deleted but home could not load: " + err.message; dirty = false; renderAll(); updateSaveBtn(); return false; }
   histReset();
   }
-  dirty = false; renderAll(); updateSaveBtn(); status.textContent = "page deleted";
+  clearDraft(slug);
+  dirty = false; renderAll(); updateSaveBtn(); status.textContent = "page deleted and staged";
+  return true;
 }
 async function movePage(slug, dir){
-  if (dirty && !confirm("Reorder without saving this page?")) return;
+  if (dirty && !(await confirmLeave())) return;
   try {
-    SITE = (await api("/api/pages/move", {slug, dir})).site;
+    replaceSite((await api("/api/pages/move", {slug, dir})).site);
   } catch (err) { status.textContent = "move failed: " + err.message; return; }
   dirty = false; renderAll(); updateSaveBtn();
 }
+async function openPageSettings(slug){
+  if (dirty && !(await confirmLeave())) return;
+  const p = SITE.pages.find(x => x.slug === slug);
+  if (!p) return;
+  pageSettingsSlug = slug;
+  $("#pageSlug").textContent = slug + ".html";
+  $("#pageNav").value = p.nav || "";
+  $("#pageTitle").value = p.title || "";
+  $("#pageDescription").value = p.description || "";
+  $("#pageHidden").checked = !!p.hidden;
+  $("#pageForm").checked = !!p.form;
+  $("#pageBadge").value = p.badge || (p.hidden ? "none" : "");
+  $("#pageHidden").disabled = slug === "index";
+  $("#pageBadge").disabled = slug === "index";
+  $("#pageDlgTitle").textContent = "Page settings — " + p.nav;
+  $("#pageDelete").hidden = slug === "index";
+  $("#pageDlg").hidden = false;
+  $("#pageNav").focus();
+}
+$("#btn-page-settings").onclick = () => openPageSettings(SLUG);
+$("#pageCancel").onclick = () => { $("#pageDlg").hidden = true; pageSettingsSlug = null; };
+$("#pageBadge").addEventListener("change", () => {
+  if ($("#pageBadge").value) $("#pageHidden").checked = true;
+});
+$("#pageHidden").addEventListener("change", () => {
+  if (!$("#pageHidden").checked) $("#pageBadge").value = "";
+});
+$("#pageApply").onclick = async () => {
+  if (!pageSettingsSlug) return;
+  const payload = {
+    slug: pageSettingsSlug,
+    nav: $("#pageNav").value,
+    title: $("#pageTitle").value,
+    description: $("#pageDescription").value,
+    hidden: $("#pageHidden").checked,
+    form: $("#pageForm").checked,
+    badge: $("#pageBadge").value
+  };
+  try {
+    const j = await api("/api/pages/settings", payload);
+    replaceSite(j.site); dirty = false; clearDraft(SLUG); renderAll(); updateSaveBtn();
+    syncFormMarker();
+    $("#pageDlg").hidden = true; pageSettingsSlug = null;
+    status.textContent = "Page settings saved and staged — commit/push to publish";
+  } catch (err) { status.textContent = "page settings failed: " + err.message; }
+};
+$("#pageDuplicate").onclick = async () => {
+  if (!pageSettingsSlug) return;
+  const source = pageSettingsSlug, name = $("#pageNav").value || "Page";
+  try {
+    const updated = await api("/api/pages/settings", {
+      slug:source, nav:name, title:$("#pageTitle").value, description:$("#pageDescription").value,
+      hidden:$("#pageHidden").checked, form:$("#pageForm").checked, badge:$("#pageBadge").value
+    });
+    replaceSite(updated.site);
+  } catch (err) { status.textContent = "save page settings first: " + err.message; return; }
+  $("#pageDlg").hidden = true;
+  openNewPageDialog(source, "copy", name + " copy");
+};
+$("#pageDelete").onclick = async () => {
+  if (!pageSettingsSlug) return;
+  const p = SITE.pages.find(x => x.slug === pageSettingsSlug);
+  if (p && await deletePage(p.slug, p.nav)) { $("#pageDlg").hidden = true; pageSettingsSlug = null; }
+};
+$("#btn-help").onclick = () => { $("#helpDlg").hidden = false; };
+$("#helpClose").onclick = () => { $("#helpDlg").hidden = true; };
+$("#btn-html-source").onclick = () => {
+  if (!editing) { status.textContent = "Press Edit before opening page HTML"; return; }
+  $("#sourceHtml").value = bodyForSave();
+  $("#sourceHint").textContent = "Changes are cleaned and previewed here; they are not saved until you press Save.";
+  $("#sourceDlg").hidden = false; $("#sourceHtml").focus();
+};
+$("#sourceCancel").onclick = () => { $("#sourceDlg").hidden = true; };
+$("#sourceApply").onclick = async () => {
+  try {
+    const j = await api("/api/clean", {body:$("#sourceHtml").value});
+    canvas.innerHTML = j.body; selImg = null; replaceTarget = null; syncFormMarker(); ensureExitBlock();
+    $("#sourceDlg").hidden = true; pushHist(); markDirty(); hint(); imgButtons();
+    status.textContent = "HTML cleaned and previewed — Save to stage";
+  } catch (err) { $("#sourceHint").textContent = "Could not clean HTML: " + err.message; }
+};
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("#helpDlg").hidden) $("#helpDlg").hidden = true;
+  else if (!$("#mediaDlg").hidden) { $("#mediaDlg").hidden = true; mediaTarget = null; mediaRange = null; }
+  else if (!$("#pageDlg").hidden) { $("#pageDlg").hidden = true; pageSettingsSlug = null; }
+  else if (!$("#sourceDlg").hidden) $("#sourceDlg").hidden = true;
+  else if (!$("#draftDlg").hidden) settleDraft("later");
+  else if (!$("#unsavedDlg").hidden) settleUnsaved("stay");
+});
 $("#btn-logo").onclick = async () => {
   const inp = document.createElement("input");
   inp.type = "file"; inp.accept = "image/png";
@@ -616,6 +1114,10 @@ function imgButtons(){
   $$("#toolbar [data-cmd]").forEach(b => {
     if (SIZE_BTNS.includes(b.dataset.cmd)) b.disabled = !selImg;
   });
+  const inspector = $("#imgInspector");
+  if (inspector) inspector.classList.toggle("on", !!selImg && editing);
+  const alt = $("#imgAlt");
+  if (alt) { alt.disabled = !selImg || !editing; if (document.activeElement !== alt) alt.value = selImg ? (selImg.alt || "") : ""; }
 }
 canvas.addEventListener("click", e => {
   // in edit mode, clicking a link must not navigate away from the builder
@@ -625,6 +1127,16 @@ canvas.addEventListener("click", e => {
   if (e.target.tagName === "IMG" && editing) { selImg = e.target; selImg.classList.add("sel"); }
   imgButtons();
 });
+$("#imgAlt").addEventListener("input", e => {
+  if (!selImg || !editing) return;
+  selImg.alt = e.target.value.slice(0, 200); markDirty();
+});
+$("#imgAlt").addEventListener("change", () => { if (selImg) pushHist(); });
+$("#btn-replace-img").onclick = () => {
+  if (!selImg || !editing) return;
+  replaceTarget = selImg; galleryMode = false; filepick.multiple = false; filepick.click();
+};
+filepick.addEventListener("cancel", () => { replaceTarget = null; mediaTarget = null; mediaRange = null; });
 function placeCaretAtEnd(el){
   el.focus();
   const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
@@ -651,10 +1163,12 @@ function nodeFromPath(root, path){
   }
   return cur;
 }
-/* ---------- text size + text color ----------
+/* ---------- text size + text color + leading + tracking + highlight ----------
    Sizes are NUMERIC pixels: the toolbar writes inline style="font-size:NNpx"
    (integer, 8-200) and never a t-* class. Colors are the c-* classes or an
-   inline style="color:...". save() whitelists both before sending and the
+   inline style="color:..."; highlights are always inline
+   style="background-color:...". Leading is a unitless multiplier (1.0–3.0),
+   tracking is px (-5..30). save() whitelists all six before sending and the
    server re-validates, so nothing hostile survives a save.
    The old t-* classes still render (the CSS keeps them) and a legacy element
    still reads back its true size through getComputedStyle, but the toolbar
@@ -662,13 +1176,26 @@ function nodeFromPath(root, path){
    off the element it touches. */
 const PX_SCALE = [8,9,10,11,12,14,16,18,20,24,28,32,36,48,64,72,96];
 const SIZE_MIN = 8, SIZE_MAX = 200;    // the number box's range
-// the seven stacks the Font dropdown offers — the only values save() keeps
-const FONT_OK = new Set(Array.from(document.querySelectorAll("#fontSel option")).map(o => o.value).filter(Boolean));
+const LEAD_MIN = 1.0, LEAD_MAX = 3.0;  // line-height multiplier range
+const TRACK_MIN = -5, TRACK_MAX = 30;  // letter-spacing px range
+// the ten stacks the Font dropdown offers — the only values save() keeps.
+// Compared whitespace-insensitively: the DOM serializes font-family with
+// spaces after commas ("Tahoma, Geneva, sans-serif") while the options
+// carry the canonical spaceless form.
+const FONT_CANON = {};
+Array.from(document.querySelectorAll("#fontSel option")).forEach(o => {
+  if (o.value) FONT_CANON[o.value.toLowerCase().replace(/\\s+/g, "")] = o.value;
+});
 const COLOR_CLASSES = ["c-muted", "c-red", "c-blue", "c-green", "c-gold"];
 const BLOCK_SEL = "p,h2,h3,blockquote,li";
 const SIZE_RE = /^t-(tiny|small|large|huge|giant)$/;
 const COLOR_RE = /^c-/;
 const WHEEL_RE = /^#[0-9a-f]{6}$/i;   // native picker always yields #rrggbb
+// a span that carries any toolbar-kept inline style must survive unwrapping
+function hasKeepStyle(el){
+  return !!(el.style.color || el.style.backgroundColor || el.style.fontSize
+    || el.style.fontFamily || el.style.lineHeight || el.style.letterSpacing);
+}
 // ---------- undo history: snapshots of the canvas ----------
 let hist = [], hi = -1, typeTimer = null;
 function histReset(){ if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; } hist = [canvas.innerHTML]; hi = 0; updateHistBtns(); }
@@ -699,7 +1226,7 @@ function doUndo(){
       savedOffset = r0.startOffset;
     }
   }
-  hi--; canvas.innerHTML = hist[hi];
+  hi--; canvas.innerHTML = hist[hi]; selImg = null; imgButtons();
   canvas.focus();
   let restored = false;
   if (savedPath) {
@@ -731,7 +1258,7 @@ function doRedo(){
       savedOffset = r0.startOffset;
     }
   }
-  hi++; canvas.innerHTML = hist[hi];
+  hi++; canvas.innerHTML = hist[hi]; selImg = null; imgButtons();
   canvas.focus();
   let restored = false;
   if (savedPath) {
@@ -775,7 +1302,7 @@ function applyWheelColor(hex){
   const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
   if (a !== z) { blocksIntersecting(r).forEach(b => paintWheel(b, hex)); return; }
   const s = nearestSpan(r);
-  if (s) { paintWheel(s, hex); if (!s.className && !s.style.color) unwrapSpan(s); }
+  if (s) { paintWheel(s, hex); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
   else { const sp = wrapSpan(r, ""); if (sp) paintWheel(sp, hex); }
 }
 function getRange(){
@@ -886,7 +1413,127 @@ function updateSizeNum(){
   if (document.activeElement === inp) return;   // don't stomp what is being typed
   const px = sizeAtCaret();
   inp.value = px === null ? "" : String(Math.round(px * 10) / 10);   // "16", not "16.0"
+  updateLeadNum(); updateTrackNum();   // keep the sibling readouts in lockstep
 }
+// ---------- line height + letter spacing + highlight ----------
+// Same targeting as sizes (eachSizeTarget), same save/server validation.
+// Leading is a unitless multiplier (1.0–3.0); tracking is px (-5..30);
+// highlight is an inline background-color like the wheel color.
+function setLeading(el, mult){
+  el.style.lineHeight = String(Math.round(mult * 100) / 100);
+}
+function setTracking(el, px){
+  el.style.letterSpacing = String(Math.round(px * 100) / 100) + "px";
+}
+// the effective leading ratio the caret is sitting in (computed px ÷ font px)
+function leadAtCaret(){
+  const r = activeRange(); if (!r) return null;
+  let n = r.startContainer;
+  if (n.nodeType === 3) n = n.parentNode;
+  while (n && n !== canvas) {
+    if (n.nodeType === 1 && (n.tagName === "SPAN" || n.matches(BLOCK_SEL))) return effectiveLead(n);
+    n = n.parentNode;
+  }
+  return effectiveLead(canvas);
+}
+function effectiveLead(el){
+  if (!el) return null;
+  const cs = getComputedStyle(el), fs = parseFloat(cs.fontSize);
+  if (!isFinite(fs) || fs <= 0 || cs.lineHeight === "normal") return null;
+  const px = parseFloat(cs.lineHeight);
+  return (isFinite(px) && px > 0) ? Math.round(px / fs * 100) / 100 : null;
+}
+// the effective tracking px the caret is sitting in
+function trackAtCaret(){
+  const r = activeRange(); if (!r) return null;
+  let n = r.startContainer;
+  if (n.nodeType === 3) n = n.parentNode;
+  while (n && n !== canvas) {
+    if (n.nodeType === 1 && (n.tagName === "SPAN" || n.matches(BLOCK_SEL))) return effectiveTrack(n);
+    n = n.parentNode;
+  }
+  return effectiveTrack(canvas);
+}
+function effectiveTrack(el){
+  if (!el) return null;
+  const v = getComputedStyle(el).letterSpacing;
+  if (!v || v === "normal") return null;
+  const px = parseFloat(v);
+  return isFinite(px) ? Math.round(px * 100) / 100 : null;
+}
+// the number boxes double as readouts and inputs
+function updateLeadNum(){
+  const inp = $("#leadNum"); if (!inp) return;
+  if (document.activeElement === inp) return;   // don't stomp what is being typed
+  const m = leadAtCaret();
+  inp.value = m === null ? "" : String(m);
+}
+function updateTrackNum(){
+  const inp = $("#trackNum"); if (!inp) return;
+  if (document.activeElement === inp) return;
+  const px = trackAtCaret();
+  inp.value = px === null ? "" : String(px);
+}
+function applyExactLeading(mult){
+  eachSizeTarget(el => setLeading(el, mult));
+}
+function applyExactTracking(px){
+  eachSizeTarget(el => setTracking(el, px));
+}
+// Enter (or the change event) in the boxes applies the value, same targeting as A-/A+.
+function commitLeadNum(){
+  const inp = $("#leadNum"); if (!inp) return;
+  const raw = (inp.value || "").trim();
+  const n = Number(raw);
+  if (raw === "" || !isFinite(n)) { updateLeadNum(); return; }   // not a number: show the real value again
+  applyExactLeading(Math.max(LEAD_MIN, Math.min(LEAD_MAX, n)));
+  canvas.focus();
+  pushHist(); imgButtons(); markDirty(); hint(); updateSizeNum();
+}
+function commitTrackNum(){
+  const inp = $("#trackNum"); if (!inp) return;
+  const raw = (inp.value || "").trim();
+  const n = Number(raw);
+  if (raw === "" || !isFinite(n)) { updateTrackNum(); return; }
+  applyExactTracking(Math.max(TRACK_MIN, Math.min(TRACK_MAX, n)));
+  canvas.focus();
+  pushHist(); imgButtons(); markDirty(); hint(); updateSizeNum();
+}
+$("#leadNum").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); commitLeadNum(); }
+});
+$("#leadNum").addEventListener("change", commitLeadNum);
+$("#trackNum").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); commitTrackNum(); }
+});
+$("#trackNum").addEventListener("change", commitTrackNum);
+// paint a highlight (inline background-color the sanitizer keeps)
+function paintHighlight(el, hex){
+  el.style.backgroundColor = hex.toLowerCase();
+}
+function applyHlColor(hex){
+  if (!WHEEL_RE.test(hex || "")) return;
+  let r = getRange();
+  if (!r) { r = activeRange(); if (r) restoreRange(r); }
+  if (!r) return;
+  hex = hex.toLowerCase();
+  if (r.collapsed) {
+    const b = nodeBlock(r.startContainer);
+    if (b) paintHighlight(b, hex);
+    return;
+  }
+  const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
+  if (a !== z) { blocksIntersecting(r).forEach(b => paintHighlight(b, hex)); return; }
+  const s = nearestSpan(r);
+  if (s) { paintHighlight(s, hex); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
+  else { const sp = wrapSpan(r, ""); if (sp) paintHighlight(sp, hex); }
+}
+$("#hlwheel").addEventListener("input", e => {
+  if (!editing) return;
+  canvas.focus();
+  applyHlColor(e.target.value);
+  pushHist(); imgButtons(); markDirty(); hint(); updateSizeNum();
+});
 function unwrapSpan(el){
   const p = el.parentNode; if (!p) return;
   const r = document.createRange();
@@ -929,7 +1576,7 @@ function eachSizeTarget(fn){
   if (!r) return;
   if (r.collapsed) {                       // caret only: size the span, else the block
     const s = nearestSpan(r);
-    if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize) unwrapSpan(s); return; }
+    if (s) { fn(s); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); return; }
     const b = nodeBlock(r.startContainer);
     if (b) fn(b);
     return;
@@ -940,12 +1587,12 @@ function eachSizeTarget(fn){
     return;
   }
   const s = nearestSpan(r);
-  if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize) unwrapSpan(s); }
+  if (s) { fn(s); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
   else { const sp = wrapSpan(r, ""); if (sp) fn(sp); }
 }
 /* ---------- fonts: same targeting as sizes, separate unwrap check ----------
    The toolbar writes an exact allowlisted stack (or removes the property);
-   save() and the server re-validate, so only the seven stacks survive. */
+   save() and the server re-validate, so only the ten stacks survive. */
 function eachFontTarget(fn){
   let r = getRange();
   if (!r) {
@@ -955,7 +1602,7 @@ function eachFontTarget(fn){
   if (!r) return;
   if (r.collapsed) {
     const s = nearestSpan(r);
-    if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize && !s.style.fontFamily) unwrapSpan(s); return; }
+    if (s) { fn(s); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); return; }
     const b = nodeBlock(r.startContainer);
     if (b) fn(b);
     return;
@@ -966,7 +1613,7 @@ function eachFontTarget(fn){
     return;
   }
   const s = nearestSpan(r);
-  if (s) { fn(s); if (!s.className && !s.style.color && !s.style.fontSize && !s.style.fontFamily) unwrapSpan(s); }
+  if (s) { fn(s); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
   else { const sp = wrapSpan(r, ""); if (sp) fn(sp); }
 }
 function setFontStack(el, stack){
@@ -1022,6 +1669,46 @@ function moveBlock(dir){
   restoreRange(nr);
   pushHist(); markDirty(); hint(); updateSizeNum(); updateFontSel(); updateLinkStat();
 }
+let blockTarget = null, blockHideTimer = null;
+const blockbar = $("#blockbar");
+function showBlockbar(el){
+  if (!editing || !el || !canvas.contains(el)) return;
+  blockTarget = el;
+  blockbar.hidden = false;
+  const r = el.getBoundingClientRect();
+  blockbar.style.left = Math.max(8, Math.min(window.innerWidth - blockbar.offsetWidth - 8, r.left)) + "px";
+  blockbar.style.top = Math.max(44, r.top - blockbar.offsetHeight - 5) + "px";
+}
+function hideBlockbar(){ clearTimeout(blockHideTimer); blockbar.hidden = true; blockTarget = null; }
+canvas.addEventListener("mousemove", e => {
+  if (!editing || blockbar.contains(e.target)) return;
+  const b = topBlock(e.target);
+  if (b) showBlockbar(b);
+});
+canvas.addEventListener("mouseleave", () => {
+  blockHideTimer = setTimeout(() => { if (!blockbar.matches(":hover")) hideBlockbar(); }, 180);
+});
+blockbar.addEventListener("mouseenter", () => clearTimeout(blockHideTimer));
+blockbar.addEventListener("mouseleave", hideBlockbar);
+blockbar.addEventListener("click", e => {
+  const action = e.target.closest("[data-block-action]")?.dataset.blockAction;
+  const el = blockTarget;
+  if (!action || !el || !canvas.contains(el)) return;
+  if (action === "up" || action === "down") {
+    const sibling = action === "up" ? el.previousElementSibling : el.nextElementSibling;
+    if (sibling) {
+      if (action === "up") el.parentNode.insertBefore(el, sibling);
+      else el.parentNode.insertBefore(sibling, el);
+      pushHist(); markDirty();
+    }
+  } else if (action === "duplicate") {
+    const copy = el.cloneNode(true); el.parentNode.insertBefore(copy, el.nextSibling);
+    pushHist(); markDirty();
+  } else if (action === "delete") {
+    el.remove(); selImg = null; ensureExitBlock(); pushHist(); markDirty(); hint(); imgButtons();
+  }
+  hideBlockbar();
+});
 // A-/A+: one step along PX_SCALE, clamped at the ends — no wrap-around and no
 // falling back to a default size.
 function applySize(dir){
@@ -1068,7 +1755,7 @@ function applyColor(cls){
     return;
   }
   const s = nearestSpan(r);
-  if (s) { setColor(s, cls); if (!s.className && !s.style.color) unwrapSpan(s); }
+  if (s) { setColor(s, cls); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
   else if (cls) wrapSpan(r, cls);          // "Auto" on a bare selection: nothing to strip
 }
 // the Clear style button, beyond what removeFormat already does
@@ -1084,9 +1771,12 @@ function clearSizeColor(){
     stripClasses(el, SIZE_RE);
     stripClasses(el, COLOR_RE);
     el.style.removeProperty("color");
+    el.style.removeProperty("background-color");   // highlight swatch/wheel
     el.style.removeProperty("font-size");      // the numeric size the toolbar writes
     el.style.removeProperty("font-family");    // the font dropdown's stack
-    if (el.tagName === "SPAN" && !el.className && !el.style.color && !el.style.fontSize && !el.style.fontFamily) unwrapSpan(el);   // no class left: unwrap
+    el.style.removeProperty("line-height");    // the line-height number box
+    el.style.removeProperty("letter-spacing"); // the tracking number box
+    if (el.tagName === "SPAN" && !el.className && !hasKeepStyle(el)) unwrapSpan(el);   // no class left: unwrap
   });
   Array.from(canvas.querySelectorAll("img.secimg")).forEach(img => {
     if (!range.intersectsNode(img)) return;
@@ -1308,13 +1998,25 @@ $("#toolbar").addEventListener("click", e => {
   else if (c === "unlink") document.execCommand("unlink");
   else if (c === "link") openLinkDialog("link");
   else if (c === "button") openLinkDialog("btn");
+  else if (c === "media") { openMediaLibrary(); return; }
   else if (c === "divider") document.execCommand("insertHTML", false, "<hr><p><br></p>");
   else if (c === "section") document.execCommand("insertHTML", false,
     '<div class="card"><h2>Section title</h2><p>Write something great here.</p></div><p><br></p>');
   else if (c === "table") document.execCommand("insertHTML", false,
     '<table><tbody><tr><th>Header</th><th>Header</th></tr><tr><td><br></td><td><br></td></tr></tbody></table><p><br></p>');
-  else if (c === "image") { galleryMode = false; filepick.multiple = false; filepick.click(); }
-  else if (c === "gallery") { galleryMode = true; filepick.multiple = true; filepick.click(); }
+  else if (c === "form") {
+    const existing = canvas.querySelector('[data-form-marker="contact"]');
+    if (existing) {
+      existing.scrollIntoView({block: "center"});
+      status.textContent = "The contact form is already placed on this page";
+      return;
+    }
+    const marker = document.createElement("p"); marker.dataset.formMarker = "contact";
+    marker.className = "form-placeholder"; marker.contentEditable = "false";
+    marker.textContent = "Contact form goes here — preview below"; appendNode(marker);
+  }
+  else if (c === "image") { galleryMode = false; replaceTarget = null; filepick.multiple = false; filepick.click(); }
+  else if (c === "gallery") { replaceTarget = null; galleryMode = true; filepick.multiple = true; filepick.click(); }
   else if ((c === "small" || c === "medium" || c === "full") && selImg) {
     selImg.classList.remove("small","medium","full");
     selImg.classList.add("secimg", c);
@@ -1325,28 +2027,38 @@ $("#toolbar").addEventListener("click", e => {
 });
 filepick.onchange = async () => {
   const files = Array.from(filepick.files); filepick.value = "";
-  if (!files.length) return;
-  const paths = [];
+  if (!files.length) { replaceTarget = null; mediaTarget = null; mediaRange = null; return; }
+  const uploads = [];
   for (const f of files) {
     const p = await uploadImage(f);
-    if (p) paths.push(p);
+    if (p) uploads.push({path:p, name:f.name});
   }
-  if (!paths.length) return;
+  if (!uploads.length) { replaceTarget = null; mediaTarget = null; mediaRange = null; return; }
+  if (replaceTarget && canvas.contains(replaceTarget)) {
+    replaceTarget.src = uploads[0].path;
+    selImg = replaceTarget; replaceTarget.classList.add("sel"); replaceTarget = null;
+    mediaRange = null; mediaTarget = null;
+    pushHist(); imgButtons(); markDirty(); hint(); status.textContent = "picture replaced — Save to stage";
+    return;
+  }
   canvas.focus();
-  if (galleryMode && paths.length > 1) {
+  if (mediaRange && canvas.contains(mediaRange.commonAncestorContainer)) restoreRange(mediaRange);
+  mediaRange = null;
+  if (galleryMode && uploads.length > 1) {
     const g = document.createElement("div"); g.className = "gallery";
-    paths.forEach(p => {
-      const img = document.createElement("img"); img.src = p; img.alt = "";
+    uploads.forEach(item => {
+    const img = document.createElement("img"); img.src = item.path; img.alt = item.name.replace(/\\.[^.]+$/, "");
       g.appendChild(img);
     });
     appendNode(g);
   } else {
-    paths.forEach(p => {
+    uploads.forEach(item => {
       const img = document.createElement("img");
-      img.src = p; img.className = "secimg medium"; img.alt = "";
+      img.src = item.path; img.className = "secimg medium"; img.alt = item.name.replace(/\\.[^.]+$/, "");
       appendNode(img);
     });
   }
+  mediaRange = null; mediaTarget = null;
   pushHist(); markDirty(); hint();
 };
 function appendNode(node){
@@ -1360,6 +2072,42 @@ function appendNode(node){
     canvas.appendChild(node); placeCaretAtEnd(canvas);
   }
 }
+async function openMediaLibrary(){
+  if (!editing) return;
+  mediaTarget = selImg && canvas.contains(selImg) ? selImg : null;
+  const r = activeRange(); mediaRange = r ? r.cloneRange() : null;
+  $("#mediaGrid").innerHTML = ""; $("#mediaEmpty").hidden = true;
+  $("#mediaDlg").hidden = false;
+  try {
+    const j = await api("/api/media");
+    const images = j.images || [];
+    $("#mediaEmpty").hidden = images.length !== 0;
+    images.forEach(item => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "media-item";
+      const img = document.createElement("img"); img.src = "/" + item.path; img.alt = "";
+      const name = document.createElement("span"); name.textContent = item.name;
+      b.append(img, name);
+      b.onclick = () => chooseMedia(item.path, item.name);
+      $("#mediaGrid").appendChild(b);
+    });
+  } catch (err) { $("#mediaEmpty").hidden = false; $("#mediaEmpty").textContent = "Could not load images: " + err.message; }
+}
+function chooseMedia(path, name){
+  $("#mediaDlg").hidden = true;
+  canvas.focus();
+  if (mediaTarget && canvas.contains(mediaTarget)) {
+    mediaTarget.src = path; selImg = mediaTarget; selImg.classList.add("sel");
+  } else {
+    if (mediaRange && canvas.contains(mediaRange.commonAncestorContainer)) restoreRange(mediaRange);
+    const img = document.createElement("img"); img.src = path;
+    img.className = "secimg medium"; img.alt = name.replace(/\\.[^.]+$/, "");
+    appendNode(img); selImg = img; img.classList.add("sel");
+  }
+  mediaTarget = null; mediaRange = null;
+  pushHist(); imgButtons(); markDirty(); hint(); status.textContent = "picture added — Save to stage";
+}
+$("#mediaClose").onclick = () => { $("#mediaDlg").hidden = true; mediaTarget = null; mediaRange = null; };
+$("#mediaUpload").onclick = () => { $("#mediaDlg").hidden = true; replaceTarget = mediaTarget; mediaTarget = null; galleryMode = false; filepick.multiple = false; filepick.click(); };
 async function uploadImage(file){
   const du = await new Promise((res, rej) => {
     const r = new FileReader(); r.onload = () => res(r.result);
@@ -1417,12 +2165,14 @@ canvas.addEventListener("paste", async e => {
 canvas.addEventListener("mouseup", ()=>{updateSizeNum();updateFontSel();updateLinkStat();});
 canvas.addEventListener("keyup", ()=>{updateSizeNum();updateFontSel();updateLinkStat();});
 async function save(){
+  if (saving) return false;
   readInputsToSite();
   // The Center/Left/Right buttons write text-align; fold alignment into the
-  // "ac"/"ar" classes, and keep a validated wheel color, a validated font
-  // size and one of the seven toolbar fonts as an inline style, before
-  // saving so all four survive the page cleaner. The canonical form is
-  // style="color:X;font-size:Ypx;font-family:Z" — anything else is dropped.
+  // "ac"/"ar" classes, and keep a validated wheel color and highlight, a
+  // validated font size, one of the ten toolbar fonts, and validated
+  // line-height and letter-spacing, before saving so all six survive the
+  // page cleaner. The canonical form is
+  // style="color:X;background-color:Y;font-size:Zpx;font-family:W;line-height:L;letter-spacing:T" — anything else is dropped.
   // The server re-validates every property, so nothing hostile survives there.
   canvas.querySelectorAll("[style]").forEach(el => {
     const wasCentered = el.classList.contains("ac");
@@ -1431,6 +2181,9 @@ async function save(){
     const col = (el.style.color || "").trim();
     const fsz = (el.style.fontSize || "").trim();
     const ffm = (el.style.fontFamily || "").trim();
+    const bgc = (el.style.backgroundColor || "").trim();
+    const lht = (el.style.lineHeight || "").trim();
+    const lsp = (el.style.letterSpacing || "").trim();
     el.removeAttribute("style");
     el.classList.remove("ac", "ar");
     if (t === "center" || (wasCentered && t === "")) el.classList.add("ac");
@@ -1441,30 +2194,66 @@ async function save(){
         && !/url|expression|javascript/i.test(v)) {
       keep.push("color:" + v);
     }
+    const bv = bgc.replace(/\\s+/g, "");
+    if (/^(#[0-9a-f]{3,8}|[a-z]{3,30}|rgba?\\([0-9,.%/]+\\)|hsla?\\([0-9,.%/]+(?:deg|turn)?\\))$/i.test(bv)
+        && !/url|expression|javascript/i.test(bv)) {
+      keep.push("background-color:" + bv);
+    }
     const f = /^(\\d{1,3})px$/.exec(fsz.replace(/\\s+/g, ""));
     if (f && +f[1] >= SIZE_MIN && +f[1] <= SIZE_MAX) {
       keep.push("font-size:" + (+f[1]) + "px");
     }
-    if (FONT_OK.has(ffm)) keep.push("font-family:" + ffm);
+    const ffk = ffm.toLowerCase().replace(/\\s+/g, "");
+    if (FONT_CANON[ffk]) keep.push("font-family:" + FONT_CANON[ffk]);
+    const lm = /^(\\d+(?:\\.\\d{1,2})?)$/.exec(lht.replace(/\\s+/g, ""));
+    if (lm && +lm[1] >= LEAD_MIN && +lm[1] <= LEAD_MAX) {
+      keep.push("line-height:" + String(Math.round(+lm[1] * 100) / 100));
+    }
+    const tm = /^(-?\\d+(?:\\.\\d{1,2})?)px$/i.exec(lsp.replace(/\\s+/g, ""));
+    if (tm && +tm[1] >= TRACK_MIN && +tm[1] <= TRACK_MAX) {
+      keep.push("letter-spacing:" + String(Math.round(+tm[1] * 100) / 100) + "px");
+    }
     if (keep.length) el.setAttribute("style", keep.join(";"));
   });
   ensureExitBlock();
   pushHist();
+  const saveSlug = SLUG, saveRevision = editRevision;
+  const sentBody = bodyForSave();
   const settings = {
     title: SITE.title.slice(0, 300) || "Flamingo and Cactus",
     tagline: SITE.tagline.slice(0, 300),
+    description: (SITE.description || "").slice(0, 300),
+    custom_css: (SITE.custom_css || "").slice(0, 20000),
+    star_animation: SITE.star_animation || "portal",
     footer: SITE.footer.slice(0, 500),
     theme: SITE.theme
   };
   status.textContent = "saving…";
-  btnSave.disabled = true;
+  saving = true; updateSaveBtn();
   try {
-    const a = await api("/api/settings", settings);
-    SITE = a.site;
-    const b = await api("/api/page/save", {slug: SLUG, body: canvas.innerHTML});
-    dirty = false; renderAll(); updateSaveBtn();
-    status.textContent = "saved — " + (b.note || "built pages updated");
-  } catch (err) { status.textContent = "save failed: " + err.message; updateSaveBtn(); }
+    const result = await api("/api/save", Object.assign({}, settings, {slug:saveSlug, body:sentBody}));
+    serverSiteSnapshot = JSON.stringify(globalSettings(result.site));
+    if (SLUG !== saveSlug) return false;
+    if (editRevision !== saveRevision) {
+      dirty = true; writeDraft(); updateSaveBtn();
+      status.textContent = "Saved this version; newer edits are still unsaved";
+      return false;
+    }
+    replaceSite(result.site);
+    const cleanChanged = result.body !== sentBody;
+    if (cleanChanged) {
+      canvas.innerHTML = result.body; syncFormMarker(); ensureExitBlock(); histReset(); selImg = null; replaceTarget = null;
+    }
+    dirty = false; clearDraft(SLUG);
+    renderAll(); updateSaveBtn();
+    status.textContent = cleanChanged
+      ? "Saved and staged; unsupported markup was cleaned. Preview before publishing."
+      : "Saved and staged — commit/push in GitKraken to publish";
+    return true;
+  } catch (err) {
+    status.textContent = "Save failed — your draft is kept: " + err.message;
+    return false;
+  } finally { saving = false; updateSaveBtn(); }
 }
 btnSave.onclick = save;
 $("#starBadge").addEventListener("click", e => {
@@ -1504,7 +2293,7 @@ function ensureExitBlock(){
   }
 }
 $("#btn-quit").onclick = async () => {
-  if (dirty && !confirm("You have unsaved edits. Quit anyway?")) return;
+  if (!(await confirmLeave())) return;
   await fetch("/api/shutdown", {method: "POST"});
   status.textContent = "builder stopped — close this tab";
 };
@@ -1512,6 +2301,20 @@ renderAll();
 setEditing(false);
 ensureExitBlock();
 histReset();
+async function initEditor(){
+  let last = null;
+  try { last = localStorage.getItem(LAST_PAGE_KEY); } catch (e) {}
+  if (last && last !== SLUG && SITE.pages.some(p => p.slug === last)) {
+    try {
+      const j = await api("/api/page?slug=" + encodeURIComponent(last));
+      SLUG = last; canvas.innerHTML = j.body; syncFormMarker(); ensureExitBlock();
+      histReset(); renderAll(); updateSaveBtn();
+    } catch (err) { status.textContent = "could not reopen last page: " + err.message; }
+  }
+  try { localStorage.setItem(LAST_PAGE_KEY, SLUG); } catch (e) {}
+  await restoreDraft();
+}
+initEditor();
 </script>
 </body>
 </html>
@@ -1522,10 +2325,13 @@ histReset();
     page = page.replace("__TITLE_ESC__", html.escape(site["title"]))
     page = page.replace("__TAGLINE_ESC__", html.escape(site["tagline"]))
     page = page.replace("__THEME__", site["theme"])
+    page = page.replace("__STAR_ANIMATION__", site.get("star_animation", "portal"))
     page = page.replace("__BODY__", canvas_body)
     page = page.replace("__FORMPREVIEW__", form_leftover)
     page = page.replace("__SITE_JSON__", json.dumps(site, ensure_ascii=False).replace("<", "\\u003c"))
     page = page.replace("__SLUG__", slug)
+    page = page.replace("__CUSTOM_CSS__", site_build.safe_custom_css(site.get("custom_css", "")) if apply_custom_css else "")
+    page = page.replace("__CUSTOM_CSS_ENABLED__", "true" if apply_custom_css else "false")
     return page.encode("utf-8")
 
 
@@ -1534,6 +2340,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, *a):
         pass
+
+    def _loopback_ok(self) -> bool:
+        """Refuse requests that did not arrive via this machine's loopback.
+
+        The builder binds 127.0.0.1 only, but a hostile page open in the same
+        browser could otherwise POST to it (plain POSTs need no preflight),
+        and DNS rebinding could make a foreign Host header resolve here."""
+        host = (self.headers.get("Host") or "").split(":")[0].lower()
+        if host not in ("127.0.0.1", "localhost"):
+            return False
+        origin = (self.headers.get("Origin") or "").strip()
+        if origin and not re.match(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$", origin):
+            return False
+        return True
 
     def _send(self, code, body: bytes, ctype="text/html; charset=utf-8"):
         self.send_response(code)
@@ -1546,13 +2366,16 @@ class Handler(BaseHTTPRequestHandler):
         self._send(code, json.dumps(obj).encode(), "application/json")
 
     def do_GET(self):
+        if not self._loopback_ok():
+            return self._json(403, {"error": "forbidden"})
         url = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(url.query)
         try:
             if url.path == "/":
                 site = read_site()
                 slug = "index"
-                self._send(200, editor_page(site, slug, read_body(slug), live_base()))
+                apply_custom_css = qs.get("no-css", ["0"])[0] != "1"
+                self._send(200, editor_page(site, slug, read_body(slug), live_base(), apply_custom_css))
             elif url.path == "/built":
                 rebuild()
                 slug = qs.get("slug", ["index"])[0]
@@ -1566,25 +2389,41 @@ class Handler(BaseHTTPRequestHandler):
                 site = read_site()
                 site["live"] = live_base()
                 self._json(200, site)
+            elif url.path == "/api/media":
+                media = []
+                if UPLOADS.is_dir():
+                    for p in sorted(UPLOADS.iterdir(), key=lambda x: x.name.lower()):
+                        if p.is_file() and p.suffix.lower() in (".png", ".jpg", ".jpeg", ".gif"):
+                            media.append({"name": p.name, "path": "uploads/" + p.name,
+                                          "bytes": p.stat().st_size})
+                self._json(200, {"images": media})
             elif url.path == "/api/page":
                 slug = qs.get("slug", [""])[0]
                 if not site_build.SLUG_RE.match(slug):
                     return self._json(400, {"error": "bad slug"})
                 self._json(200, {"slug": slug, "body": read_body(slug)})
             elif url.path.endswith(".html"):
-                # Serve a built page directly, e.g. /financials.html, so the
-                # local preview matches the live URL structure.
+                # Serve a built page directly, e.g. /financials.html or the
+                # unlisted /flank/index.html ledger, so the local preview
+                # matches the live URL structure.
                 site = read_site()
                 known = {p["slug"] for p in site["pages"]} | {"404"}
-                name = url.path.lstrip("/").rsplit(".", 1)[0]
-                if site_build.SLUG_RE.match(name) and name in known:
+                rel = url.path.lstrip("/")
+                name = rel.rsplit(".", 1)[0]
+                is_known_page = "/" not in name and site_build.SLUG_RE.match(name) and name in known
+                is_flank = rel in ("flank/index.html", "flank/about.html")
+                if is_known_page or is_flank:
                     try:
                         rebuild()
                     except Exception as e:
                         return self._json(500, {"error": str(e)[:300]})
-                    p = SITE / f"{name}.html"
+                    p = SITE / rel
                     if p.is_file():
                         return self._send(200, p.read_bytes())
+                    if is_known_page:
+                        p = SITE / f"{name}.html"
+                        if p.is_file():
+                            return self._send(200, p.read_bytes())
                 return self._json(404, {"error": "not found"})
             elif url.path.startswith("/uploads/"):
                 name = safe_upload_name(url.path[len("/uploads/"):])
@@ -1611,26 +2450,102 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(n).decode("utf-8"))
 
     def _save_site(self, site: dict) -> str:
+        with _MUTEX:
+            return self._save_site_locked(site)
+
+    def _save_site_locked(self, site: dict) -> str:
         PAGES.mkdir(parents=True, exist_ok=True)
+        old_data = DATA.read_bytes() if DATA.is_file() else None
         write_text_atomic(DATA, json.dumps(site, ensure_ascii=False, indent=2) + "\n")
-        rebuild()
+        try:
+            rebuild()
+        except Exception:
+            if old_data is None:
+                DATA.unlink(missing_ok=True)
+            else:
+                write_text_atomic(DATA, old_data.decode("utf-8"))
+            raise
         paths = [DATA] + [PAGES / f"{p['slug']}.html" for p in site["pages"]] \
             + [SITE, LOGO, UPLOADS]
         return git_add([p for p in paths if p.exists()])
 
+    def _handle_save(self, doc) -> None:
+        slug = str(doc.get("slug", ""))
+        if not site_build.SLUG_RE.match(slug):
+            return self._json(400, {"error": "bad slug"})
+        site = read_site()
+        if slug not in [p["slug"] for p in site["pages"]]:
+            return self._json(400, {"error": "unknown page"})
+        site["title"] = str(doc.get("title", ""))[:300] or "Flamingo and Cactus"
+        site["tagline"] = str(doc.get("tagline", ""))[:300]
+        site["description"] = str(doc.get("description", ""))[:300]
+        custom_css = str(doc.get("custom_css", ""))
+        css_error = site_build.custom_css_error(custom_css)
+        if css_error:
+            return self._json(400, {"error": css_error})
+        site["custom_css"] = site_build.safe_custom_css(custom_css)
+        site["star_animation"] = (str(doc.get("star_animation", "portal"))
+                                  if str(doc.get("star_animation", "portal")) in site_build.STAR_ANIMATIONS
+                                  else "portal")
+        site["footer"] = str(doc.get("footer", ""))[:500]
+        if str(doc.get("theme", "")) in site_build.THEMES:
+            site["theme"] = str(doc.get("theme"))
+        clean = site_build.sanitize(str(doc.get("body", ""))[:200000])
+        page_path = PAGES / f"{slug}.html"
+        old_data = DATA.read_bytes() if DATA.is_file() else None
+        old_page = page_path.read_bytes() if page_path.is_file() else None
+        PAGES.mkdir(parents=True, exist_ok=True)
+        try:
+            write_text_atomic(DATA, json.dumps(site, ensure_ascii=False, indent=2) + "\n")
+            write_text_atomic(page_path, clean)
+            rebuild()
+        except Exception:
+            if old_data is None:
+                DATA.unlink(missing_ok=True)
+            else:
+                write_text_atomic(DATA, old_data.decode("utf-8"))
+            if old_page is None:
+                page_path.unlink(missing_ok=True)
+            else:
+                write_text_atomic(page_path, old_page.decode("utf-8"))
+            raise
+        saved_site = read_site()
+        paths = [DATA] + [PAGES / f"{p['slug']}.html" for p in saved_site["pages"]] \
+            + [SITE, LOGO, UPLOADS]
+        note = git_add([p for p in paths if p.exists()])
+        return self._json(200, {"ok": True, "site": saved_site, "body": clean, "note": note})
+
     def do_POST(self):
+        if not self._loopback_ok():
+            return self._json(403, {"error": "forbidden"})
         url = urllib.parse.urlparse(self.path)
         try:
+            if url.path == "/api/save":
+                doc = self._read_json()
+                with _MUTEX:
+                    return self._handle_save(doc)
             if url.path == "/api/settings":
                 doc = self._read_json()
                 site = read_site()
                 site["title"] = str(doc.get("title", ""))[:300] or "Flamingo and Cactus"
                 site["tagline"] = str(doc.get("tagline", ""))[:300]
+                site["description"] = str(doc.get("description", ""))[:300]
+                custom_css = str(doc.get("custom_css", ""))
+                css_error = site_build.custom_css_error(custom_css)
+                if css_error:
+                    return self._json(400, {"error": css_error})
+                site["custom_css"] = site_build.safe_custom_css(custom_css)
+                if str(doc.get("star_animation", "")) in site_build.STAR_ANIMATIONS:
+                    site["star_animation"] = str(doc.get("star_animation"))
                 site["footer"] = str(doc.get("footer", ""))[:500]
                 if str(doc.get("theme", "")) in site_build.THEMES:
                     site["theme"] = str(doc.get("theme"))
                 note = self._save_site(site)
                 return self._json(200, {"ok": True, "site": site, "note": note})
+            if url.path == "/api/clean":
+                doc = self._read_json()
+                clean = site_build.sanitize(str(doc.get("body", ""))[:200000])
+                return self._json(200, {"ok": True, "body": clean})
             if url.path == "/api/page/save":
                 doc = self._read_json()
                 slug = str(doc.get("slug", ""))
@@ -1644,17 +2559,79 @@ class Handler(BaseHTTPRequestHandler):
                 write_text_atomic(PAGES / f"{slug}.html", clean)
                 rebuild()
                 note = git_add([PAGES / f"{slug}.html", SITE])
-                return self._json(200, {"ok": True, "note": note})
+                return self._json(200, {"ok": True, "note": note, "body": clean})
+            if url.path == "/api/pages/settings":
+                doc = self._read_json()
+                slug = str(doc.get("slug", ""))
+                nav = str(doc.get("nav", ""))[:60].strip()
+                badge = str(doc.get("badge", ""))
+                if not site_build.SLUG_RE.match(slug):
+                    return self._json(400, {"error": "bad slug"})
+                if not nav:
+                    return self._json(400, {"error": "menu name cannot be empty"})
+                if badge not in ("", "none", "star", "gem"):
+                    return self._json(400, {"error": "bad badge"})
+                if slug == "index" and (bool(doc.get("hidden")) or badge):
+                    return self._json(400, {"error": "the home page must stay visible and cannot have a badge"})
+                site = read_site()
+                target = next((p for p in site["pages"] if p["slug"] == slug), None)
+                if target is None:
+                    return self._json(400, {"error": "unknown page"})
+                target["nav"] = nav
+                page_title = str(doc.get("title", ""))[:300].strip()
+                page_description = str(doc.get("description", ""))[:300].strip()
+                if page_title:
+                    target["title"] = page_title
+                else:
+                    target.pop("title", None)
+                if page_description:
+                    target["description"] = page_description
+                else:
+                    target.pop("description", None)
+                target["form"] = bool(doc.get("form"))
+                if badge:
+                    for p in site["pages"]:
+                        if p is not target and p.get("hidden") and p.get("badge", "star") == badge:
+                            p["badge"] = "none"
+                    target["hidden"] = True
+                    target["badge"] = badge
+                elif bool(doc.get("hidden")):
+                    target["hidden"] = True
+                    target["badge"] = "none"
+                else:
+                    target.pop("hidden", None)
+                    target.pop("badge", None)
+                note = self._save_site(site)
+                return self._json(200, {"ok": True, "site": site, "note": note})
+            if url.path == "/api/pages/duplicate":
+                doc = self._read_json()
+                source_slug = str(doc.get("slug", ""))
+                nav = str(doc.get("nav", ""))[:60].strip() or "New page"
+                if not site_build.SLUG_RE.match(source_slug):
+                    return self._json(400, {"error": "bad slug"})
+                site = read_site()
+                source_index = next((i for i,p in enumerate(site["pages"]) if p["slug"] == source_slug), None)
+                if source_index is None:
+                    return self._json(400, {"error": "unknown page"})
+                taken = {p["slug"] for p in site["pages"]}
+                slug = unique_slug(nav, taken)
+                source = site["pages"][source_index]
+                clone = dict(source)
+                clone["slug"], clone["nav"] = slug, nav
+                clone.pop("hidden", None)
+                clone.pop("badge", None)
+                site["pages"].insert(source_index + 1, clone)
+                body = read_body(source_slug)
+                write_text_atomic(PAGES / f"{slug}.html", body)
+                note = self._save_site(site)
+                return self._json(200, {"ok": True, "slug": slug, "site": site,
+                                        "body": body, "note": note})
             if url.path == "/api/pages/add":
                 doc = self._read_json()
                 nav = str(doc.get("nav", ""))[:60].strip() or "New page"
                 site = read_site()
-                slug = slugify(nav)
-                i, base = 1, slug
                 taken = {p["slug"] for p in site["pages"]}
-                while slug in taken:
-                    i += 1
-                    slug = f"{base}-{i}"[:40]
+                slug = unique_slug(nav, taken)
                 site["pages"].append({"slug": slug, "nav": nav})
                 write_text_atomic(PAGES / f"{slug}.html", "")
                 note = self._save_site(site)

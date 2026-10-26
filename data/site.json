@@ -3,6 +3,9 @@
   "tagline": "Flamingo and Cactus Group",
   "footer": "",
   "theme": "classic",
+  "star_animation": "portal",
+  "description": "",
+  "custom_css": "",
   "pages": [
     {
       "slug": "index",

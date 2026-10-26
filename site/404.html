@@ -39,6 +39,17 @@
     --rule2:#35312a;
     --link:#9db8ff;
   }
+  body[data-theme="midnight"]{
+    --paper:#0d0a14;
+    --paper2:#161021;
+    --ink:#ece5f7;
+    --ink2:#cfc3e8;
+    --muted:#9d90b8;
+    --faint:#6f6488;
+    --rule:#33264d;
+    --rule2:#241b38;
+    --link:#d3b8ff;
+  }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
@@ -83,6 +94,10 @@
   body[data-theme="ink"] .canvas .c-blue{color:#9db8ff}
   body[data-theme="ink"] .canvas .c-green{color:#7ee2a8}
   body[data-theme="ink"] .canvas .c-gold{color:#d29922}
+  body[data-theme="midnight"] .canvas .c-red{color:#ff9d9d}
+  body[data-theme="midnight"] .canvas .c-blue{color:#b3a6ff}
+  body[data-theme="midnight"] .canvas .c-green{color:#8fe6ae}
+  body[data-theme="midnight"] .canvas .c-gold{color:#e3b83b}
   .canvas h2{
     font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;
     text-transform:uppercase;color:var(--ink2);margin:26px 0 8px;
@@ -196,6 +211,13 @@
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
   }
+  footer .themetoggle{
+    display:inline-block;margin:10px 0 0;padding:7px 16px;
+    border:1px solid var(--rule);border-radius:2px;background:transparent;
+    color:var(--muted);cursor:pointer;
+    font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;
+  }
+  footer .themetoggle:hover{color:var(--ink);border-color:var(--ink);}
   img{max-width:100%;height:auto}
   /* ---------- small screens: same site, reshaped ---------- */
   @media (max-width:700px){
@@ -243,6 +265,7 @@
   }
   @media (hover:none){.contactform .dropzone{padding:18px 14px}}
 
+
 </style>
 </head>
 <body data-theme="classic">
@@ -253,6 +276,9 @@
     <p class="tagline">Flamingo &amp; Cactus Group</p>
   </div>
   <div class="hr"></div>
+  <footer>
+  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>
+  </footer>
 </div>
 </body>
 </html>

@@ -1,45 +1,112 @@
-# Flamingo & Cactus — website builder (desktop only)
+# Flamingo & Cactus — website repo
 
-A GoDaddy-style builder that runs on this computer only: pages down the
-left, a live canvas in the middle, blocks and themes. Plain old-style
-look, desktop only (min-width 1120px).
+This repo is the entire Flamingo & Cactus website. The live site is
+https://flamingoandcactus.com. Everything on it is generated from the files
+here — there is no database, no server code running the site, and no online
+editor. If you can read this repo, you can understand the whole site.
 
-The repo lives at `~/Documents/flamingo-site/` and publishes to
-`https://flamingoandcactus.com`.
-The launcher is the `Flamingo & Cactus site` entry — on the Desktop and in the app menu.
+## How a change goes live
+
+1. **Edit** — change words with the local builder (`edit.py`), or edit the
+   files in `data/` by hand.
+2. **Build** — `scripts/build.py` turns `data/` into the finished pages in
+   `site/`. The builder runs this for you on every save.
+3. **Commit** — commit with GitKraken (or git). A pre-commit hook rebuilds
+   `site/` and stages it, so the built pages always travel with the source.
+4. **Push** — pushing `main` triggers the `gh-pages.yml` workflow, which
+   rebuilds `site/` once more and publishes it to the `gh-pages` branch.
+   GitHub Pages serves that branch at our custom domain within a minute or
+   two. Nothing goes live until you push.
+
+## How the site is built
+
+`scripts/build.py` (standard library Python only) reads `data/` and writes
+`site/` from scratch on every run, so the output is fully reproducible:
+
+- `data/site.json` — the site settings (title, tagline, search description,
+  footer, theme) plus the page list: each page's file name, menu name,
+  and flags (`hidden`, `badge`, `form`).
+- `data/pages/<name>.html` — one file per page, containing plain HTML.
+- `assets/logo.png` — the masthead picture, embedded into every page.
+- `assets/uploads/` — pictures used by pages, copied to `site/uploads/`.
+- `site/` — the finished website: one `.html` file per page, `404.html`,
+  `favicon.png`, `CNAME`, `robots.txt`, and `sitemap.xml`.
+
+Every build runs the page bodies through an HTML sanitizer. Only a fixed
+allowlist of tags survives (paragraphs, headings, lists, links, images,
+tables, quotes, dividers, and a few inline styles like text size and
+color). Anything else — scripts, forms, off-site images, event handlers —
+is stripped before it can reach a published page. `python3 scripts/build.py
+--check` rebuilds into a temporary directory and verifies the whole site,
+and the `verify.yml` workflow runs the same check on every push.
+
+Four themes exist: Classic, Parchment, Ink, and Midnight (an almost-black
+dark purple). The theme is a single setting in `data/site.json` and restyles
+every page at once. Every page also carries a small Dark mode / Light mode
+button in its footer, so visitors can switch to or from Midnight themselves;
+the choice is remembered in that browser.
+
+Two floating badges appear on every page. The gold star links to a hidden
+Latest page; the blue gem links to a hidden Feedback page. Hidden pages are
+not in the menu but are still built, real pages. Which pages carry the
+badges (and which page, if any, shows the contact form) is controlled by
+flags in `data/site.json`, editable in the builder's Page settings.
+
+The Contact page's form is the one thing that is not static. It posts
+directly to FormSubmit (`https://formsubmit.co`), which emails each
+submission to our inbox. The form markup itself lives in `build.py`, not in
+the page files, so editing the Contact page text can never break it.
+
+The hidden Flank ledger lives here too, as the unlisted `site/flank/`
+directory. It is built from `data/The Flank.md` by `scripts/build_flank.py`
+on every build. Only the Financials page links to it, and each ledger page
+links back. The ledger is edited on the Desktop (`~/Desktop/The Flank.md`
+is the source of truth); the `flamingo-ledger-watcher` service notices
+within seconds, copies it into `data/`, rebuilds, and stages both. `sh
+scripts/sync-ledger.sh` does the same by hand. Install the watcher with
+`sh scripts/install-watcher.sh`, remove it with `sh
+scripts/uninstall-watcher.sh`.
 
 ## How editing works
 
-You are the only one who enters text. There is no login and no online editor.
+You are the only one who enters text. There is no login and no online
+editor. Open the `Flamingo & Cactus site` entry (Desktop or app menu). If
+the builder is already running it just opens your browser to it; if not, it
+starts a local-only server on `http://127.0.0.1:8767/` and nothing else can
+reach it.
 
-1. Open `Flamingo & Cactus site` (Desktop or app menu). If the builder is
-   already running it just opens your browser to it; if not, it starts it.
-2. Left sidebar:
-   - **Pages** — click to open, ↑↓ to reorder the menu, ✎ to rename,
-     × to delete, **+ Page** to add one. The home page cannot be deleted.
-   - **Site** — title, tagline, footer line, theme
-     (Classic / Parchment / Ink), logo.
-3. Middle: press **Edit**, then type on the page itself. Toolbar blocks:
-   bold, italic, underline, Heading, Text, bullets, numbers, quote,
-   alignment, Link, **Button** (asks whether it opens in a new tab),
-   Picture, **Gallery**, Divider.
-4. Pictures: Picture button, Gallery button (many at once), drag files
-   onto the page, or paste from the clipboard. Click a picture, then
-   Small / Medium / Full. Galleries lay out side by side on their own.
-5. **Save** (or Ctrl+S) saves the settings and the open page, rebuilds
-   every page (plus `site/flank/` below), and stages it all with `git add`.
-   Commit in GitKraken when it looks right.
-6. **Quit** stops the builder from the browser, or Ctrl+C in the terminal.
+- **Pages** (left sidebar) — click to open, ↑↓ to reorder. The gear opens
+  Page settings: menu name, browser tab title, search description, hidden
+  status, star/feedback badge, and contact form. Add a blank page or copy
+  the current page. The home page cannot be deleted.
+- **Site** — title, tagline, search description, footer, theme, logo, star
+  transition, and Advanced CSS.
+- **Edit** — press Edit, then click page text and type. The toolbar is
+  grouped into Edit, Text, Layout, Color, Links, Insert, Image, and Style:
+  headings, text size/font/color, links and buttons, pictures, galleries,
+  sections, tables, the contact-form position marker, and an HTML source
+  mode for advanced markup (unsupported tags are cleaned before preview).
+- **Blocks** — hover a page block for move, duplicate, and delete controls
+  (Alt+↑/↓ also moves a block). Select an image to set its size, alignment,
+  alt text, or replace it. Reuse uploaded images from the media library.
+- **Save** (or Ctrl+S) — saves the settings and the open page, rebuilds
+  everything, and stages the files with `git add`. Unsaved edits are kept
+  as a draft in your browser, and the editor asks before switching pages or
+  closing the tab. Nothing is published until you commit and push.
+- **Preview** — shows the exact built page. **View live site** opens the
+  published copy. **Help** in the Pages heading explains the shortcuts.
+  **Quit** stops the builder from the browser, or Ctrl+C in the terminal.
 
-`view built page` shows the exact built file for the open page (no edit
-chrome), so you can check before committing. `view live site` opens the
-published GitHub Pages copy in a new tab. Each page is also served
-locally at its live address (e.g. `/financials.html`), rebuilt on the spot.
+You can also skip the builder: edit `data/site.json` or a file in
+`data/pages/`, run `python3 scripts/build.py`, and commit. The pre-commit
+hook (`sh scripts/install-hooks.sh` installs it; GitKraken honours it)
+rebuilds and stages `site/` automatically.
 
 ## Publishing (GitHub Pages + custom domain)
 
 Pushing `main` runs `.github/workflows/gh-pages.yml`, which rebuilds
-`site/` and publishes it to the `gh-pages` branch:
+`site/` and publishes it to the `gh-pages` branch with plain git (no
+third-party actions):
 
 1. Settings → Pages → Source: **Deploy from a branch** → `gh-pages` / (root).
 2. Settings → Pages → Custom domain: `flamingoandcactus.com`, then Enforce
@@ -51,42 +118,31 @@ Pushing `main` runs `.github/workflows/gh-pages.yml`, which rebuilds
 4. The site goes live at `https://flamingoandcactus.com` within a minute or
    two of each push to `main`.
 
-`.githooks/pre-commit` rebuilds `site/` and stages it with every commit
-(install with `scripts/install-hooks.sh`); `verify.yml` re-checks the build
-in CI.
-
-## The hidden Flank ledger
-
-The old standalone Flank-ledger site now lives here as the unlisted
-`site/flank/` directory (`flank/index.html` + `flank/about.html`), built
-from `data/The Flank.md` by `scripts/build_flank.py` on every build. It is
-in no menu; the **The Flank** button on the Financials page is the only
-link to it, and each ledger page links back to the main site.
-
-The editing flow is unchanged from the old repo: the ledger is edited on
-the Desktop (`~/Desktop/The Flank.md`, the source of truth), and the
-**flamingo-ledger-watcher** service notices within seconds, copies it into
-`data/`, rebuilds `site/` (main pages + ledger), and stages both — commit
-in GitKraken like any other edit. It only stages, never commits or pushes.
-`sh scripts/sync-ledger.sh` does the same by hand; `--check` reports what
-would change without writing. Install with `sh scripts/install-watcher.sh`,
-remove with `sh scripts/uninstall-watcher.sh`.
-
 ## Layout
 
+- `edit.py` — the local builder (loopback only, port 8767)
+- `launch.sh` — the Desktop/app-menu launcher: reuses the running builder
+  or starts it
 - `data/site.json` — settings + the page/menu list
 - `data/pages/<slug>.html` — one page each; plain allowlisted HTML,
   cleaned on every save
 - `data/The Flank.md` — the ledger, synced from `~/Desktop/The Flank.md`
-- `assets/logo.png` — masthead picture (embedded into each page, like Flank)
+- `assets/logo.png` — masthead picture (embedded into each page)
 - `assets/uploads/` — pictures used by pages (copied to `site/uploads/`)
-- `scripts/build.py` — builds `site/` from `data/` (stdlib only, owns the cleaner)
-- `scripts/build_flank.py` — builds `site/flank/` from the ledger (stdlib only)
+- `scripts/build.py` — builds `site/` from `data/` (stdlib only, owns the
+  sanitizer and the `--check` verifier)
+- `scripts/build_flank.py` — builds `site/flank/` from the ledger (stdlib)
 - `scripts/sync-ledger.sh`, `scripts/watch-ledger.py` — Desktop-ledger flow
+- `.githooks/pre-commit` — rebuilds + stages `site/` on every commit
+  (install with `scripts/install-hooks.sh`)
+- `.github/workflows/gh-pages.yml` — publishes `site/` to `gh-pages` on
+  push to `main`
+- `.github/workflows/verify.yml` — recompiles and re-verifies the build
+  on every push and pull request
 - `site/` — the built pages: `<slug>.html`, `404.html`, `favicon.png`,
-  `CNAME`, plus the unlisted `flank/` directory
-- `edit.py` — the local builder (loopback only, port 8767)
+  `CNAME`, `robots.txt`, `sitemap.xml`, plus the unlisted `flank/`
+  directory
 
-`python3 scripts/build.py --check` rebuilds to a temp dir and verifies,
-including a check that scripts and off-site images never reach the pages.
-Nothing here phones home. The only network use is the loopback server itself.
+Nothing here phones home. The only network use is the loopback builder
+itself, plus the contact form posting to FormSubmit when a visitor (not
+you) submits it.
