@@ -597,10 +597,19 @@ CSS = r'''  :root{
   .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
   .contactform label:first-of-type{margin-top:0}
   .contactform .sub{display:block;font:italic 12px Georgia,serif;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:3px}
-  .contactform input[type=text],.contactform input[type=email],.contactform input[type=tel],.contactform input[type=file],.contactform textarea{display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:9px 10px;margin:0}
-  .contactform input[type=file]{cursor:pointer;border-style:dashed;padding:14px 12px}
-  .contactform input[type=file]::file-selector-button{font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;padding:8px 18px;margin-right:12px;cursor:pointer}
-  .contactform input[type=file]::file-selector-button:hover{opacity:.85}
+  .contactform input[type=text],.contactform input[type=email],.contactform input[type=tel],.contactform textarea{display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:9px 10px;margin:0}
+  .contactform input[type=file]:not(.filepick){display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px dashed var(--rule);border-radius:2px;padding:14px 12px;margin:0;cursor:pointer}
+  .contactform input.filepick{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+  .contactform .dropzone{display:block;width:100%;margin:0;border:1px dashed var(--rule);border-radius:2px;background:var(--paper);padding:16px 14px;text-align:center;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;text-transform:none;color:var(--muted);cursor:pointer;touch-action:manipulation}
+  .contactform .dropzone:hover{color:var(--ink2)}
+  .contactform .dropzone:focus{outline:1px solid #1c4fd8;border-color:#1c4fd8}
+  .contactform .dropzone.over{border-color:#1c4fd8;color:var(--ink);background:var(--paper2)}
+  .contactform .filelist{list-style:none;margin:8px 0 0;padding:0;font-size:13px;color:var(--ink2)}
+  .contactform .filelist li{display:flex;gap:10px;align-items:center;justify-content:space-between;min-width:0;padding:5px 0;border-bottom:1px solid var(--rule2)}
+  .contactform .filelist li span{flex:1;min-width:0;overflow-wrap:anywhere}
+  .contactform .filelist button{margin:0;min-height:44px;min-width:72px;padding:8px 10px;background:none;border:1px solid var(--rule);border-radius:2px;color:var(--muted);cursor:pointer;font:12px "Helvetica Neue",Arial,sans-serif;letter-spacing:0;text-transform:none;flex:0 0 auto}
+  .contactform .filelist button:hover{color:#b3261e;border-color:#b3261e}
+  body[data-theme="ink"] .contactform .filelist button:hover{color:#ff8a80;border-color:#ff8a80}
   .contactform .filehint{font:italic 12px Georgia,serif;color:var(--muted);margin:6px 0 0}
   .contactform .filehint.over{color:#b3261e}
   body[data-theme="ink"] .contactform .filehint.over{color:#ff8a80}
@@ -627,7 +636,7 @@ CSS = r'''  :root{
     }
     nav.sitenav a,nav.sitenav .cur{margin:0 8px;white-space:nowrap}
     .star-badge{top:10px;left:10px;right:auto;width:140px;height:140px}
-    .star-badge .star-title{font-size:9px;max-width:62%;line-height:1.3;letter-spacing:.5px}
+    .star-badge .star-title{font-size:7px;max-width:62%;line-height:1.3;letter-spacing:.5px}
     .star-badge .star-sub{display:none}
     .gem-badge{top:10px;left:auto;right:10px;width:112px;height:76px;border-radius:11px}
     .gem-badge .gem-title{font-size:9px;letter-spacing:1.2px}
@@ -657,6 +666,7 @@ CSS = r'''  :root{
     .canvas .card{padding:14px 14px}
     .contactform{margin:22px 0 0;padding:16px 14px}
   }
+  @media (hover:none){.contactform .dropzone{padding:18px 14px}}
 '''
 
 
@@ -691,23 +701,63 @@ CONTACT_FORM_HTML = (
   '  <input type="text" id="cf-contact" name="contact" maxlength="160" autocomplete="email" placeholder="Optional">\n'
   '  <label for="cf-note">Note</label>\n'
   '  <textarea id="cf-note" name="note" required maxlength="5000" placeholder="Anything you want us to know&hellip;"></textarea>\n'
-  '  <label for="cf-photo">Files<span class="sub">Optional — as many files as you like, 10 MB total.</span></label>\n'
-  '  <input type="file" id="cf-photo" name="attachment" multiple>\n'
+  '  <label id="cf-files-label">Files<span class="sub">Optional — multiple files on supported browsers, 10 MB total.</span></label>\n'
+  '  <input type="file" id="cf-photo" name="attachment" aria-labelledby="cf-files-label">\n'
   '  <p class="filehint" id="cf-filehint">No files yet.</p>\n'
+  '  <noscript><p class="filehint">With JavaScript off, send one file per message.</p></noscript>\n'
   '  <button type="submit">Send it our way</button>\n'
   "</form>"
   '<script>(function(){try{'
   'var inp=document.getElementById("cf-photo"),hint=document.getElementById("cf-filehint"),form=inp&&inp.form;'
   'if(!inp||!hint||!form)return;'
-  'function mb(n){return (n/1048576).toFixed(1)+" MB";}'
-  'function refresh(){var n=inp.files.length,t=0,i;for(i=0;i<n;i++)t+=inp.files[i].size;'
-  'var over=t>10485760;'
-  'hint.textContent=!n?"No files yet.":n+(n===1?" file, ":" files, ")+mb(t)+" of 10 MB.";'
+  'function setFiles(target,files){try{var dt=new DataTransfer();for(var i=0;i<files.length;i++)dt.items.add(files[i]);target.files=dt.files;'
+  'if(!target.files||target.files.length!==files.length)return false;'
+  'for(var j=0;j<files.length;j++)if(target.files[j].name!==files[j].name||target.files[j].size!==files[j].size)return false;'
+  'return true;}catch(_){return false;}}'
+  'if(typeof DataTransfer==="undefined"||typeof File==="undefined"||!setFiles(inp,[new File(["check"],"fc-upload-check.txt",{type:"text/plain"})])){'
+  'try{inp.value="";}catch(_){}hint.textContent="This browser can send one file per message. Update it to enable multi-file upload.";return;}'
+  'try{inp.value="";}catch(_){}'
+  'inp.className="filepick";inp.multiple=true;inp.setAttribute("tabindex","-1");inp.setAttribute("aria-hidden","true");'
+  'var picker=document.createElement("input");picker.type="file";picker.id="cf-file-picker";picker.multiple=true;picker.className="filepick";picker.tabIndex=-1;picker.setAttribute("aria-hidden","true");'
+  'var zone=document.createElement("button");zone.type="button";zone.className="dropzone";zone.id="cf-drop";'
+  'zone.setAttribute("aria-labelledby","cf-files-label cf-drop-instructions");'
+  'var instructions=document.createElement("span");instructions.id="cf-drop-instructions";'
+  'instructions.textContent=window.matchMedia&&window.matchMedia("(hover:none)").matches?"Tap to browse, or paste files here.":"Drop files here, paste them, or click to browse.";zone.appendChild(instructions);'
+  'var lst=document.createElement("ul");lst.className="filelist";lst.id="cf-files";'
+  'inp.parentNode.insertBefore(zone,inp.nextSibling);zone.parentNode.insertBefore(lst,zone.nextSibling);'
+  'form.appendChild(picker);var all=[],extras=[],MAX_BYTES=10000000;'
+  'function mb(n){return (n/1000000).toFixed(1)+" MB";}'
+  'function sync(){return setFiles(inp,all);}'
+  'function failToNative(msg){all=[];for(var i=0;i<extras.length;i++)if(extras[i].parentNode)extras[i].parentNode.removeChild(extras[i]);extras=[];'
+  'try{inp.value="";picker.value="";}catch(_){}inp.multiple=false;inp.className="";inp.removeAttribute("tabindex");inp.removeAttribute("aria-hidden");'
+  'picker.disabled=true;zone.hidden=true;lst.hidden=true;hint.textContent=msg;hint.classList.add("over");}'
+  'function render(){var t=0,i;lst.innerHTML="";'
+  'for(i=0;i<all.length;i++)(function(f,ix){t+=f.size;'
+  'var li=document.createElement("li"),nm=document.createElement("span"),b=document.createElement("button");'
+  'nm.textContent=f.name+" ("+mb(f.size)+")";li.appendChild(nm);'
+  'b.type="button";b.textContent="Remove";b.setAttribute("aria-label","Remove "+f.name);'
+  'b.onclick=function(){all.splice(ix,1);sync();render();};li.appendChild(b);lst.appendChild(li);})(all[i],i);'
+  'var over=t>MAX_BYTES;'
+  'hint.textContent=!all.length?"No files yet.":all.length+(all.length===1?" file, ":" files, ")+mb(t)+" of 10 MB.";'
   'hint.classList.toggle("over",over);return !over;}'
-  'inp.addEventListener("change",refresh);'
-  'form.addEventListener("submit",function(e){if(!refresh()){e.preventDefault();'
-  'hint.textContent="Those files are over 10 MB in total — remove one and try again.";}});'
-  'refresh();}catch(_){}})();</script>'
+  'function add(fs){for(var i=0;i<fs.length;i++)all.push(fs[i]);if(!sync()){failToNative("This browser could not safely combine files. Use the file picker and send one file per message.");return false;}render();return true;}'
+  'zone.addEventListener("click",function(){picker.click();});'
+  'zone.addEventListener("dragover",function(e){if(e.dataTransfer&&e.dataTransfer.types&&e.dataTransfer.types.indexOf("Files")>=0){e.preventDefault();zone.classList.add("over");}});'
+  'zone.addEventListener("dragleave",function(){zone.classList.remove("over");});'
+  'zone.addEventListener("drop",function(e){e.preventDefault();zone.classList.remove("over");var d=e.dataTransfer;if(d&&d.files&&d.files.length)add(d.files);});'
+  'form.addEventListener("paste",function(e){var d=e.clipboardData;if(d&&d.files&&d.files.length){e.preventDefault();add(d.files);}});'
+  'picker.addEventListener("change",function(){if(picker.files&&picker.files.length)add(picker.files);try{picker.value="";}catch(_){}});'
+  'form.addEventListener("submit",function(e){if(!render()){e.preventDefault();'
+  'hint.textContent="Those files are over 10 MB in total — remove one and try again.";return;}'
+  'for(var x=0;x<extras.length;x++)if(extras[x].parentNode)extras[x].parentNode.removeChild(extras[x]);extras=[];'
+  'if(all.length){if(!setFiles(inp,[all[0]])){e.preventDefault();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}'
+  'inp.multiple=false;'
+  'for(var xi=1;xi<all.length;xi++){var ni=document.createElement("input");ni.type="file";ni.name="attachment_"+(xi+1);ni.className="filepick filepick-extra";ni.tabIndex=-1;ni.setAttribute("aria-hidden","true");'
+  'if(!setFiles(ni,[all[xi]])){e.preventDefault();failToNative("This browser could not prepare every file. Use the file picker and send one file per message.");return;}'
+  'form.appendChild(ni);extras.push(ni);}}'
+  'var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=true;btn.textContent="Sending…";}});'
+  'window.addEventListener("pageshow",function(){var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=false;btn.textContent="Send it our way";}});'
+  'render();}catch(_){}})();</script>'
 )
 
 
@@ -1028,8 +1078,10 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             expect("&quot;Random&quot;" in contact_built, "contact form notes Random is fine")
             expect('name="contact"' in contact_built, "contact form has one optional email-or-phone field")
             expect('name="_honey"' in contact_built, "contact form carries a spam honeypot")
-            expect('type="file"' in contact_built and 'name="attachment"' in contact_built and "multiple" in contact_built,
-                   "contact form takes as many files as fit in 10 MB")
+            expect('type="file"' in contact_built and 'name="attachment"' in contact_built
+                   and 'ni.name="attachment_"+(xi+1)' in contact_built
+                   and "MAX_BYTES=10000000" in contact_built,
+                   "contact form uses one uniquely named field per file, capped at 10 MB")
             expect("formsubmit.co" not in idx, "form appears only on the flagged page, not home")
             marked = render_page(site["title"], site["tagline"], site["footer"], site["theme"],
                                  site["pages"], "contact", "<p>hi</p><p>[contact form]</p><p>bye</p>", "x",
