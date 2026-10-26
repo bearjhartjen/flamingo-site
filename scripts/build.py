@@ -21,6 +21,7 @@ Layout:
 
 import argparse
 import base64
+import datetime
 import html
 import json
 import os
@@ -43,7 +44,7 @@ DEFAULT_OUT = ROOT / "site"
 CUSTOM_DOMAIN = "flamingoandcactus.com"
 
 THEMES = ("classic", "parchment", "ink", "midnight")
-STAR_ANIMATIONS = ("portal", "fade", "none")
+STAR_ANIMATIONS = ("portal", "comic", "fade", "none")
 SLUG_RE = re.compile(r"^[a-z0-9-]{1,40}$")
 
 
@@ -525,12 +526,15 @@ class _Sanitize(HTMLParser):
             return
         ad = dict(attrs)
         if tag == "div":
-            # galleries and cards survive as divs; everything else is a paragraph
+            # galleries, cards and the hidden events source survive as divs;
+            # everything else is a paragraph
             classes = ad.get("class", "").split()
             if "gallery" in classes:
                 pass
             elif "card" in classes:
                 ad["class"] = "card"
+            elif "evsrc" in classes:
+                ad["class"] = "evsrc"
             else:
                 tag = "p"
         if tag not in ALLOWED_TAGS:
@@ -559,8 +563,11 @@ class _Sanitize(HTMLParser):
             self.out.append(
                 f'<img class="{cls}" src="{html.escape(src, quote=True)}" alt="{alt}">')
         elif tag == "div":
-            if ad.get("class", "") == "card":
+            cls = ad.get("class", "")
+            if cls == "card":
                 self.out.append('<div class="card">')
+            elif cls == "evsrc":
+                self.out.append('<div class="evsrc">')
             else:
                 self.out.append('<div class="gallery">')
         elif tag == "span":
@@ -683,25 +690,25 @@ CSS = r'''  :root{
     --link:#1a3a7c;
   }
   body[data-theme="ink"]{
-    --paper:#161513;
-    --paper2:#1e1c19;
-    --ink:#f0e9da;
-    --ink2:#d6cdbb;
-    --muted:#a89d85;
-    --faint:#7d7461;
-    --rule:#4a453a;
-    --rule2:#35312a;
+    --paper:#262220;
+    --paper2:#2f2b28;
+    --ink:#f5efe0;
+    --ink2:#ddd2c0;
+    --muted:#b8ac92;
+    --faint:#928872;
+    --rule:#6b6152;
+    --rule2:#544b3e;
     --link:#9db8ff;
   }
   body[data-theme="midnight"]{
-    --paper:#0d0a14;
-    --paper2:#161021;
-    --ink:#ece5f7;
-    --ink2:#cfc3e8;
-    --muted:#9d90b8;
-    --faint:#6f6488;
-    --rule:#33264d;
-    --rule2:#241b38;
+    --paper:#221c2c;
+    --paper2:#2b2336;
+    --ink:#f0e9f7;
+    --ink2:#d9cff0;
+    --muted:#b3a8cd;
+    --faint:#8b80a6;
+    --rule:#4d3c6b;
+    --rule2:#3b2d54;
     --link:#d3b8ff;
   }
   *{box-sizing:border-box}
@@ -793,37 +800,59 @@ CSS = r'''  :root{
     border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
     padding:18px 20px;margin:0 0 16px;
   }
+  .canvas p.ev-hit,.canvas li.ev-hit{outline:2px solid var(--ink);outline-offset:3px}
+  body[data-theme="ink"] .canvas .card{background:#332e28;border-color:#6b6152}
+  body[data-theme="midnight"] .canvas .card{background:#2b2336;border-color:#4d3c6b}
   .canvas .card h2:first-child{margin-top:0}
   .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
+  /* Header badges — comic book, black and white, level with each other,
+     both kept the same distance from the centred logo (438px either side).
+     The blue stays only on the feedback page's Contact us button. */
   .star-badge{
-    position:absolute;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
+    position:absolute;top:64px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 35% 30%,#f3d97b,#c9a227 58%,#a37f14);
-    color:#3a2d00;text-decoration:none;text-align:center;
-    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
-    filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));
-    transition:transform .18s ease;
+    color:#111;text-decoration:none;text-align:center;
+    /* the hard offset shadow rides the whole silhouette; the ::before/::after
+       pseudo pair draws the black star with a white star inset inside it,
+       since clip-path would otherwise cut any painted outline */
+    filter:drop-shadow(7px 9px 0 rgba(0,0,0,.9));
+    transition:transform .15s ease;
   }
-  .star-badge:hover{transform:scale(1.07) rotate(-4deg)}
-  .star-badge .star-title{display:block;max-width:58%;font:700 12px/1.3 "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase}
-  .star-badge .star-sub{display:block;margin-top:4px;font:italic 10px Georgia,serif;animation:starpulse 3s ease-in-out infinite}
+  .star-badge::before,.star-badge::after{content:"";position:absolute;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  .star-badge::before{inset:0;background:#111}
+  .star-badge::after{inset:3px;background:#fffdf7}
+  .star-badge .star-title,.star-badge .star-sub{position:relative;z-index:1}
+  .star-badge:hover{transform:scale(1.06) rotate(-6deg)}
+  .star-badge .star-title{display:block;max-width:70%;font:800 12px/1.25 "Arial Black","Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;text-transform:uppercase}
+  .star-badge .star-sub{display:block;margin-top:2px;font:700 8px "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;animation:starpulse 3s ease-in-out infinite}
+  .star-badge .star-title,.star-badge .star-sub{transform:translateY(-5px)}
   @keyframes starpulse{0%,100%{opacity:.45}50%{opacity:.9}}
-  @media (max-width:1250px){.star-badge{top:20px;left:56px}}
+  @media (max-width:1250px) and (min-width:701px){
+    .star-badge{top:20px;left:56px;width:140px;height:140px}
+    .star-badge .star-title{font-size:9px}
+    .star-badge .star-sub{font-size:7px}
+    /* pad the masthead so the badges never sit on the logo or title */
+    .masthead{padding-top:150px}
+  }
   @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
   .gem-badge{
-    position:absolute;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
+    position:absolute;top:94px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#8fbef5,#1c4fd8 58%,#0b2a8c);
-    color:#fff;text-decoration:none;text-align:center;
-    border-radius:16px;
-    filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));
-    transition:transform .18s ease;
+    background:#fffdf7;
+    color:#111;text-decoration:none;text-align:center;
+    border:3px solid #111;border-radius:14px;
+    box-shadow:7px 8px 0 #111;
+    transform:rotate(1.5deg);
+    transition:transform .15s ease;
   }
-  .gem-badge:hover{transform:scale(1.06) rotate(3deg)}
-  .gem-badge .gem-title{display:block;max-width:80%;font:700 13px/1.4 "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase}
-  @media (max-width:1250px){.gem-badge{top:20px;left:auto;right:56px}}
+  .gem-badge:hover{transform:rotate(-1deg) scale(1.05)}
+  .gem-badge .gem-title{display:block;max-width:84%;font:800 14px/1.3 "Arial Black","Helvetica Neue",Arial,sans-serif;letter-spacing:2.5px;text-transform:uppercase}
+  @media (max-width:1250px) and (min-width:701px){
+    .gem-badge{top:52px;left:auto;right:56px;width:150px;height:76px;border-radius:11px;box-shadow:5px 6px 0 #111}
+    .gem-badge .gem-title{font-size:11px}
+  }
   @media print{.gem-badge{display:none}}
   .star-badge.warp,.gem-badge.warp{animation:badgepop .6s cubic-bezier(.3,1.3,.4,1) forwards;z-index:1001;will-change:transform}
   @keyframes badgepop{
@@ -837,12 +866,20 @@ CSS = r'''  :root{
   body.warping .page{opacity:0;transform:scale(.985)}
   #fx{position:fixed;inset:0;z-index:1000;pointer-events:none;overflow:hidden}
   #fx .flash{position:absolute;inset:0;background:radial-gradient(circle at var(--fx-x,50%) var(--fy,30%),#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:fxflash .5s ease-out}
+  /* comic burst: black-and-ink impact frame instead of golden sparkles */
+  #fx .comicflash{position:absolute;inset:0;background:#111;opacity:0;animation:comicko .45s ease-out}
+  @keyframes comicko{0%{opacity:0}18%{opacity:.92}38%{opacity:.15}55%{opacity:.6}100%{opacity:0}}
   @keyframes fxflash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}
   #fx canvas{position:absolute;inset:0;width:100%;height:100%}
   body.arrive .page{animation:arrivefade .55s cubic-bezier(.2,.9,.3,1) both}
   @keyframes arrivefade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
   #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:radial-gradient(circle at 50% 30%,#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:flashfade .5s ease-out}
   @keyframes flashfade{0%{opacity:0}25%{opacity:.7}100%{opacity:0}}
+  body[data-star-animation="comic"] #arriveflash{background:#111}
+  body[data-theme="midnight"][data-star-animation="comic"] #arriveflash,
+  body[data-theme="ink"][data-star-animation="comic"] #arriveflash{background:#fffdf7}
+  @keyframes flashfadeink{0%{opacity:0}28%{opacity:.85}100%{opacity:0}}
+  body[data-star-animation="comic"] #arriveflash{animation-name:flashfadeink}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
   .canvas::after{content:"";display:table;clear:both}
   .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
@@ -851,7 +888,9 @@ CSS = r'''  :root{
   .canvas img.ileft{float:left;margin:4px 14px 8px 0}
   .canvas img.iright{float:right;margin:4px 0 8px 14px}
   .canvas img.icenter{display:block;margin-left:auto;margin-right:auto}
-  .contactform{max-width:560px;margin:26px auto 0;padding:20px 22px;border:1px solid var(--rule);border-radius:4px;background:var(--paper2)}
+  .masthead a.logolink{display:inline-block;text-decoration:none;transition:opacity .15s ease}
+  .masthead a.logolink:hover{opacity:.78}
+  .contactform{max-width:560px;margin:26px auto 0;padding:20px 22px;border:1px solid var(--rule);border-radius:4px;background:#ecdcc0}
   .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
   .contactform label:first-of-type{margin-top:0}
   .contactform .sub{display:block;font:italic 12px Georgia,serif;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:3px}
@@ -875,6 +914,57 @@ CSS = r'''  :root{
   .contactform input:focus,.contactform textarea:focus{outline:2px solid var(--link);outline-offset:-1px;border-color:var(--link)}
   .contactform button{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
   .contactform button:hover{opacity:.85}
+  /* status line: success banner + the fallback when a submit hangs */
+  .cf-status{display:block;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--paper);font:italic 13px/1.5 Georgia,Times,serif;color:var(--ink2);margin:10px 0 0}
+  .cf-status[hidden]{display:none}
+  .cf-status a{color:var(--link)}
+  .cf-status.is-err{border-color:#b3261e;color:#b3261e}
+  body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
+  body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* dark themes: the form fields need to be plainly visible, not black on black */
+  body[data-theme="ink"] .contactform{background:#332e28;border-color:#6b6152}
+  body[data-theme="ink"] .contactform input[type=text],body[data-theme="ink"] .contactform input[type=email],body[data-theme="ink"] .contactform input[type=tel],body[data-theme="ink"] .contactform textarea{background:#3f3830;border-color:#857763;color:#f5efe0}
+  body[data-theme="ink"] .contactform .dropzone{background:#3f3830;border-color:#857763;color:#ddd2c0}
+  body[data-theme="midnight"] .contactform{background:#2b2336;border-color:#4d3c6b}
+  body[data-theme="midnight"] .contactform input[type=text],body[data-theme="midnight"] .contactform input[type=email],body[data-theme="midnight"] .contactform input[type=tel],body[data-theme="midnight"] .contactform textarea{background:#383046;border-color:#9a87c0;color:#f0e9f7}
+  body[data-theme="midnight"] .contactform .dropzone{background:#383046;border-color:#9a87c0;color:#d9cff0}
+  /* ---------- events page: month calendar woven from the list ---------- */
+  /* hidden until the calendar script takes over (no-JS keeps the page clean) */
+  .canvas .evsrc{display:none}
+  .evcal{max-width:640px;margin:18px auto 8px;border:1px solid var(--rule);border-radius:6px;background:#f3e8d2;padding:16px 16px 8px;display:none}
+  body[data-theme="ink"] .evcal{background:#332e28;border-color:#6b6152}
+  body[data-theme="midnight"] .evcal{background:#2b2336;border-color:#4d3c6b}
+  .evcal .evcal-bar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;justify-content:center}
+  .evcal .evcal-bar button{min-height:40px;min-width:40px;padding:6px 10px;font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;cursor:pointer}
+  .evcal .evcal-bar select{min-height:40px;padding:6px 8px;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
+  body[data-theme="ink"] .evcal .evcal-bar button,body[data-theme="ink"] .evcal .evcal-bar select{background:#312a22;border-color:#7a6e58;color:#f0e9da}
+  body[data-theme="midnight"] .evcal .evcal-bar button,body[data-theme="midnight"] .evcal .evcal-bar select{background:#2b2140;border-color:#8471a6;color:#ece5f7}
+  .evcal .ev-search{flex:1 1 200px;max-width:260px;min-height:40px;padding:8px 10px;font:14px Georgia,Times,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
+  body[data-theme="ink"] .evcal .ev-search{background:#312a22;border-color:#7a6e58;color:#f0e9da}
+  body[data-theme="midnight"] .evcal .ev-search{background:#2b2140;border-color:#8471a6;color:#ece5f7}
+  .evcal .evcal-bar button:hover{opacity:.85}
+  .evcal .evcal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:12px 0 2px;font:600 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--faint);text-align:center}
+  .evcal .evcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .evcal .ev-day{position:relative;min-height:52px;padding:4px 2px 2px;font:13px Georgia,Times,serif;color:var(--ink2);background:var(--paper);border:1px solid var(--rule2);border-radius:2px;cursor:default;text-align:left}
+  body[data-theme="ink"] .evcal .ev-day,body[data-theme="midnight"] .evcal .ev-day{background:var(--paper2)}
+  body[data-theme="ink"] .evcal .ev-day.empty,body[data-theme="midnight"] .evcal .ev-day.empty{background:transparent}
+  body[data-theme="ink"] .evcal .ev-day .ev-dot,body[data-theme="midnight"] .evcal .ev-day .ev-dot{background:#7ee2a8}
+  .evcal .ev-day.empty{background:transparent;border-color:transparent}
+  .evcal .ev-day.today{box-shadow:inset 0 0 0 2px var(--ink)}
+  .evcal .ev-day.ev-set{border-color:var(--ink)}
+  .evcal .ev-day.ev-set:hover{transform:scale(1.06);z-index:2}
+  .evcal .ev-day .ev-dot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#1a7f37}
+  .evcal .ev-day .ev-tag{display:none}
+  .evcal .evcal-legend{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;margin:8px 0 4px;font:italic 12px Georgia,Times,serif;color:var(--muted)}
+  .evcal .evcal-legend .ev-mi{padding:2px 8px;border-radius:2px;background:var(--paper);border:1px solid var(--rule2);font-style:normal;font-size:11.5px;color:var(--ink2);text-align:left;display:inline-block}
+  body[data-theme="ink"] .evcal .evcal-legend .ev-mi,body[data-theme="midnight"] .evcal .evcal-legend .ev-mi{background:var(--paper2)}
+  .evcal .evcal-legend b{font-weight:700;font-style:normal}
+  .evcal .evcal-empty{margin:8px 0 4px;font:italic 13px Georgia,Times,serif;color:var(--muted);text-align:center}
+  .evcal-empty[hidden],.evcal .evcal-bar button[hidden]{display:none}
+  @media (max-width:700px){
+    .evcal{padding:12px 10px 6px}
+    .evcal .ev-day{min-height:44px;font-size:12px}
+  }
   footer{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
@@ -896,15 +986,15 @@ CSS = r'''  :root{
     h1{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
     .tagline{font-size:13px}
     nav.sitenav{
-      display:flex;flex-wrap:wrap;justify-content:center;gap:2px 4px;
+      display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;
       font-size:11px;line-height:2.1;
     }
-    nav.sitenav a,nav.sitenav .cur{margin:0 8px;white-space:nowrap}
+    nav.sitenav a,nav.sitenav .cur{margin:0 10px;white-space:nowrap}
     .star-badge{top:10px;left:10px;right:auto;width:140px;height:140px}
-    .star-badge .star-title{font-size:7px;max-width:62%;line-height:1.3;letter-spacing:.5px}
+    .star-badge .star-title{font-size:9px;max-width:70%;line-height:1.25;letter-spacing:.2px}
     .star-badge .star-sub{display:none}
-    .gem-badge{top:10px;left:auto;right:10px;width:112px;height:76px;border-radius:11px}
-    .gem-badge .gem-title{font-size:9px;letter-spacing:1.2px}
+    .gem-badge{top:42px;left:auto;right:10px;width:140px;height:76px;border-radius:11px;border-width:2.5px;box-shadow:5px 6px 0 #111}
+    .gem-badge .gem-title{font-size:10px;letter-spacing:1.5px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
     /* giant inline titles (the toolbar writes up to 200px) stay dramatic
@@ -959,6 +1049,8 @@ CONTACT_FORM_HTML = (
   '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
   '  <input type="hidden" name="_subject" value="New message from the Flamingo and Cactus contact form">\n'
   '  <input type="hidden" name="_template" value="table">\n'
+  '  <input type="hidden" name="_captcha" value="false">\n'
+  '  <input type="hidden" name="_next" value="https://' + CUSTOM_DOMAIN + '/contact.html?sent=1">\n'
   '  <input type="text" name="_honey" style="display:none">\n'
   '  <input type="hidden" id="cf-sentat" name="sent_at" value="">\n'
   '  <label for="cf-name">Your name<span class="sub">You can put &quot;Random&quot; if you would rather not say who you are.</span></label>\n'
@@ -970,13 +1062,27 @@ CONTACT_FORM_HTML = (
   '  <label id="cf-files-label">Files<span class="sub">Optional — multiple files on supported browsers, 10 MB total.</span></label>\n'
   '  <input type="file" id="cf-photo" name="attachment" aria-labelledby="cf-files-label">\n'
   '  <p class="filehint" id="cf-filehint">No files yet.</p>\n'
+  '  <p class="cf-status" id="cf-status" hidden></p>\n'
   '  <noscript><p class="filehint">With JavaScript off, send one file per message.</p></noscript>\n'
   '  <button type="submit">Send it our way</button>\n'
   "</form>"
   '<script>(function(){try{'
+  # Success handling: FormSubmit redirects back to ?sent=1 when the message
+  # went through, so the page can say so instead of leaving the button gray.
+  'var inlineStatus=function(t,err){var st=document.getElementById("cf-status");if(!st)return;'
+  'st.hidden=false;st.textContent=t;if(err)st.classList.add("is-err");else st.classList.remove("is-err");};'
+  'try{var q=new URLSearchParams(location.search);'
+  'if(q.get("sent")==="1"){inlineStatus("Sent — it went through. Thank you.");'
+  'try{history.replaceState(null,"",location.pathname);}catch(_){}}}catch(_){}'
+  'var watch=null;'
+  'window.addEventListener("pagehide",function(){if(watch){clearTimeout(watch);watch=null;}});'
   'var inp=document.getElementById("cf-photo"),hint=document.getElementById("cf-filehint"),form=inp&&inp.form;'
   'if(!inp||!hint||!form)return;'
-  'function stampTime(){try{var st=document.getElementById("cf-sentat");if(st)st.value=new Date().toString();}catch(_){}}'
+  'function stampTime(){try{var st=document.getElementById("cf-sentat");if(!st)return;'
+  'var d=new Date();var s="";'
+  'try{s=d.toLocaleString("en-US",{timeZone:"America/New_York",month:"numeric",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit",timeZoneName:"short"})+" (Eastern)";}'
+  'catch(_){s=d.toString()+" | UTC offset "+(d.getTimezoneOffset()/-60)+" hours";}'
+  'st.value=s;}catch(_){}}'
   'stampTime();'
   'function setFiles(target,files){try{var dt=new DataTransfer();for(var i=0;i<files.length;i++)dt.items.add(files[i]);target.files=dt.files;'
   'if(!target.files||target.files.length!==files.length)return false;'
@@ -1023,7 +1129,14 @@ CONTACT_FORM_HTML = (
   'for(var xi=1;xi<all.length;xi++){var ni=document.createElement("input");ni.type="file";ni.name="attachment_"+(xi+1);ni.className="filepick filepick-extra";ni.tabIndex=-1;ni.setAttribute("aria-hidden","true");'
   'if(!setFiles(ni,[all[xi]])){e.preventDefault();failToNative("This browser could not prepare every file. Use the file picker and send one file per message.");return;}'
   'form.appendChild(ni);extras.push(ni);}}'
-  'var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=true;btn.textContent="Sending…";}});'
+  'var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=true;btn.textContent="Sending…";}'
+  # 20 s watchdog: a real submit unloads the page (pagehide clears this).
+  # If the load is stuck, bring the button back and explain the way out.
+  'watch=setTimeout(function(){try{var btn=form.querySelector("button[type=submit]");'
+  'if(btn){btn.disabled=false;btn.textContent="Send it our way";}'
+  'var st=document.getElementById("cf-status");if(st){st.hidden=false;st.classList.add("is-err");'
+  'st.textContent="If it stayed on Sending, the upload may be slow — wait a moment, and only send again if nothing arrives. You can also email us directly with the same files: ";'
+  'var a=document.createElement("a");a.href="mailto:' + CONTACT_EMAIL + '";a.textContent="' + CONTACT_EMAIL + '";st.appendChild(a);}}catch(_){}},20000);});'
   'window.addEventListener("pageshow",function(){var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=false;btn.textContent="Send it our way";}});'
   'render();}catch(_){}})();</script>'
 )
@@ -1051,6 +1164,245 @@ def place_form(body_html: str, form_html: str) -> tuple:
     if n:
         return placed, ""
     return body_html, form_html
+
+
+# ---------------------------------------------------------------------------
+# Events page: `[event calendar]` woven from the plain list already on the
+# page. The list stays the one editable source; the calendar is derived from
+# it, so the calendar only ever shows what the list says.
+# ---------------------------------------------------------------------------
+
+_EVENT_MONTH_NAMES = (
+    ("january", "jan"), ("february", "feb"), ("march", "mar"), ("april", "apr"),
+    ("may",), ("june", "jun"), ("july", "jul"), ("august", "aug"),
+    ("september", "sept", "sep"), ("october", "oct"),
+    ("november", "nov"), ("december", "dec"),
+)
+_MONTH_ALTS = "|".join(alt for group in _EVENT_MONTH_NAMES for alt in group)
+_EVENT_DATE_RE = re.compile(
+    r"\b(" + _MONTH_ALTS + r")\.?[,]?\s+(\d{1,2})(?:st|nd|rd|th)?(?!\d)", re.I)
+_EVENT_SPAN_RE = re.compile(
+    r"from\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\s*"
+    r"(?:to|until|till|through|thru|&ndash;|&mdash;|[&#8211;]|&#8212;|[\u2013\u2014]|\u2014|-)\s*"
+    r"(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)", re.I)
+_EVENT_AT_RE = re.compile(
+    r"(?:\bat\b|from)\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)", re.I)
+_EVENT_YEAR_RE = re.compile(r"\b(20\d{2})\b")
+
+_MONTH_LOOKUP = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+                 "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+_WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_MONTH_SHORT = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _event_block_text(fragment: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", fragment)
+    text = html.unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _event_unit(h: int, m: str | None, ap: str) -> str:
+    ap = ap.replace(".", "").lower() or "am"
+    h12, daypart = h, "am"
+    if h == 12:
+        daypart = "pm" if ap.startswith("p") else "am"
+    elif h > 12:
+        h12, daypart = h - 12, "pm"
+    else:
+        daypart = "am" if ap.startswith("a") else "pm"
+    return f"{h12}{':' + m if m else ''} {daypart}"
+
+
+def _parse_list_events(body_html: str) -> list[dict]:
+    """Every dated event mentioned in the page's paragraphs and list items.
+
+    The events source (typically a hidden `.evsrc` block) is what the owner
+    edits; the calendar is derived from it and always reflects it."""
+    spans = []
+    for m in re.finditer(r"<(p|li)(?:[^>]*)>(.*?)</\1\s*>", body_html, re.S | re.I):
+        spans.append((m.start(), m.group(2)))
+    today = datetime.date.today()
+    events: list[dict] = []
+    for i, (_pos, frag) in enumerate(spans):
+        text = _event_block_text(frag)
+        if "[event calendar]" in text:
+            continue
+        if not text or "[contact form]" in text:
+            continue
+        dm = _EVENT_DATE_RE.search(text)
+        if not dm:
+            continue
+        month = _MONTH_LOOKUP.get(dm.group(1)[:3].lower())
+        day = int(dm.group(2))
+        if not month or not 1 <= day <= 31:
+            continue
+        ym = _EVENT_YEAR_RE.search(text)
+        year = int(ym.group(1)) if ym else (
+            today.year if datetime.date(today.year, month, day) >= today
+            else today.year + 1)
+        try:
+            stamp = datetime.date(year, month, day)
+        except ValueError:
+            continue
+        tm = _EVENT_SPAN_RE.search(text)
+        unit1 = unit2 = ""
+        single = ""
+        if tm:
+            unit1 = _event_unit(int(tm.group(1)), tm.group(2), tm.group(3))
+            unit2 = _event_unit(int(tm.group(4)), tm.group(5), tm.group(6))
+        else:
+            am = _EVENT_AT_RE.search(text)
+            if am:
+                single = _event_unit(int(am.group(1)), am.group(2), am.group(3))
+        label = text
+        for pat in _EVENT_SPAN_RE, _EVENT_AT_RE, _EVENT_DATE_RE, _EVENT_YEAR_RE:
+            label = pat.sub(" ", label)
+        label = re.sub(r"\s+", " ", label)
+        label = re.sub(r"^[\s,.:;-]+|[\s,.:;-]+$", "", label)
+        if len(label) > 84:
+            cut = label[:84]
+            sp = cut.rfind(" ")
+            label = (label[:sp] if sp > 40 else cut).rstrip(" ,.;:-") + "…"
+        events.append({
+            "y": stamp.year, "m": stamp.month, "d": stamp.day,
+            "wd": _WEEKDAYS[stamp.weekday()],
+            "ms": _MONTH_SHORT[stamp.month - 1],
+            "key": f"{stamp.month}/{stamp.day}",
+            # search runs on the full untruncated text; label is display-only
+            "match": stamp.strftime("%B %d, %Y ") + text,
+            "times": (f"{unit1} – {unit2}" if unit1 and unit2
+                      else single if single else ""),
+            "day": f"{_WEEKDAYS[stamp.weekday()]}, {_MONTH_SHORT[stamp.month - 1]} {stamp.day}, {stamp.year}",
+            "label": label,
+        })
+        if len(events) >= 80:
+            break
+    return events
+
+
+EVENTS_CALENDAR_MARKUP = (
+    '<div class="evcal" id="evcal">'
+    '<div class="evcal-bar">'
+    '<button type="button" id="ev-prev" aria-label="Previous month">&lsaquo;</button>'
+    '<select id="ev-month" aria-label="Month"></select>'
+    '<select id="ev-year" aria-label="Year"></select>'
+    '<button type="button" id="ev-next" aria-label="Next month">&rsaquo;</button>'
+    '<input type="text" id="ev-search" class="ev-search" '
+    'placeholder="Search events by name or date" aria-label="Search events">'
+    '<button type="button" id="ev-reset" class="ev-reset" hidden>Show all</button>'
+    "</div>"
+    '<div class="evcal-head" aria-hidden="true">'
+    "<span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>"
+    "<span>Thu</span><span>Fri</span><span>Sat</span>"
+    "</div>"
+    '<div class="evcal-grid" id="ev-grid"></div>'
+    '<div class="evcal-empty" id="ev-empty" hidden>No events found for this month.</div>'
+    '<div class="evcal-legend" id="ev-legend"></div>'
+    "</div>"
+)
+
+
+def place_calendar(body_html: str) -> tuple[str, str]:
+    """Swap an `[event calendar]` marker paragraph for the month calendar.
+
+    The calendar is generated from the dated items already on the page — the
+    list itself is untouched and still rendered keeps right below it. Returns
+    (page_body, extra_script): extra_script is '' with no marker."""
+    import json as _json
+    events = _parse_list_events(body_html)
+    marker_re = re.compile(r"<(?:p|li)[^>]*>\s*\[event calendar\]\s*</(?:p|li)>",
+                           flags=re.IGNORECASE)
+    if not marker_re.search(body_html):
+        return body_html, ""
+    data = _json.dumps(events, ensure_ascii=True).replace("</", "<\\/")
+    script = ('<script>/* events calendar: derived from the list on this '
+              'page; the list stays the source of truth */(function(){'
+              'var EV=' + data + ";"
+              'var cal=document.getElementById("evcal");if(!cal)return;'
+              'cal.style.display="block";'
+              'var grid=document.getElementById("ev-grid"),'
+              'monthSel=document.getElementById("ev-month"),'
+              'yearSel=document.getElementById("ev-year"),'
+              'empty=document.getElementById("ev-empty"),'
+              'legend=document.getElementById("ev-legend"),'
+              'search=document.getElementById("ev-search"),'
+              'reset=document.getElementById("ev-reset");'
+              'var months=["January","February","March","April","May","June",'
+              '"July","August","September","October","November","December"];'
+              'var t0=new Date(),ty=t0.getFullYear();'
+              'var ys={};var ymin=ty-1,ymax=ty+5;'
+              'for(var i=0;i<EV.length;i++){var y=EV[i].y;if(y<ymin)ymin=y;if(y>ymax)ymax=y;}'
+              'for(var y=ymin;y<=ymax;y++)ys[y]=1;'
+              'var yyears=[];for(var k in ys)yyears.push(+k);yyears.sort(function(a,b){return a-b;});'
+              'months.forEach(function(m,i){var o=document.createElement("option");o.value=i+1;o.textContent=m;monthSel.appendChild(o);});'
+              'yyears.forEach(function(y){var o=document.createElement("option");o.value=y;o.textContent=y;yearSel.appendChild(o);});'
+              'var cm=t0.getMonth()+1, cy=ty; '
+              'var near=null,nf=null,nk=null,tk=t0.getFullYear()*10000+(t0.getMonth()+1)*100+t0.getDate();'
+              'for(var i=0;i<EV.length;i++){var ek=EV[i].y*10000+EV[i].m*100+EV[i].d;'
+              'if(!nk||ek<nk)nk=ek,near=EV[i];'
+              'if(ek>=tk&&(!nf||ek<nf))nf=ek,near=EV[i];}'
+              'if(near){cm=near.m;cy=near.y;}'
+              'monthSel.value=cm; yearSel.value=cy;'
+              'function q(){return (search.value||"").trim().toLowerCase();}'
+              'function evOn(ev){var s=q();if(!s)return true;'
+              'return (ev.match.toLowerCase().indexOf(s)>=0);}'
+              'function render(){'
+              'var y=cy, mo=cm;'
+              'var first=new Date(y,mo-1,1), days=new Date(y,mo,0).getDate(), dow=first.getDay();'
+              'grid.innerHTML="";'
+              'for(var i=0;i<dow;i++){var blank=document.createElement("span");blank.className="ev-day empty";grid.appendChild(blank);}'
+              'var nOn=0,legendKids=[];'
+              'for(var d=1;d<=days;d++){(function(d){'
+              'var mine=[];for(var i=0;i<EV.length;i++){var e=EV[i];if(e.y===y&&e.m===mo&&e.d===d&&evOn(e))mine.push(e);}'
+              'var cell=document.createElement("span");cell.className="ev-day";cell.textContent=d;'
+              'if(d===new Date().getDate()&&y===new Date().getFullYear()&&mo===new Date().getMonth()+1)cell.classList.add("today");'
+              'if(mine.length){nOn++;cell.classList.add("ev-set");'
+              'var dot=document.createElement("span");dot.className="ev-dot";cell.appendChild(dot);'
+              'var tip=[];for(var j=0;j<mine.length;j++)tip.push(mine[j].day+(mine[j].times?" · "+mine[j].times:"")+" — "+mine[j].label);'
+              'cell.setAttribute("role","img");'
+              'cell.setAttribute("aria-label",tip.join(" | "));'
+              'for(j=0;j<mine.length;j++)legendKids.push(mine[j]);'
+              'cell.style.display="";}'
+              'else{cell.style.display=q()?"none":"";}'
+              'grid.appendChild(cell);})(d);}'
+              'empty.hidden=!!nOn;'
+              'empty.textContent=q()?"No events match your search.":"No events found for this month.";'
+              'legend.innerHTML="";'
+              'legendKids.sort(function(a,b){return (a.y*10000+a.m*100+a.d)-(b.y*10000+b.m*100+b.d);});'
+              'for(i=0;i<legendKids.length;i++){(function(e){'
+              'var chip=document.createElement("span");chip.className="ev-mi";'
+              'var b=document.createElement("b");b.textContent=e.day;chip.appendChild(b);'
+              'chip.appendChild(document.createTextNode((e.times?" · "+e.times:"")+" · "+e.label));'
+              'legend.appendChild(chip);})(legendKids[i]);}'
+              'var chips=legend.children.length; legend.style.display=chips?"":"none";'
+              '}'
+              'function setSearch(){var s=q();reset.hidden=!s;'
+              'if(s){var first=null;'
+              'for(var i=0;i<EV.length;i++){var e=EV[i];if(evOn(e)){if(first===null||e.y*10000+e.m*100+e.d<first.y*10000+first.m*100+first.d)first=e;}}'
+              'if(first){cm=first.m;cy=first.y;}}'
+              'monthSel.value=cm;yearSel.value=cy;render();}'
+              'function syncSel(){var o=[];'
+              'for(var i=0;i<yearSel.options.length;i++)o.push(+yearSel.options[i].value);'
+              'if(o.indexOf(+cy)<0){var no=document.createElement("option");no.value=cy;no.textContent=cy;yearSel.appendChild(no);}'
+              'yearSel.value=cy;monthSel.value=cm;}'
+              'monthSel.addEventListener("change",function(){cm=+monthSel.value;render();});'
+              'yearSel.addEventListener("change",function(){cy=+yearSel.value;render();});'
+              'document.getElementById("ev-prev").addEventListener("click",function(){cm--;if(cm<1){cm=12;cy--;}syncSel();render();});'
+              'document.getElementById("ev-next").addEventListener("click",function(){cm++;if(cm>12){cm=1;cy++;}syncSel();render();});'
+              'search.addEventListener("input",setSearch);'
+              'reset.addEventListener("click",function(){search.value="";setSearch();});'
+              'render();})();</script>'
+    )
+    placed = [""]
+    state = {"n": 0}
+    def _swap(_m):
+        if state["n"] == 0:
+            state["n"] += 1
+            return EVENTS_CALENDAR_MARKUP
+        return ""
+    body_new = marker_re.sub(_swap, body_html)
+    return body_new, script
 
 
 def badge_slug(pages, name):
@@ -1115,18 +1467,20 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
     canon = f"https://{CUSTOM_DOMAIN}/" if slug == "index" else f"https://{CUSTOM_DOMAIN}/{slug}.html"
     canvas = ""
     form_block = ""
+    placed = body_html
     if any(p["slug"] == slug and p.get("form") for p in pages):
         # `[contact form]` typed anywhere in the page body marks the spot;
         # without it the form lands after the whole page body.
         placed, leftover = place_form(body_html, CONTACT_FORM_HTML)
-        canvas = f'  <div class="canvas">\n{placed}\n  </div>\n' if placed else ""
         if leftover:
             form_block = f"  {leftover}\n"
-    elif body_html:
+    else:
         # The marker is reserved for the generated contact form; never let
         # the literal implementation token leak onto a page without a form.
-        body_html = re.sub(r"<p[^>]*>\s*\[contact form\]\s*</p>", "", body_html)
-        canvas = f'  <div class="canvas">\n{body_html}\n  </div>\n' if body_html else ""
+        placed = re.sub(r"<p[^>]*>\s*\[contact form\]\s*</p>", "", body_html)
+    placed, cal_script = place_calendar(placed)
+    if placed:
+        canvas = f'  <div class="canvas">\n{placed}{cal_script}\n  </div>\n'
     footer_text = html.escape(footer) + "\n" if footer.strip() else ""
     footer_block = ('  <footer>\n' + footer_text +
                     '  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>\n'
@@ -1153,7 +1507,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         f"{gem_html(pages)}"
         "\n"
         '  <div class="masthead">\n'
-        f'    <img src="{logo_uri}" alt="Flamingo and Cactus">\n'
+        f'    <a class="logolink" href="index.html" aria-label="Go to the main page"><img src="{logo_uri}" alt="Flamingo and Cactus"></a>\n'
         f"    <h1>{html.escape(title)}</h1>\n"
         f"    <p class=\"tagline\">{html.escape(tagline)}</p>\n"
         "</div>\n"
@@ -1197,6 +1551,58 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "if(star.classList.contains('warp'))return;"
         "if(mode==='fade'){try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');"
         "setTimeout(function(){window.location.href=href;},320);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');try{sessionStorage.removeItem(flag)}catch(_){}},3000);return;}"
+        # Comic mode: an ink-and-paper starburst — jagged white blob, radial
+        # speed-line rays, black and white shards — instead of golden sparkles.
+        "if(mode==='comic'){"
+        "var r=star.getBoundingClientRect();"
+        "var x=r.left+r.width/2,y=r.top+r.height/2;"
+        "try{sessionStorage.setItem(flag,'1')}catch(_){}"
+        "star.classList.add('warp');document.body.classList.add('warping');"
+        "var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}"
+        "setTimeout(nav2,560);setTimeout(nav2,1100);"
+        "setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2200);"
+        "try{"
+        "var fx=document.createElement('div');fx.id='fx';"
+        "var fl=document.createElement('div');fl.className='comicflash';fx.appendChild(fl);"
+        "var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);"
+        "var dpr=Math.min(window.devicePixelRatio||1,2);"
+        "var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;"
+        "var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);"
+        "var N=W<700?18:30,S=[],i,a,sp;"
+        "for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=3+Math.random()*6;"
+        "S.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4+Math.random()*7,rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.4,age:0,life:26+Math.random()*22,ink:Math.random()<.5});}"
+        "var rays=W<700?12:18,seed=[],j;"
+        "for(j=0;j<rays;j++)seed.push(.6+Math.random()*.5);"
+        "var wax={age:0,life:24};"
+        "var t0=performance.now();"
+        "(function frame(){"
+        "var alive=false,i,s;"
+        "cx2.clearRect(0,0,W,H);"
+        "if(wax.age<=wax.life){wax.age++;alive=true;"
+        "var wx=Math.min(1,wax.age/wax.life),R0=Math.min(W,H)*.08+wx*44;"
+        "cx2.globalAlpha=1-wx*.3;"
+        "cx2.fillStyle='#fffdf7';cx2.strokeStyle='#111';cx2.lineWidth=5;"
+        "cx2.beginPath();"
+        "for(i=0;i<16;i++){var aa=i*Math.PI/8,rr=R0*(1+.22*Math.sin(aa*3+wax.age*.5));"
+        "var px=x+Math.cos(aa)*rr,py=y+Math.sin(aa)*rr;cx2[i?'lineTo':'moveTo'](px,py);}"
+        "cx2.closePath();cx2.fill();cx2.stroke();"
+        "for(i=0;i<rays;i++){var aa=i*Math.PI*2/rays,ln=(0.3+0.16*seed[i])*Math.max(W,H)*wx; "
+        "cx2.beginPath();cx2.moveTo(x+Math.cos(aa)*R0*.7,y+Math.sin(aa)*R0*.7);"
+        "cx2.lineTo(x+Math.cos(aa)*ln,y+Math.sin(aa)*ln);"
+        "cx2.strokeStyle=i%2?'#111':'#fffdf7';cx2.lineWidth=i%2?9:4;cx2.stroke();}"
+        "cx2.globalAlpha=1;}"
+        "for(i=0;i<S.length;i++){s=S[i];s.age++;if(s.age>s.life)continue;alive=true;"
+        "s.x+=s.vx;s.y+=s.vy;s.vx*=.97;s.vy=s.vy*.97;s.rot+=s.vr;"
+        "cx2.globalAlpha=Math.max(0,1-s.age/s.life);"
+        "cx2.save();cx2.translate(s.x,s.y);cx2.rotate(s.rot);"
+        "cx2.beginPath();cx2.moveTo(0,-s.r);cx2.lineTo(s.r*.7,s.r);cx2.lineTo(-s.r*.7,s.r);cx2.closePath();"
+        "if(s.ink){cx2.fillStyle='#111';cx2.fill();}else{cx2.fillStyle='#fffdf7';cx2.fill();cx2.lineWidth=2;cx2.strokeStyle='#111';cx2.stroke();}"
+        "cx2.restore();}"
+        "cx2.globalAlpha=1;"
+        "if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);"
+        "else if(fx.parentNode)fx.parentNode.removeChild(fx);})();"
+        "}catch(_){}"
+        "return;}"
         "var r=star.getBoundingClientRect();"
         "var x=r.left+r.width/2,y=r.top+r.height/2;"
         "try{sessionStorage.setItem(flag,'1')}catch(_){}"
@@ -1707,6 +2113,54 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                 "a plain hidden page does not summon the gem badge")
         expect('href="feedback.html"' in idx and "gem-badge" in idx,
                 "built home carries the gem badge to the feedback page")
+        # Feedback session 2026-10-26 (emails 883/893/906/907/908/909/910/913):
+        # comic B&W badges, deliverable form, localized stamp, comic burst,
+        # logo -> home, calendar on events, simplified products + deep page.
+        expect('class="logolink" href="index.html"' in idx,
+               "clicking the logo returns to the main page")
+        expect("Arial Black" in idx and "#fffdf7" in idx and ".gem-badge" in idx,
+               "star and feedback badges render in the comic black-and-white style")
+        expect(".star-badge::before,.star-badge::after{content:\"\";position:absolute;"
+               "clip-path:polygon" in CSS,
+               "comic star outline comes from layered pseudos (clip-path-safe)")
+        expect(site.get("star_animation") == "comic" and 'data-star-animation="comic"' in idx,
+               "star click uses the comic burst")
+        expect("comicko" in idx and "comicflash" in idx and "mode==='comic'" in idx,
+               "comic burst draws an ink starburst, not golden sparkles")
+        cf = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
+        expect('name="_captcha" value="false"' in cf and 'contact.html?sent=1' in cf,
+               "contact posts captcha-free and returns to a flagged success URL")
+        expect('id="cf-status" hidden' in cf and "watch=setTimeout" in cf,
+               "stuck submits get a status line and a hang watchdog")
+        expect("America/New_York" in cf and "Eastern" in cf,
+               "sent_at is stamped in clearly-labeled Eastern time")
+        expect('body[data-theme="midnight"] .contactform input[type=text]' in cf,
+               "dark mode gives the form fields a visible background")
+        expect(".cf-status[hidden]{display:none}" in CSS,
+               "the status line stays hidden until used")
+        evc = (tmp / "events.html").read_text(encoding="utf-8") if (tmp / "events.html").is_file() else ""
+        if "[event calendar]" in (pages_dir / "events.html").read_text(encoding="utf-8"):
+            expect('id="evcal"' in evc and 'var EV=' in evc,
+                   "events page swaps the calendar in where the marker was")
+            expect("[event calendar]" not in evc,
+                   "the calendar marker never leaks onto the public page")
+            expect(".evcal-empty[hidden]" in evc and ".evcal .evcal-bar button[hidden]" in evc,
+                   "calendar hidden/empty states obey the hidden attribute")
+            expect("t0.getFullYear()*10000+(t0.getMonth()+1)*100+t0.getDate()" in evc,
+                   "calendar search matches by name, date and month")
+            expect('"match"' in evc and "ymin=ty-1,ymax=ty+5" in evc,
+                   "search runs on the full untruncated text; year list covers every event year")
+            expect(".canvas .evsrc{display:none}" in evc,
+                   "the event source block stays hidden; the calendar is the face")
+            expect(".ev-day .ev-dot{position:absolute;left:50%;top:50%" in evc and "#1a7f37" in evc,
+                   "calendar event dots are centered green dots")
+        prdb = (tmp / "products-deep.html").read_text(encoding="utf-8") if (tmp / "products-deep.html").is_file() else ""
+        prd = (tmp / "products.html").read_text(encoding="utf-8") if (tmp / "products.html").is_file() else ""
+        if (pages_dir / "products-deep.html").is_file():
+            expect('href="products-deep.html"' in prd,
+                   "products page links the hidden deep-explanations page")
+            expect("VPT24-6670" in prdb and "VPT24-6670" not in prd,
+                   "the full technical write-up lives only on the deep page")
         nohidden = nav_html([{"slug": "a", "nav": "A"}, {"slug": "b", "nav": "B"}, {"slug": "z", "nav": "Z", "hidden": True}], "a")
         expect("z.html" not in nohidden and ">A</span>" in nohidden and "b.html" in nohidden,
                 "hidden pages stay out of the nav")
@@ -1738,6 +2192,13 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             expect("bearjhartjen.github.io/Flank-ledger" not in flank_html,
                    "ledger has no links to the old standalone site")
             expect("const TX = [" in flank_html, "ledger embeds the transaction data")
+            expect('var k="fc-theme"' in flank_html,
+                   "ledger carries the main site's dark mode over (same localStorage key)")
+            expect('body[data-theme="midnight"]' in flank_html,
+                   "ledger has a midnight palette of its own")
+            expect('document.addEventListener("DOMContentLoaded",set)' in flank_html
+                   or "readyState===\"loading\"" in flank_html,
+                   "the ledger's theme carryover applies after the body exists")
         if "sitenav" in idx:
             nav_block = idx.split('<nav class="sitenav">')[1].split("</nav>")[0]
             expect("flank" not in nav_block,

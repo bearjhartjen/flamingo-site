@@ -3,7 +3,6 @@
   "tagline": "Flamingo and Cactus Group",
   "footer": "",
   "theme": "classic",
-  "star_animation": "portal",
   "description": "",
   "custom_css": "",
   "pages": [
@@ -43,6 +42,15 @@
       "slug": "contact",
       "nav": "Contact",
       "form": true
+    },
+    {
+      "slug": "products-deep",
+      "nav": "Deep explanations",
+      "hidden": true,
+      "badge": "none",
+      "title": "The deep explanations",
+      "description": "The full technical write-up of every Flamingo and Cactus product."
     }
-  ]
+  ],
+  "star_animation": "comic"
 }

@@ -29,25 +29,25 @@
     --link:#1a3a7c;
   }
   body[data-theme="ink"]{
-    --paper:#161513;
-    --paper2:#1e1c19;
-    --ink:#f0e9da;
-    --ink2:#d6cdbb;
-    --muted:#a89d85;
-    --faint:#7d7461;
-    --rule:#4a453a;
-    --rule2:#35312a;
+    --paper:#262220;
+    --paper2:#2f2b28;
+    --ink:#f5efe0;
+    --ink2:#ddd2c0;
+    --muted:#b8ac92;
+    --faint:#928872;
+    --rule:#6b6152;
+    --rule2:#544b3e;
     --link:#9db8ff;
   }
   body[data-theme="midnight"]{
-    --paper:#0d0a14;
-    --paper2:#161021;
-    --ink:#ece5f7;
-    --ink2:#cfc3e8;
-    --muted:#9d90b8;
-    --faint:#6f6488;
-    --rule:#33264d;
-    --rule2:#241b38;
+    --paper:#221c2c;
+    --paper2:#2b2336;
+    --ink:#f0e9f7;
+    --ink2:#d9cff0;
+    --muted:#b3a8cd;
+    --faint:#8b80a6;
+    --rule:#4d3c6b;
+    --rule2:#3b2d54;
     --link:#d3b8ff;
   }
   *{box-sizing:border-box}
@@ -139,37 +139,59 @@
     border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
     padding:18px 20px;margin:0 0 16px;
   }
+  .canvas p.ev-hit,.canvas li.ev-hit{outline:2px solid var(--ink);outline-offset:3px}
+  body[data-theme="ink"] .canvas .card{background:#332e28;border-color:#6b6152}
+  body[data-theme="midnight"] .canvas .card{background:#2b2336;border-color:#4d3c6b}
   .canvas .card h2:first-child{margin-top:0}
   .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
+  /* Header badges — comic book, black and white, level with each other,
+     both kept the same distance from the centred logo (438px either side).
+     The blue stays only on the feedback page's Contact us button. */
   .star-badge{
-    position:absolute;top:80px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
+    position:absolute;top:64px;left:calc(50% - 606px);z-index:200;width:168px;height:168px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 35% 30%,#f3d97b,#c9a227 58%,#a37f14);
-    color:#3a2d00;text-decoration:none;text-align:center;
-    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
-    filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));
-    transition:transform .18s ease;
+    color:#111;text-decoration:none;text-align:center;
+    /* the hard offset shadow rides the whole silhouette; the ::before/::after
+       pseudo pair draws the black star with a white star inset inside it,
+       since clip-path would otherwise cut any painted outline */
+    filter:drop-shadow(7px 9px 0 rgba(0,0,0,.9));
+    transition:transform .15s ease;
   }
-  .star-badge:hover{transform:scale(1.07) rotate(-4deg)}
-  .star-badge .star-title{display:block;max-width:58%;font:700 12px/1.3 "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase}
-  .star-badge .star-sub{display:block;margin-top:4px;font:italic 10px Georgia,serif;animation:starpulse 3s ease-in-out infinite}
+  .star-badge::before,.star-badge::after{content:"";position:absolute;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  .star-badge::before{inset:0;background:#111}
+  .star-badge::after{inset:3px;background:#fffdf7}
+  .star-badge .star-title,.star-badge .star-sub{position:relative;z-index:1}
+  .star-badge:hover{transform:scale(1.06) rotate(-6deg)}
+  .star-badge .star-title{display:block;max-width:70%;font:800 12px/1.25 "Arial Black","Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;text-transform:uppercase}
+  .star-badge .star-sub{display:block;margin-top:2px;font:700 8px "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;animation:starpulse 3s ease-in-out infinite}
+  .star-badge .star-title,.star-badge .star-sub{transform:translateY(-5px)}
   @keyframes starpulse{0%,100%{opacity:.45}50%{opacity:.9}}
-  @media (max-width:1250px){.star-badge{top:20px;left:56px}}
+  @media (max-width:1250px) and (min-width:701px){
+    .star-badge{top:20px;left:56px;width:140px;height:140px}
+    .star-badge .star-title{font-size:9px}
+    .star-badge .star-sub{font-size:7px}
+    /* pad the masthead so the badges never sit on the logo or title */
+    .masthead{padding-top:150px}
+  }
   @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
   .gem-badge{
-    position:absolute;top:80px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
+    position:absolute;top:94px;left:calc(50% + 438px);z-index:200;width:170px;height:110px;
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#8fbef5,#1c4fd8 58%,#0b2a8c);
-    color:#fff;text-decoration:none;text-align:center;
-    border-radius:16px;
-    filter:drop-shadow(0 6px 10px rgba(0,0,0,.28));
-    transition:transform .18s ease;
+    background:#fffdf7;
+    color:#111;text-decoration:none;text-align:center;
+    border:3px solid #111;border-radius:14px;
+    box-shadow:7px 8px 0 #111;
+    transform:rotate(1.5deg);
+    transition:transform .15s ease;
   }
-  .gem-badge:hover{transform:scale(1.06) rotate(3deg)}
-  .gem-badge .gem-title{display:block;max-width:80%;font:700 13px/1.4 "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase}
-  @media (max-width:1250px){.gem-badge{top:20px;left:auto;right:56px}}
+  .gem-badge:hover{transform:rotate(-1deg) scale(1.05)}
+  .gem-badge .gem-title{display:block;max-width:84%;font:800 14px/1.3 "Arial Black","Helvetica Neue",Arial,sans-serif;letter-spacing:2.5px;text-transform:uppercase}
+  @media (max-width:1250px) and (min-width:701px){
+    .gem-badge{top:52px;left:auto;right:56px;width:150px;height:76px;border-radius:11px;box-shadow:5px 6px 0 #111}
+    .gem-badge .gem-title{font-size:11px}
+  }
   @media print{.gem-badge{display:none}}
   .star-badge.warp,.gem-badge.warp{animation:badgepop .6s cubic-bezier(.3,1.3,.4,1) forwards;z-index:1001;will-change:transform}
   @keyframes badgepop{
@@ -183,12 +205,20 @@
   body.warping .page{opacity:0;transform:scale(.985)}
   #fx{position:fixed;inset:0;z-index:1000;pointer-events:none;overflow:hidden}
   #fx .flash{position:absolute;inset:0;background:radial-gradient(circle at var(--fx-x,50%) var(--fy,30%),#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:fxflash .5s ease-out}
+  /* comic burst: black-and-ink impact frame instead of golden sparkles */
+  #fx .comicflash{position:absolute;inset:0;background:#111;opacity:0;animation:comicko .45s ease-out}
+  @keyframes comicko{0%{opacity:0}18%{opacity:.92}38%{opacity:.15}55%{opacity:.6}100%{opacity:0}}
   @keyframes fxflash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}
   #fx canvas{position:absolute;inset:0;width:100%;height:100%}
   body.arrive .page{animation:arrivefade .55s cubic-bezier(.2,.9,.3,1) both}
   @keyframes arrivefade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
   #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:radial-gradient(circle at 50% 30%,#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:flashfade .5s ease-out}
   @keyframes flashfade{0%{opacity:0}25%{opacity:.7}100%{opacity:0}}
+  body[data-star-animation="comic"] #arriveflash{background:#111}
+  body[data-theme="midnight"][data-star-animation="comic"] #arriveflash,
+  body[data-theme="ink"][data-star-animation="comic"] #arriveflash{background:#fffdf7}
+  @keyframes flashfadeink{0%{opacity:0}28%{opacity:.85}100%{opacity:0}}
+  body[data-star-animation="comic"] #arriveflash{animation-name:flashfadeink}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
   .canvas::after{content:"";display:table;clear:both}
   .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
@@ -197,7 +227,9 @@
   .canvas img.ileft{float:left;margin:4px 14px 8px 0}
   .canvas img.iright{float:right;margin:4px 0 8px 14px}
   .canvas img.icenter{display:block;margin-left:auto;margin-right:auto}
-  .contactform{max-width:560px;margin:26px auto 0;padding:20px 22px;border:1px solid var(--rule);border-radius:4px;background:var(--paper2)}
+  .masthead a.logolink{display:inline-block;text-decoration:none;transition:opacity .15s ease}
+  .masthead a.logolink:hover{opacity:.78}
+  .contactform{max-width:560px;margin:26px auto 0;padding:20px 22px;border:1px solid var(--rule);border-radius:4px;background:#ecdcc0}
   .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
   .contactform label:first-of-type{margin-top:0}
   .contactform .sub{display:block;font:italic 12px Georgia,serif;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:3px}
@@ -221,6 +253,57 @@
   .contactform input:focus,.contactform textarea:focus{outline:2px solid var(--link);outline-offset:-1px;border-color:var(--link)}
   .contactform button{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
   .contactform button:hover{opacity:.85}
+  /* status line: success banner + the fallback when a submit hangs */
+  .cf-status{display:block;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--paper);font:italic 13px/1.5 Georgia,Times,serif;color:var(--ink2);margin:10px 0 0}
+  .cf-status[hidden]{display:none}
+  .cf-status a{color:var(--link)}
+  .cf-status.is-err{border-color:#b3261e;color:#b3261e}
+  body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
+  body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* dark themes: the form fields need to be plainly visible, not black on black */
+  body[data-theme="ink"] .contactform{background:#332e28;border-color:#6b6152}
+  body[data-theme="ink"] .contactform input[type=text],body[data-theme="ink"] .contactform input[type=email],body[data-theme="ink"] .contactform input[type=tel],body[data-theme="ink"] .contactform textarea{background:#3f3830;border-color:#857763;color:#f5efe0}
+  body[data-theme="ink"] .contactform .dropzone{background:#3f3830;border-color:#857763;color:#ddd2c0}
+  body[data-theme="midnight"] .contactform{background:#2b2336;border-color:#4d3c6b}
+  body[data-theme="midnight"] .contactform input[type=text],body[data-theme="midnight"] .contactform input[type=email],body[data-theme="midnight"] .contactform input[type=tel],body[data-theme="midnight"] .contactform textarea{background:#383046;border-color:#9a87c0;color:#f0e9f7}
+  body[data-theme="midnight"] .contactform .dropzone{background:#383046;border-color:#9a87c0;color:#d9cff0}
+  /* ---------- events page: month calendar woven from the list ---------- */
+  /* hidden until the calendar script takes over (no-JS keeps the page clean) */
+  .canvas .evsrc{display:none}
+  .evcal{max-width:640px;margin:18px auto 8px;border:1px solid var(--rule);border-radius:6px;background:#f3e8d2;padding:16px 16px 8px;display:none}
+  body[data-theme="ink"] .evcal{background:#332e28;border-color:#6b6152}
+  body[data-theme="midnight"] .evcal{background:#2b2336;border-color:#4d3c6b}
+  .evcal .evcal-bar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;justify-content:center}
+  .evcal .evcal-bar button{min-height:40px;min-width:40px;padding:6px 10px;font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;cursor:pointer}
+  .evcal .evcal-bar select{min-height:40px;padding:6px 8px;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
+  body[data-theme="ink"] .evcal .evcal-bar button,body[data-theme="ink"] .evcal .evcal-bar select{background:#312a22;border-color:#7a6e58;color:#f0e9da}
+  body[data-theme="midnight"] .evcal .evcal-bar button,body[data-theme="midnight"] .evcal .evcal-bar select{background:#2b2140;border-color:#8471a6;color:#ece5f7}
+  .evcal .ev-search{flex:1 1 200px;max-width:260px;min-height:40px;padding:8px 10px;font:14px Georgia,Times,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
+  body[data-theme="ink"] .evcal .ev-search{background:#312a22;border-color:#7a6e58;color:#f0e9da}
+  body[data-theme="midnight"] .evcal .ev-search{background:#2b2140;border-color:#8471a6;color:#ece5f7}
+  .evcal .evcal-bar button:hover{opacity:.85}
+  .evcal .evcal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:12px 0 2px;font:600 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--faint);text-align:center}
+  .evcal .evcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .evcal .ev-day{position:relative;min-height:52px;padding:4px 2px 2px;font:13px Georgia,Times,serif;color:var(--ink2);background:var(--paper);border:1px solid var(--rule2);border-radius:2px;cursor:default;text-align:left}
+  body[data-theme="ink"] .evcal .ev-day,body[data-theme="midnight"] .evcal .ev-day{background:var(--paper2)}
+  body[data-theme="ink"] .evcal .ev-day.empty,body[data-theme="midnight"] .evcal .ev-day.empty{background:transparent}
+  body[data-theme="ink"] .evcal .ev-day .ev-dot,body[data-theme="midnight"] .evcal .ev-day .ev-dot{background:#7ee2a8}
+  .evcal .ev-day.empty{background:transparent;border-color:transparent}
+  .evcal .ev-day.today{box-shadow:inset 0 0 0 2px var(--ink)}
+  .evcal .ev-day.ev-set{border-color:var(--ink)}
+  .evcal .ev-day.ev-set:hover{transform:scale(1.06);z-index:2}
+  .evcal .ev-day .ev-dot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#1a7f37}
+  .evcal .ev-day .ev-tag{display:none}
+  .evcal .evcal-legend{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;margin:8px 0 4px;font:italic 12px Georgia,Times,serif;color:var(--muted)}
+  .evcal .evcal-legend .ev-mi{padding:2px 8px;border-radius:2px;background:var(--paper);border:1px solid var(--rule2);font-style:normal;font-size:11.5px;color:var(--ink2);text-align:left;display:inline-block}
+  body[data-theme="ink"] .evcal .evcal-legend .ev-mi,body[data-theme="midnight"] .evcal .evcal-legend .ev-mi{background:var(--paper2)}
+  .evcal .evcal-legend b{font-weight:700;font-style:normal}
+  .evcal .evcal-empty{margin:8px 0 4px;font:italic 13px Georgia,Times,serif;color:var(--muted);text-align:center}
+  .evcal-empty[hidden],.evcal .evcal-bar button[hidden]{display:none}
+  @media (max-width:700px){
+    .evcal{padding:12px 10px 6px}
+    .evcal .ev-day{min-height:44px;font-size:12px}
+  }
   footer{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
@@ -242,15 +325,15 @@
     h1{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
     .tagline{font-size:13px}
     nav.sitenav{
-      display:flex;flex-wrap:wrap;justify-content:center;gap:2px 4px;
+      display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;
       font-size:11px;line-height:2.1;
     }
-    nav.sitenav a,nav.sitenav .cur{margin:0 8px;white-space:nowrap}
+    nav.sitenav a,nav.sitenav .cur{margin:0 10px;white-space:nowrap}
     .star-badge{top:10px;left:10px;right:auto;width:140px;height:140px}
-    .star-badge .star-title{font-size:7px;max-width:62%;line-height:1.3;letter-spacing:.5px}
+    .star-badge .star-title{font-size:9px;max-width:70%;line-height:1.25;letter-spacing:.2px}
     .star-badge .star-sub{display:none}
-    .gem-badge{top:10px;left:auto;right:10px;width:112px;height:76px;border-radius:11px}
-    .gem-badge .gem-title{font-size:9px;letter-spacing:1.2px}
+    .gem-badge{top:42px;left:auto;right:10px;width:140px;height:76px;border-radius:11px;border-width:2.5px;box-shadow:5px 6px 0 #111}
+    .gem-badge .gem-title{font-size:10px;letter-spacing:1.5px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
     /* giant inline titles (the toolbar writes up to 200px) stay dramatic

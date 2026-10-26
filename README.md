@@ -41,23 +41,45 @@ is stripped before it can reach a published page. `python3 scripts/build.py
 and the `verify.yml` workflow runs the same check on every push.
 
 Three light themes exist: Classic (white with a whisper of tan),
-Parchment (a stronger cream), and Ink (dark). Midnight (an almost-black
-dark purple) is the fourth. The theme is a single
+Parchment (a stronger cream), and Ink (dark). Midnight (a lighter
+dark-purple) is the fourth. The theme is a single
 setting in `data/site.json` and restyles every page at once. Every page also
 carries a small Dark mode / Light mode
 button in its footer, so visitors can switch to or from Midnight themselves;
 the choice is remembered in that browser.
 
-Two floating badges appear on every page. The gold star links to a hidden
-Latest page; the blue gem links to a hidden Feedback page. Hidden pages are
+Two floating badges appear on every page, in a black-and-white comic
+style: the star links to a hidden Latest page (clicking it fires a comic
+book ink burst - "Latest and greatest" with a small "Click me" - and both
+badges sit level, evenly spaced either side of the centred logo); the white
+FEEDBACK plate links to a hidden Feedback page. Hidden pages are
 not in the menu but are still built, real pages. Which pages carry the
 badges (and which page, if any, shows the contact form) is controlled by
-flags in `data/site.json`, editable in the builder's Page settings.
+flags in `data/site.json`, editable in the builder's Page settings. The
+clicking-the-logo-returns-home behaviour is built in. Products carry a
+plain-English blurb on the page and link a hidden "deep explanations"
+page (slug `products-deep`) that keeps the full write-up. The Events page
+weaves an `[event calendar]` marker into a month/year calendar derived from
+a hidden source block on the same page (`.evsrc`, one line per event, kept
+out of the visible page by CSS). The calendar is the face; it can be
+searched by event name or date, and it defaults to the month of the next
+upcoming event. To add an event: open the Events page in the builder's
+source view and add a paragraph inside `.evsrc` containing a month and day
+("November 14th" works; "Sat, Mar 7 2027" too) plus the time and place —
+the calendar picks it up on the next build.
+
+Dark mode is Midnight ("almost-black dark purple" that is kept readable) or
+Ink, and the choice is carried over to the Flank ledger: both read the
+same `fc-theme` browser key, so switching on any page switches both.
 
 The Contact page's form is the one thing that is not static. It posts
 directly to FormSubmit (`https://formsubmit.co`), which emails each
-submission to our inbox. The form markup itself lives in `build.py`, not in
-the page files, so editing the Contact page text can never break it.
+submission to our inbox - captcha-free, and it returns to the contact page
+with a success flag. The form carries a honeypot, stamps the sender's
+local Eastern time, and if a submission seems stuck it brings the button
+back and explains the direct-email way out. The form markup itself lives
+in `build.py`, not in the page files, so editing the Contact page text
+can never break it.
 
 The hidden Flank ledger lives here too, as the unlisted `site/flank/`
 directory. It is built from `data/The Flank.md` by `scripts/build_flank.py`
