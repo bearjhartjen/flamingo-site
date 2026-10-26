@@ -416,6 +416,24 @@ def _style_attr(style: str | None) -> str:
     return f' style="{";".join(parts)}"' if parts else ""
 
 
+def _phone_big_class(style: str | None) -> str:
+    """Return 't-big' (with a leading space) when the size needs a phone cap.
+
+    Sizes the toolbar treats as giant titles (40px and up) get a class the
+    CSS caps on small screens, so phone sizing comes from a real number in
+    Python instead of attribute-substring pattern matching, which cannot
+    tell 10px from 100px."""
+    size = _clean_size(style)
+    if not size:
+        return ""
+    try:
+        if float(size[:-2]) >= 40:
+            return " t-big"
+    except ValueError:
+        return ""
+    return ""
+
+
 # Geometry for the big button box: strict px lengths on a strict range, so
 # dragging a box anywhere can never smuggle anything but a position through.
 _LEN_PX_RE = re.compile(r"-?\d+(?:\.\d{1,2})?px", re.IGNORECASE)
@@ -577,6 +595,9 @@ class _Sanitize(HTMLParser):
             for c in ad.get("class", "").split():
                 if c in TEXT_CLASSES and c not in keep:
                     keep.append(c)
+            big = _phone_big_class(ad.get("style", ""))
+            if big and big.strip() not in keep:
+                keep.append(big.strip())
             attrs = ""
             if keep:
                 attrs += f' class="{" ".join(keep)}"'
@@ -609,6 +630,9 @@ class _Sanitize(HTMLParser):
                 for c in ad.get("class", "").split():
                     if c in TEXT_CLASSES and c not in keep:
                         keep.append(c)
+                big = _phone_big_class(ad.get("style", ""))
+                if big and big.strip() not in keep:
+                    keep.append(big.strip())
                 if keep:
                     extra = f' class="{" ".join(keep)}"'
                 # wheel-picked colour and numeric size survive together as
@@ -894,7 +918,7 @@ CSS = r'''  :root{
   .contactform label{display:block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:14px 0 5px}
   .contactform label:first-of-type{margin-top:0}
   .contactform .sub{display:block;font:italic 12px Georgia,serif;letter-spacing:0;text-transform:none;color:var(--muted);margin-top:3px}
-  .contactform input[type=text],.contactform input[type=email],.contactform input[type=tel],.contactform textarea{display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:9px 10px;margin:0}
+  .contactform input[type=text],.contactform input[type=email],.contactform input[type=tel],.contactform textarea{display:block;width:100%;box-sizing:border-box;font:16px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:9px 10px;margin:0}
   .contactform input[type=file]:not(.filepick){display:block;width:100%;box-sizing:border-box;font:15px Georgia,serif;color:var(--ink);background:var(--paper);border:1px dashed var(--rule);border-radius:2px;padding:14px 12px;margin:0;cursor:pointer}
   .contactform input.filepick{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
   .contactform .dropzone{display:block;width:100%;margin:0;border:1px dashed var(--rule);border-radius:2px;background:var(--paper);padding:16px 14px;text-align:center;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;text-transform:none;color:var(--muted);cursor:pointer;touch-action:manipulation}
@@ -936,10 +960,10 @@ CSS = r'''  :root{
   body[data-theme="midnight"] .evcal{background:#2b2336;border-color:#4d3c6b}
   .evcal .evcal-bar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;justify-content:center}
   .evcal .evcal-bar button{min-height:40px;min-width:40px;padding:6px 10px;font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;cursor:pointer}
-  .evcal .evcal-bar select{min-height:40px;padding:6px 8px;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
+  .evcal .evcal-bar select{min-height:40px;padding:6px 8px;font:600 16px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
   body[data-theme="ink"] .evcal .evcal-bar button,body[data-theme="ink"] .evcal .evcal-bar select{background:#312a22;border-color:#7a6e58;color:#f0e9da}
   body[data-theme="midnight"] .evcal .evcal-bar button,body[data-theme="midnight"] .evcal .evcal-bar select{background:#2b2140;border-color:#8471a6;color:#ece5f7}
-  .evcal .ev-search{flex:1 1 200px;max-width:260px;min-height:40px;padding:8px 10px;font:14px Georgia,Times,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
+  .evcal .ev-search{flex:1 1 200px;max-width:260px;min-height:40px;padding:8px 10px;font:16px Georgia,Times,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
   body[data-theme="ink"] .evcal .ev-search{background:#312a22;border-color:#7a6e58;color:#f0e9da}
   body[data-theme="midnight"] .evcal .ev-search{background:#2b2140;border-color:#8471a6;color:#ece5f7}
   .evcal .evcal-bar button:hover{opacity:.85}
@@ -991,25 +1015,18 @@ CSS = r'''  :root{
     }
     nav.sitenav a,nav.sitenav .cur{margin:0 10px;white-space:nowrap}
     .star-badge{top:10px;left:10px;right:auto;width:140px;height:140px}
-    .star-badge .star-title{font-size:9px;max-width:70%;line-height:1.25;letter-spacing:.2px}
+    .star-badge .star-title{font-size:10px;max-width:70%;line-height:1.25;letter-spacing:.2px}
     .star-badge .star-sub{display:none}
     .gem-badge{top:42px;left:auto;right:10px;width:140px;height:76px;border-radius:11px;border-width:2.5px;box-shadow:5px 6px 0 #111}
     .gem-badge .gem-title{font-size:10px;letter-spacing:1.5px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
-    /* giant inline titles (the toolbar writes up to 200px) stay dramatic
-       on phones instead of running off the screen */
-    .canvas [style*="font-size:4"],.canvas [style*="font-size:5"],
-    .canvas [style*="font-size:6"],.canvas [style*="font-size:7"],
-    .canvas [style*="font-size:8"],.canvas [style*="font-size:9"],
-    .canvas [style*="font-size:10"],.canvas [style*="font-size:11"],
-    .canvas [style*="font-size:12"],.canvas [style*="font-size:13"],
-    .canvas [style*="font-size:14"],.canvas [style*="font-size:15"],
-    .canvas [style*="font-size:16"],.canvas [style*="font-size:17"],
-    .canvas [style*="font-size:18"],.canvas [style*="font-size:19"],
-    .canvas [style*="font-size:200"]{
-      font-size:min(11vw,40px) !important;line-height:1.15;
-    }
+    /* giant inline titles (40px toolbar sizes and up) stay dramatic on
+       phones instead of running off the screen. The t-big class is stamped
+       by the sanitizer when the inline size is really 40px or more, so
+       small text is never inflated by mistake. Modern-phone reference:
+       393px viewport (iPhone 16e) — 320px still fits because of the vw leg. */
+    .canvas .t-big{font-size:min(12vw,44px) !important;line-height:1.15}
     .canvas img.small{width:140px}
     .canvas img.medium{width:100%}
     .canvas table{display:block;overflow-x:auto}
@@ -1872,7 +1889,24 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             good = sanitize(f'<a href="{good_href}">Hi</a>')
             expect(f'href="{good_href}"' in good, f"sanitizer keeps safe href {good_href}")
         # FIX 2-ish handled in flank check; FIX 3: 150px capped in CSS
-        expect('font-size:15' in idx, "150px titles are capped on phones")
+        expect(".canvas .t-big{font-size:min(12vw,44px) !important;line-height:1.15}" in idx,
+               "40px-or-bigger inline titles carry a phone cap via the t-big class (tuned for ~393px modern phones)")
+        expect('[style*="font-size:10"]' not in idx and '[style*="font-size:16"]' not in idx,
+               "the old pattern-match cap is gone (no more inflating 10-19px text)")
+        bigp = sanitize('<p style="font-size:96px">x</p>')
+        smallp = sanitize('<p><span style="font-size:16px">x</span></p>')
+        expect(bigp == '<p class="t-big" style="font-size:96px">x</p>'
+               and sanitize(bigp) == bigp,
+               "the sanitizer stamps t-big on real giant titles, idempotently")
+        expect(smallp == '<p><span style="font-size:16px">x</span></p>',
+               "small inline text is never inflated on phones")
+        expect("font:16px Georgia,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule)" in CSS,
+               "every form field is 16px so iPhone never auto-zooms on focus")
+        expect("font:16px Georgia,Times,serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}" in CSS or
+               ".evcal .ev-search{flex:1 1 200px;max-width:260px;min-height:40px;padding:8px 10px;font:16px Georgia,Times,serif" in CSS,
+               "calendar search box is 16px on mobile too")
+        expect("font:16px Georgia,serif;color:var(--ink);background" in open("scripts/build_flank.py",encoding="utf-8").read(),
+               "the ledger's search input is 16px (same iOS zoom rule)")
         # FIX 4: div close balanced
         divbalanced = sanitize('<div><p>x</p></div>')
         expect(divbalanced.count("<p") == divbalanced.count("</p>"), "div close emits matching p close")
