@@ -2615,7 +2615,7 @@ async function save(){
   status.textContent = "saving…";
   saving = true; updateSaveBtn();
   try {
-    const result = await api("/api/save", Object.assign({}, settings, {slug:saveSlug, body:sentBody}));
+    const result = await api("/api/save", Object.assign({}, settings, {slug:saveSlug, body:sentBody, siteBase:serverSiteSnapshot}));
     serverSiteSnapshot = JSON.stringify(globalSettings(result.site));
     if (SLUG !== saveSlug) return false;
     if (editRevision !== saveRevision) {
@@ -2886,9 +2886,23 @@ class Handler(BaseHTTPRequestHandler):
         if css_error:
             return self._json(400, {"error": css_error})
         site["custom_css"] = site_build.safe_custom_css(custom_css)
-        site["star_animation"] = (str(doc.get("star_animation", "portal"))
-                                  if str(doc.get("star_animation", "portal")) in site_build.STAR_ANIMATIONS
-                                  else "portal")
+        # A builder tab opened hours ago still carries the star setting it
+        # loaded then; its next Save silently reverts any external change,
+        # which is what kept flipping star_animation back to "portal".
+        # Send the tab's last-known snapshot as siteBase: keep the disk
+        # value unless the tab actually moved the Star-Animation dropdown.
+        doc_star = str(doc.get("star_animation", "portal"))
+        base_star = None
+        try:
+            base = json.loads(str(doc.get("siteBase", "")))
+            if isinstance(base, dict):
+                base_star = str(base.get("star_animation", "portal"))
+        except ValueError:
+            pass
+        if base_star is None or base_star != doc_star \
+                or site.get("star_animation", "portal") == doc_star \
+                or doc_star not in site_build.STAR_ANIMATIONS:
+            site["star_animation"] = doc_star if doc_star in site_build.STAR_ANIMATIONS else "portal"
         site["footer"] = str(doc.get("footer", ""))[:500]
         if str(doc.get("theme", "")) in site_build.THEMES:
             site["theme"] = str(doc.get("theme"))
