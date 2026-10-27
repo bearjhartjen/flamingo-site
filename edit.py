@@ -260,6 +260,8 @@ EDITOR_CSS = site_build.CSS + r'''
     width:26px;height:22px;padding:1px;border:1px solid #999;border-radius:2px;
     background:#fff;cursor:pointer;vertical-align:middle;
   }
+  .toolbar .cwheel{display:inline-flex;flex-direction:column;align-items:center;gap:1px;vertical-align:middle}
+  .toolbar .cwheel em{font-style:normal;font-size:9px;line-height:10px;color:#333;letter-spacing:.2px}
   .toolbar .sep{width:1px;height:20px;background:#bbb;margin:0 4px}
   #linkStat{font:12px "Helvetica Neue",Arial,sans-serif;color:#bbb;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ld-back{position:fixed;inset:0;background:rgba(20,20,20,.5);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:12vh 12px 12px}
@@ -460,8 +462,8 @@ __CSS__
   <button data-cmd="color" data-color="c-blue" class="swatch" title="Blue" style="background:#2f6fd0"></button>
   <button data-cmd="color" data-color="c-green" class="swatch" title="Green" style="background:#2e8b57"></button>
   <button data-cmd="color" data-color="c-gold" class="swatch" title="Gold" style="background:#c9a227"></button>
-  <input type="color" id="colorwheel" title="Any color — full wheel" value="#c0392b">
-  <input type="color" id="hlwheel" title="Highlight color — full wheel" value="#f3d97b">
+  <span class="cwheel"><input type="color" id="colorwheel" title="Text color — full wheel" value="#c0392b"><em>Text</em></span>
+  <span class="cwheel"><input type="color" id="hlwheel" title="Marker highlight — paints the background behind the text you select" value="#f3d97b"><em>Highlight</em></span>
   </div>
   <div class="toolgroup"><span class="groupname">Links</span>
   <button data-cmd="link">Link</button>
@@ -586,6 +588,7 @@ __CSS__
     <h3 id="helpTitle">Using the site editor</h3>
     <p><b>1. Pick a page.</b> Use the Pages list to switch pages. Use Page settings to rename, hide, add a badge or enable the contact form.</p>
     <p><b>2. Edit the preview.</b> Press Edit, then click text and type. Use the labeled toolbar groups to format text and add pictures, links, sections and tables.</p>
+    <p><b>Colors are for text.</b> The "Text" wheel and the color swatches color the letters themselves — a click inside a paragraph colors just the run of text the caret sits in. The "Highlight" wheel is a marker pen: it paints the background behind the word you clicked into or the text you selected, never a whole block.</p>
     <p><b>3. Manage content.</b> Hover a page block for move, duplicate and delete controls. Select an image to change its size, alignment or alt text.</p>
     <p><b>4. Save and publish.</b> Save writes the editable source and stages the built site. Commit and push in GitKraken to publish.</p>
     <p class="dlg-note">Shortcuts: Ctrl+S save · Ctrl+Z undo · Ctrl+Y redo · Alt+↑/↓ move a block. A draft is saved in this browser while you edit. If custom CSS hides the editor, open /?no-css=1.</p>
@@ -1412,7 +1415,9 @@ function applyWheelColor(hex){
     anc.style.backgroundColor = hex;
     return;
   }
-  if (r.collapsed) {
+  if (r.collapsed) {                 // caret: the run of text it sits in
+    const s = nearestSpan(r);
+    if (s) { paintWheel(s, hex); return; }
     const b = nodeBlock(r.startContainer);
     if (b) paintWheel(b, hex);
     return;
@@ -1420,7 +1425,7 @@ function applyWheelColor(hex){
   const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
   if (a !== z) { blocksIntersecting(r).forEach(b => paintWheel(b, hex)); return; }
   const s = nearestSpan(r);
-  if (s) { paintWheel(s, hex); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
+  if (spanCovers(r, s)) { paintWheel(s, hex); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
   else { const sp = wrapSpan(r, ""); if (sp) paintWheel(sp, hex); }
 }
 function getRange(){
@@ -1635,15 +1640,18 @@ function applyHlColor(hex){
   if (!r) { r = activeRange(); if (r) restoreRange(r); }
   if (!r) return;
   hex = hex.toLowerCase();
-  if (r.collapsed) {
-    const b = nodeBlock(r.startContainer);
-    if (b) paintHighlight(b, hex);
-    return;
+  if (r.collapsed) {             // caret: the word it sits in — never the block
+    const wq = wordRangeAt(r);
+    if (!wq) {
+      status.textContent = "Highlight paints a word or a text selection — it never colors a whole block";
+      return;
+    }
+    r = wq; restoreRange(r);
   }
   const a = nodeBlock(r.startContainer), z = nodeBlock(r.endContainer);
   if (a !== z) { blocksIntersecting(r).forEach(b => paintHighlight(b, hex)); return; }
   const s = nearestSpan(r);
-  if (s) { paintHighlight(s, hex); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
+  if (spanCovers(r, s)) { paintHighlight(s, hex); }
   else { const sp = wrapSpan(r, ""); if (sp) paintHighlight(sp, hex); }
 }
 $("#hlwheel").addEventListener("input", e => {
@@ -1661,16 +1669,42 @@ function unwrapSpan(el){
   p.removeChild(el);
   if (last) { r.setEndAfter(last); restoreRange(r); }
 }
+// the text runs a range covers, in document order — [node, start, end)
+function textRuns(r){
+  let root = r.commonAncestorContainer;
+  if (root.nodeType === 3) root = root.parentNode;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const runs = [];
+  let n;
+  while ((n = walker.nextNode())) {
+    if (!r.intersectsNode(n)) continue;
+    let a = 0, b = n.length;
+    if (n === r.startContainer) a = r.startOffset;
+    if (n === r.endContainer) b = r.endOffset;
+    if (a >= b) continue;
+    runs.push([n, a, b]);
+  }
+  return runs;
+}
 function wrapSpan(r, cls){
   const s = document.createElement("span");
-  s.className = cls;
+  if (cls) s.className = cls;
   try { r.surroundContents(s); }
   catch (e) {
-    // selection grazes an element boundary: move the contents in instead
-    const frag = r.extractContents();
-    s.appendChild(frag);
-    if (!s.firstChild) return null;
-    r.insertNode(s);
+    // selection grazes an element boundary: split the covered text runs out
+    // of their spans and gather them — extractContents would clone the
+    // partially contained span (duplicated ids, strays of nested wrappers)
+    const runs = textRuns(r);
+    if (!runs.length) return null;
+    const slices = runs.map(([node, a, b]) => {
+      let t = node;
+      if (b < t.length) t.splitText(b);
+      if (a > 0) t = t.splitText(a);
+      return t;
+    });
+    const anchor = slices[0].parentNode;
+    anchor.insertBefore(s, slices[0]);
+    for (let i = 0; i < slices.length; i++) s.appendChild(slices[i]);
   }
   const nr = document.createRange();
   nr.selectNodeContents(s);
@@ -1857,12 +1891,37 @@ $("#fontSel").addEventListener("change", () => {
   applyFont($("#fontSel").value);
   pushHist(); markDirty(); hint(); updateSizeNum(); updateFontSel(); updateLinkStat();
 });
+// the word the caret sits in, or null on whitespace / between elements
+function wordRangeAt(r){
+  const n = r.startContainer;
+  if (n.nodeType !== 3) return null;
+  const txt = n.data, off = r.startOffset;
+  const w = c => /[A-Za-z0-9&_'’-]/.test(c);
+  let a = off, z = off;
+  while (a > 0 && w(txt[a-1])) a--;
+  while (z < txt.length && w(txt[z])) z++;
+  if (a === z) return null;
+  const q = document.createRange();
+  q.setStart(n, a); q.setEnd(n, z);
+  return q;
+}
+// true when el's exact contents equal range r (styling el then touches
+// nothing beyond the selection); a null element covers nothing
+function spanCovers(r, el){
+  if (!el) return false;
+  const probe = document.createRange();
+  probe.selectNodeContents(el);
+  return probe.compareBoundaryPoints(Range.START_TO_START, r) === 0 &&
+         probe.compareBoundaryPoints(Range.END_TO_END, r) === 0;
+}
 function applyColor(cls){
   if (cls && COLOR_CLASSES.indexOf(cls) < 0) return;
   let r = getRange();
   if (!r) { r = activeRange(); if (r) restoreRange(r); }
   if (!r) return;
-  if (r.collapsed) {                       // caret only: color the current block
+  if (r.collapsed) {                       // caret: the run of text it sits in
+    const s = nearestSpan(r);
+    if (s) { setColor(s, cls); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); return; }
     const b = nodeBlock(r.startContainer);
     if (b) setColor(b, cls);
     return;
@@ -1873,7 +1932,7 @@ function applyColor(cls){
     return;
   }
   const s = nearestSpan(r);
-  if (s) { setColor(s, cls); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
+  if (spanCovers(r, s)) { setColor(s, cls); if (!s.className && !hasKeepStyle(s)) unwrapSpan(s); }
   else if (cls) wrapSpan(r, cls);          // "Auto" on a bare selection: nothing to strip
 }
 // the Clear style button, beyond what removeFormat already does

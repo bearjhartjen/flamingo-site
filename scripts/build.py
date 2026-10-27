@@ -127,7 +127,7 @@ def load_site(path: Path) -> dict:
     if "index" not in seen:
         clean_pages.insert(0, {"slug": "index", "nav": "Home"})
     theme = str(doc.get("theme", "classic"))
-    star_animation = str(doc.get("star_animation", "portal"))
+    star_animation = str(doc.get("star_animation", "comic"))
     raw_custom_css = str(doc.get("custom_css", ""))
     css_error = custom_css_error(raw_custom_css)
     if css_error:
@@ -138,7 +138,7 @@ def load_site(path: Path) -> dict:
         "tagline": str(doc.get("tagline", ""))[:300],
         "footer": str(doc.get("footer", ""))[:500],
         "theme": theme if theme in THEMES else "classic",
-        "star_animation": star_animation if star_animation in STAR_ANIMATIONS else "portal",
+        "star_animation": star_animation if star_animation in STAR_ANIMATIONS else "comic",
         "description": str(doc.get("description", ""))[:300],
         "custom_css": custom_css,
         "pages": clean_pages,
@@ -1594,7 +1594,7 @@ def nav_html(pages, current: str) -> str:
 def render_page(title: str, tagline: str, footer: str, theme: str,
                 pages, slug: str, body_html: str, logo_uri: str,
                 description: str = "", custom_css: str = "",
-                star_animation: str = "portal") -> str:
+                star_animation: str = "comic") -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
     page_title = page_meta.get("title", "").strip() or title
     desc = page_meta.get("description", "").strip() or description.strip() or tagline.strip() or title
@@ -1635,7 +1635,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         + LD_ORG + "\n"
         "<style>\n" + CSS + "\n" + safe_custom_css(custom_css) + "\n</style>\n"
         "</head>\n"
-        f'<body data-theme="{theme}" data-star-animation="{star_animation if star_animation in STAR_ANIMATIONS else "portal"}">\n'
+        f'<body data-theme="{theme}" data-star-animation="{star_animation if star_animation in STAR_ANIMATIONS else "comic"}">\n'
         '<div class="page">\n'
         f"{star_html(pages)}"
         f"{gem_html(pages)}"
@@ -1828,7 +1828,7 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
             render_page(site["title"], site["tagline"], site["footer"],
         site["theme"], site["pages"], p["slug"], clean, logo_uri,
                         site.get("description", ""), site.get("custom_css", ""),
-                        site.get("star_animation", "portal")))
+                        site.get("star_animation", "comic")))
     nf = (NOTFOUND.replace("__CSS__", CSS + "\n" + safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
@@ -1892,7 +1892,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         idx = (tmp / "index.html").read_text(encoding="utf-8")
         expect(len(idx) > 0, "index.html non-empty")
         expect(html.escape(site["title"]) in idx, "title present")
-        expect(('data-star-animation="' + site.get("star_animation", "portal") + '"') in idx,
+        expect(('data-star-animation="' + site.get("star_animation", "comic") + '"') in idx,
                "site selects its star transition mode in generated pages")
         page_meta = render_page(site["title"], site["tagline"], site["footer"], site["theme"],
                                 [{"slug":"index", "nav":"Home", "title":"Page-specific title",
@@ -2288,7 +2288,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         expect(".star-badge::before,.star-badge::after{content:\"\";position:absolute;"
                "clip-path:polygon" in CSS,
                "comic star outline comes from layered pseudos (clip-path-safe)")
-        anim = site.get("star_animation", "portal")
+        anim = site.get("star_animation", "comic")
         expect(anim in STAR_ANIMATIONS and ('data-star-animation="' + anim + '"') in idx,
                "star animation is a known mode and the pages carry it")
         expect("comicko" in idx and "comicflash" in idx and "mode==='comic'" in idx,
