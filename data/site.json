@@ -3,7 +3,7 @@
   "tagline": "Flamingo and Cactus Group",
   "footer": "",
   "theme": "classic",
-  "star_animation": "comic",
+  "star_animation": "portal",
   "description": "",
   "custom_css": "",
   "pages": [
@@ -43,6 +43,10 @@
       "slug": "contact",
       "nav": "Contact",
       "form": true
+    },
+    {
+      "slug": "issues",
+      "nav": "ISSUES"
     }
   ]
 }
