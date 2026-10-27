@@ -43,14 +43,6 @@
       "slug": "contact",
       "nav": "Contact",
       "form": true
-    },
-    {
-      "slug": "products-deep",
-      "nav": "Deep explanations",
-      "title": "The deep explanations",
-      "description": "The full technical write-up of every Flamingo and Cactus product.",
-      "hidden": true,
-      "badge": "none"
     }
   ]
 }

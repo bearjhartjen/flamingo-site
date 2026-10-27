@@ -946,6 +946,30 @@ CSS = r'''  :root{
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* the big yes/no panels: on success the form is replaced by the panel, so
+     there is no way to miss that the note went through (or did not) */
+  .contactform[hidden],.cf-done[hidden],.cf-error[hidden]{display:none}
+  .cf-done,.cf-error{max-width:560px;box-sizing:border-box;margin:26px auto 0;padding:22px;border-radius:4px;text-align:left}
+  .cf-done{border:2px solid #1a7f37;background:#eaf4ec}
+  .cf-error{border:2px solid #b3261e;background:#fbeeed}
+  .cf-done-head{font:700 22px Georgia,Times,serif;color:#1a7f37;margin:0 0 8px}
+  .cf-done-sub{font:14px/1.55 Georgia,Times,serif;color:var(--ink2);margin:0}
+  .cf-done-stamp{font:italic 12px Georgia,Times,serif;color:var(--muted);margin:8px 0 0}
+  .cf-again{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
+  .cf-again:hover{opacity:.85}
+  .cf-error-head{font:700 18px Georgia,Times,serif;color:#b3261e;margin:0 0 8px}
+  .cf-error-body{font:14px/1.55 Georgia,Times,serif;color:var(--ink2);margin:0 0 6px}
+  .cf-error-body a{color:var(--link)}
+  body[data-theme="ink"] .cf-done{border-color:#2f6f4a;background:#243328}
+  body[data-theme="ink"] .cf-done-head{color:#7ee2a8}
+  body[data-theme="ink"] .cf-done-sub,body[data-theme="ink"] .cf-done-stamp,body[data-theme="ink"] .cf-error-body{color:#ddd2c0}
+  body[data-theme="ink"] .cf-error{border-color:#8a4a44;background:#3a2624}
+  body[data-theme="ink"] .cf-error-head{color:#ff8a80}
+  body[data-theme="midnight"] .cf-done{border-color:#3f7f57;background:#28362e}
+  body[data-theme="midnight"] .cf-done-head{color:#7ee2a8}
+  body[data-theme="midnight"] .cf-done-sub,body[data-theme="midnight"] .cf-done-stamp,body[data-theme="midnight"] .cf-error-body{color:#d9cff0}
+  body[data-theme="midnight"] .cf-error{border-color:#8a4a4a;background:#3a262c}
+  body[data-theme="midnight"] .cf-error-head{color:#ff9d9d}
   /* dark themes: the form fields need to be plainly visible, not black on black */
   body[data-theme="ink"] .contactform{background:#332e28;border-color:#6b6152}
   body[data-theme="ink"] .contactform input[type=text],body[data-theme="ink"] .contactform input[type=email],body[data-theme="ink"] .contactform input[type=tel],body[data-theme="ink"] .contactform textarea{background:#3f3830;border-color:#857763;color:#f5efe0}
@@ -1022,6 +1046,26 @@ CSS = r'''  :root{
     .gem-badge .gem-title{font-size:10px;letter-spacing:1.5px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
+    /* A dragged button keeps its desktop pixel spot on wide screens, but
+       pixels mean nothing once the canvas narrows: left:286px of an 804px
+       canvas is mid-page, of a ~365px phone canvas it hangs off the right
+       edge and the text wraps one word per line over the nearest image.
+       On small screens a placed button reflows into the text as a centred
+       block, exactly like an undragged one, and keeps its inline colours.
+       !important is what beats the dragged inline style. */
+    .canvas a.btn[style],.canvas a.bigbtn[style]{
+      position:static !important;
+      left:auto !important;right:auto !important;top:auto !important;bottom:auto !important;
+      transform:none !important;
+    }
+    .canvas a.btn[style]{
+      display:block !important;width:fit-content !important;height:auto !important;
+      margin:12px auto !important;padding:12px 24px !important;text-align:center;
+    }
+    .canvas a.bigbtn[style]{
+      width:fit-content !important;height:auto !important;max-width:100% !important;
+      margin:20px auto !important;
+    }
     /* giant inline titles (40px toolbar sizes and up) stay dramatic on
        phones instead of running off the screen. The t-big class is stamped
        by the sanitizer when the inline size is really 40px or more, so
@@ -1038,6 +1082,7 @@ CSS = r'''  :root{
     .canvas .gallery img{width:100%}
     .canvas .card{padding:14px 14px}
     .contactform{margin:22px 0 0;padding:16px 14px}
+    .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
   }
   @media (hover:none){.contactform .dropzone{padding:18px 14px}}
 '''
@@ -1085,23 +1130,64 @@ CONTACT_FORM_HTML = (
   '  <button type="submit">Send it our way</button>\n'
   "</form>"
   '<script>(function(){try{'
-  # Success handling: FormSubmit redirects back to ?sent=1 when the message
-  # went through, so the page can say so instead of leaving the button gray.
+  # Submission handling: stay on the page and get an explicit answer.
+  # Text-only notes POST as JSON to FormSubmit's AJAX endpoint, and the page
+  # shows a big success or error panel carrying the service own verdict —
+  # no navigation away from the site, no silent "did it send?".
+  # Notes with files still go by the classic multipart POST, because the
+  # AJAX endpoint does not turn base64 payloads into real attachments;
+  # that road keeps the ?sent=1 redirect and the 20 s hang watchdog.
+  "var AJAX_URL='https://formsubmit.co/ajax/" + CONTACT_EMAIL + "';"
   'var inlineStatus=function(t,err){var st=document.getElementById("cf-status");if(!st)return;'
   'st.hidden=false;st.textContent=t;if(err)st.classList.add("is-err");else st.classList.remove("is-err");};'
-  'try{var q=new URLSearchParams(location.search);'
-  'if(q.get("sent")==="1"){inlineStatus("Sent — it went through. Thank you.");'
-  'try{history.replaceState(null,"",location.pathname);}catch(_){}}}catch(_){}'
-  'var watch=null;'
-  'window.addEventListener("pagehide",function(){if(watch){clearTimeout(watch);watch=null;}});'
   'var inp=document.getElementById("cf-photo"),hint=document.getElementById("cf-filehint"),form=inp&&inp.form;'
   'if(!inp||!hint||!form)return;'
+  'var all=[],extras=[],MAX_BYTES=10000000,busy=false,watch=null,picker=null,lastStamp="";'
+  'function getBtn(){return form.querySelector("button[type=submit]");}'
+  'function restoreBtn(){var b=getBtn();if(b){b.disabled=false;b.textContent="Send it our way";}}'
+  # The two big panels are built up front and sit just before the form.
+  # showDone() swaps the form out for the success panel; showError() keeps
+  # the form (with everything the visitor typed) and explains the way out.
+  'var done=document.createElement("div");done.className="cf-done";done.setAttribute("role","status");'
+  'var doneHead=document.createElement("p");doneHead.className="cf-done-head";doneHead.textContent="It went through.";'
+  'var doneSub=document.createElement("p");doneSub.className="cf-done-sub";'
+  'var doneStamp=document.createElement("p");doneStamp.className="cf-done-stamp";'
+  'var again=document.createElement("button");again.type="button";again.className="cf-again";again.textContent="Send another note";'
+  'done.appendChild(doneHead);done.appendChild(doneSub);done.appendChild(doneStamp);done.appendChild(again);'
+  'done.hidden=true;form.parentNode.insertBefore(done,form);'
+  'var errbox=document.createElement("div");errbox.className="cf-error";errbox.setAttribute("role","alert");'
+  'var errHead=document.createElement("p");errHead.className="cf-error-head";errHead.textContent="It did not go through.";'
+  'var errBody=document.createElement("p");errBody.className="cf-error-body";'
+  'var errMail=document.createElement("p");errMail.className="cf-error-body";errMail.textContent="You can email us directly instead: ";'
+  'var emLink=document.createElement("a");emLink.href="mailto:' + CONTACT_EMAIL + '";emLink.textContent="' + CONTACT_EMAIL + '";'
+  'errMail.appendChild(emLink);'
+  'errbox.appendChild(errHead);errbox.appendChild(errBody);errbox.appendChild(errMail);'
+  'errbox.hidden=true;form.parentNode.insertBefore(errbox,form);'
+  'function scrollUp(el){try{el.scrollIntoView({behavior:"smooth",block:"center"});}catch(_){try{el.scrollIntoView();}catch(_2){}}}'
+  'function showDone(){busy=false;restoreBtn();errbox.hidden=true;form.hidden=true;done.hidden=false;'
+  'doneSub.textContent="Your note is in our inbox. We read everything — thank you!";'
+  'doneStamp.textContent=lastStamp?("Stamped "+lastStamp):"";'
+  'scrollUp(done);}'
+  'function showError(msg){busy=false;restoreBtn();done.hidden=true;errbox.hidden=false;'
+  'errBody.textContent=(msg||"The note did not send.")+" Press Send again — or email us directly below.";'
+  'scrollUp(errbox);}'
+  'function hideStatus(){var st=document.getElementById("cf-status");if(st){st.hidden=true;}}'
+  'again.addEventListener("click",function(){try{done.hidden=true;errbox.hidden=true;form.hidden=false;'
+  'try{form.reset();}catch(_){}all=[];extras=[];'
+  'try{if(picker)picker.value="";}catch(_){}try{inp.value="";}catch(_){}inp.multiple=true;'
+  'render();stampTime();hideStatus();}catch(_){}});'
+  'window.addEventListener("pagehide",function(){if(watch){clearTimeout(watch);watch=null;}});'
   'function stampTime(){try{var st=document.getElementById("cf-sentat");if(!st)return;'
   'var d=new Date();var s="";'
   'try{s=d.toLocaleString("en-US",{timeZone:"America/New_York",month:"numeric",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit",timeZoneName:"short"})+" (Eastern)";}'
   'catch(_){s=d.toString()+" | UTC offset "+(d.getTimezoneOffset()/-60)+" hours";}'
-  'st.value=s;}catch(_){}}'
+  'st.value=s;lastStamp=s;}catch(_){}}'
   'stampTime();'
+  # ?sent=1 (the files road redirects back here with it): the note went
+  # through — show the same big panel instead of the form.
+  'try{var q=new URLSearchParams(location.search);'
+  'if(q.get("sent")==="1"){showDone();'
+  'try{history.replaceState(null,"",location.pathname);}catch(_){}}}catch(_){}'
   'function setFiles(target,files){try{var dt=new DataTransfer();for(var i=0;i<files.length;i++)dt.items.add(files[i]);target.files=dt.files;'
   'if(!target.files||target.files.length!==files.length)return false;'
   'for(var j=0;j<files.length;j++)if(target.files[j].name!==files[j].name||target.files[j].size!==files[j].size)return false;'
@@ -1110,14 +1196,14 @@ CONTACT_FORM_HTML = (
   'try{inp.value="";}catch(_){}hint.textContent="This browser can send one file per message. Update it to enable multi-file upload.";return;}'
   'try{inp.value="";}catch(_){}'
   'inp.className="filepick";inp.multiple=true;inp.setAttribute("tabindex","-1");inp.setAttribute("aria-hidden","true");'
-  'var picker=document.createElement("input");picker.type="file";picker.id="cf-file-picker";picker.multiple=true;picker.className="filepick";picker.tabIndex=-1;picker.setAttribute("aria-hidden","true");'
+  'picker=document.createElement("input");picker.type="file";picker.id="cf-file-picker";picker.multiple=true;picker.className="filepick";picker.tabIndex=-1;picker.setAttribute("aria-hidden","true");'
   'var zone=document.createElement("button");zone.type="button";zone.className="dropzone";zone.id="cf-drop";'
   'zone.setAttribute("aria-labelledby","cf-files-label cf-drop-instructions");'
   'var instructions=document.createElement("span");instructions.id="cf-drop-instructions";'
   'instructions.textContent=window.matchMedia&&window.matchMedia("(hover:none)").matches?"Tap to browse and attach files.":"Drop files here or click to browse.";zone.appendChild(instructions);'
   'var lst=document.createElement("ul");lst.className="filelist";lst.id="cf-files";'
   'inp.parentNode.insertBefore(zone,inp.nextSibling);zone.parentNode.insertBefore(lst,zone.nextSibling);'
-  'form.appendChild(picker);var all=[],extras=[],MAX_BYTES=10000000;'
+  'form.appendChild(picker);'
   'function mb(n){return (n/1000000).toFixed(1)+" MB";}'
   'function sync(){return setFiles(inp,all);}'
   'function failToNative(msg){all=[];for(var i=0;i<extras.length;i++)if(extras[i].parentNode)extras[i].parentNode.removeChild(extras[i]);extras=[];'
@@ -1139,23 +1225,53 @@ CONTACT_FORM_HTML = (
   'zone.addEventListener("drop",function(e){e.preventDefault();zone.classList.remove("over");var d=e.dataTransfer;if(d&&d.files&&d.files.length)add(d.files);});'
   'form.addEventListener("paste",function(e){var d=e.clipboardData;if(d&&d.files&&d.files.length){e.preventDefault();add(d.files);}});'
   'picker.addEventListener("change",function(){if(picker.files&&picker.files.length)add(picker.files);try{picker.value="";}catch(_){}});'
-  'form.addEventListener("submit",function(e){stampTime();if(!render()){e.preventDefault();'
-  'hint.textContent="Those files are over 10 MB in total — remove one and try again.";return;}'
-  'for(var x=0;x<extras.length;x++)if(extras[x].parentNode)extras[x].parentNode.removeChild(extras[x]);extras=[];'
-  'if(all.length){if(!setFiles(inp,[all[0]])){e.preventDefault();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}'
-  'inp.multiple=false;'
+  'function prepNative(){for(var x=0;x<extras.length;x++)if(extras[x].parentNode)extras[x].parentNode.removeChild(extras[x]);extras=[];'
+  'if(!setFiles(inp,[all[0]]))return false;inp.multiple=false;'
   'for(var xi=1;xi<all.length;xi++){var ni=document.createElement("input");ni.type="file";ni.name="attachment_"+(xi+1);ni.className="filepick filepick-extra";ni.tabIndex=-1;ni.setAttribute("aria-hidden","true");'
-  'if(!setFiles(ni,[all[xi]])){e.preventDefault();failToNative("This browser could not prepare every file. Use the file picker and send one file per message.");return;}'
-  'form.appendChild(ni);extras.push(ni);}}'
-  'var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=true;btn.textContent="Sending…";}'
+  'if(!setFiles(ni,[all[xi]]))return false;form.appendChild(ni);extras.push(ni);}return true;}'
+  'form.addEventListener("submit",function(e){var pd=false;'
+  'try{e.preventDefault();pd=true;'
+  'if(busy)return;'
+  'stampTime();'
+  'if(!render()){hint.textContent="Those files are over 10 MB in total — remove one and try again.";return;}'
+  'var honey=form.querySelector("[name=_honey]");'
+  'if(honey&&honey.value){showDone();return;}'
+  'var b=getBtn();if(b){b.disabled=true;b.textContent="Sending…";}'
+  # Files ride the classic multipart POST (FormSubmit turns real multipart
+  # parts into email attachments; it does not do that for JSON base64).
+  'if(all.length){'
+  'if(!prepNative()){restoreBtn();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}'
+  'busy=true;'
+  'inlineStatus("Sending "+(all.length===1?"1 file":all.length+" files")+" — a big upload can take a moment…",false);'
   # 20 s watchdog: a real submit unloads the page (pagehide clears this).
-  # If the load is stuck, bring the button back and explain the way out.
-  'watch=setTimeout(function(){try{var btn=form.querySelector("button[type=submit]");'
-  'if(btn){btn.disabled=false;btn.textContent="Send it our way";}'
-  'var st=document.getElementById("cf-status");if(st){st.hidden=false;st.classList.add("is-err");'
-  'st.textContent="If it stayed on Sending, the upload may be slow — wait a moment, and only send again if nothing arrives. You can also email us directly with the same files: ";'
-  'var a=document.createElement("a");a.href="mailto:' + CONTACT_EMAIL + '";a.textContent="' + CONTACT_EMAIL + '";st.appendChild(a);}}catch(_){}},20000);});'
-  'window.addEventListener("pageshow",function(){var btn=form.querySelector("button[type=submit]");if(btn){btn.disabled=false;btn.textContent="Send it our way";}});'
+  # If the load is stuck, explain the way out instead of a gray button.
+  'watch=setTimeout(function(){showError("The upload did not come back within 20 seconds. The files may still be going — only send again if nothing arrives.");},20000);'
+  'form.submit();return;}'
+  'busy=true;'
+  'var f=function(n){var el=form.querySelector("[name="+n+"]");return el?el.value:"";};'
+  'var payload={_subject:f("_subject")||"New message from the Flamingo and Cactus contact form",_template:"table",_captcha:"false",'
+  'sent_at:(document.getElementById("cf-sentat")||{}).value||lastStamp,'
+  'name:f("name"),contact:f("contact"),note:f("note")};'
+  'var c=payload.contact.replace(/^\\s+|\\s+$/g,"");'
+  'if(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(c))payload._replyto=c;'
+  'inlineStatus("Sending your note…",false);'
+  'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
+  'fetch(AJAX_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(payload),signal:ctrl?ctrl.signal:undefined})'
+  '.then(function(r){return r.json().catch(function(){return{success:"false",message:"the mail service answered with something unreadable"};});})'
+  '.then(function(j){if(to)clearTimeout(to);'
+  'if(j&&j.success==="true"){showDone();return;}'
+  'var m=(j&&j.message)?String(j.message):"the mail service refused the note";'
+  'if(/web server|HTML files/i.test(m))m="your browser or an extension hid the page address from the mail service, and it refused the note";'
+  'showError("The mail service said: "+m+".");})'
+  '.catch(function(er){if(to)clearTimeout(to);'
+  'if(er&&er.name==="AbortError"){showError("The send took too long and was stopped. If nothing arrives, press Send again — only once.");return;}'
+  'if(form.submit){inlineStatus("The direct send did not answer — trying the classic way…",false);'
+  'watch=setTimeout(function(){showError("The classic send did not return either. Your connection may be offline — email us directly instead.");},20000);'
+  'form.submit();return;}'
+  'showError("The note could not be sent from here (network or mail service unreachable).");});'
+  '}catch(er){if(pd){try{busy=false;restoreBtn();}catch(_2){}}}});'
+  'window.addEventListener("pageshow",function(){busy=false;restoreBtn();});'
   'render();}catch(_){}})();</script>'
 )
 
@@ -2172,8 +2288,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         expect(".star-badge::before,.star-badge::after{content:\"\";position:absolute;"
                "clip-path:polygon" in CSS,
                "comic star outline comes from layered pseudos (clip-path-safe)")
-        expect(site.get("star_animation") == "comic" and 'data-star-animation="comic"' in idx,
-               "star click uses the comic burst")
+        anim = site.get("star_animation", "portal")
+        expect(anim in STAR_ANIMATIONS and ('data-star-animation="' + anim + '"') in idx,
+               "star animation is a known mode and the pages carry it")
         expect("comicko" in idx and "comicflash" in idx and "mode==='comic'" in idx,
                "comic burst draws an ink starburst, not golden sparkles")
         cf = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
@@ -2181,12 +2298,18 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "contact posts captcha-free and returns to a flagged success URL")
         expect('id="cf-status" hidden' in cf and "watch=setTimeout" in cf,
                "stuck submits get a status line and a hang watchdog")
+        expect("formsubmit.co/ajax/" in cf,
+               "text-only notes take the AJAX endpoint and get an explicit verdict")
+        expect('textContent="It went through."' in cf and '"cf-done"' in cf,
+               "success swaps the form for an unmissable panel")
+        expect('textContent="It did not go through."' in cf,
+               "a refused note gets an explicit error panel")
         expect("America/New_York" in cf and "Eastern" in cf,
                "sent_at is stamped in clearly-labeled Eastern time")
         expect('body[data-theme="midnight"] .contactform input[type=text]' in cf,
                "dark mode gives the form fields a visible background")
-        expect(".cf-status[hidden]{display:none}" in CSS,
-               "the status line stays hidden until used")
+        expect(".cf-status[hidden]{display:none}" in CSS and ".cf-done[hidden]" in CSS and ".cf-error[hidden]" in CSS,
+               "the status line and panels stay hidden until used")
         evc = (tmp / "events.html").read_text(encoding="utf-8") if (tmp / "events.html").is_file() else ""
         if "[event calendar]" in (pages_dir / "events.html").read_text(encoding="utf-8"):
             expect('id="evcal"' in evc and 'var EV=' in evc,

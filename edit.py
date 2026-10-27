@@ -337,8 +337,15 @@ def editor_page(site: dict, slug: str, body: str, live: str | None,
     form_here = any(p.get("slug") == slug and p.get("form") for p in site.get("pages", []))
     # Keep the source marker in the editable canvas; render a separate inert
     # preview on every editor page so enabling the form takes effect live.
+    # The preview must never send for real: drop the behaviour script, stop
+    # the inline submit and turn the send button into a plain button.
+    preview_form = re.sub(r"<script>[\s\S]*?</script>", "",
+                          site_build.CONTACT_FORM_HTML, count=1)
+    preview_form = preview_form.replace("<form ", '<form onsubmit="return false;" ', 1)
+    preview_form = preview_form.replace('<button type="submit">Send it our way</button>',
+                                        '<button type="button">Send it our way</button>', 1)
     inert = ('<div id="formpreview" contenteditable="false">'
-             + site_build.CONTACT_FORM_HTML.replace("<form ", "<form onsubmit=\"return false;\" ", 1)
+             + preview_form
              + "</div>")
     if form_here:
         marker = '<p data-form-marker="contact" class="form-placeholder" contenteditable="false">Contact form goes here — preview below</p>'
