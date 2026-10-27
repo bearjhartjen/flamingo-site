@@ -266,6 +266,30 @@
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* the big yes/no panels: on success the form is replaced by the panel, so
+     there is no way to miss that the note went through (or did not) */
+  .contactform[hidden],.cf-done[hidden],.cf-error[hidden]{display:none}
+  .cf-done,.cf-error{max-width:560px;box-sizing:border-box;margin:26px auto 0;padding:22px;border-radius:4px;text-align:left}
+  .cf-done{border:2px solid #1a7f37;background:#eaf4ec}
+  .cf-error{border:2px solid #b3261e;background:#fbeeed}
+  .cf-done-head{font:700 22px Georgia,Times,serif;color:#1a7f37;margin:0 0 8px}
+  .cf-done-sub{font:14px/1.55 Georgia,Times,serif;color:var(--ink2);margin:0}
+  .cf-done-stamp{font:italic 12px Georgia,Times,serif;color:var(--muted);margin:8px 0 0}
+  .cf-again{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
+  .cf-again:hover{opacity:.85}
+  .cf-error-head{font:700 18px Georgia,Times,serif;color:#b3261e;margin:0 0 8px}
+  .cf-error-body{font:14px/1.55 Georgia,Times,serif;color:var(--ink2);margin:0 0 6px}
+  .cf-error-body a{color:var(--link)}
+  body[data-theme="ink"] .cf-done{border-color:#2f6f4a;background:#243328}
+  body[data-theme="ink"] .cf-done-head{color:#7ee2a8}
+  body[data-theme="ink"] .cf-done-sub,body[data-theme="ink"] .cf-done-stamp,body[data-theme="ink"] .cf-error-body{color:#ddd2c0}
+  body[data-theme="ink"] .cf-error{border-color:#8a4a44;background:#3a2624}
+  body[data-theme="ink"] .cf-error-head{color:#ff8a80}
+  body[data-theme="midnight"] .cf-done{border-color:#3f7f57;background:#28362e}
+  body[data-theme="midnight"] .cf-done-head{color:#7ee2a8}
+  body[data-theme="midnight"] .cf-done-sub,body[data-theme="midnight"] .cf-done-stamp,body[data-theme="midnight"] .cf-error-body{color:#d9cff0}
+  body[data-theme="midnight"] .cf-error{border-color:#8a4a4a;background:#3a262c}
+  body[data-theme="midnight"] .cf-error-head{color:#ff9d9d}
   /* dark themes: the form fields need to be plainly visible, not black on black */
   body[data-theme="ink"] .contactform{background:#332e28;border-color:#6b6152}
   body[data-theme="ink"] .contactform input[type=text],body[data-theme="ink"] .contactform input[type=email],body[data-theme="ink"] .contactform input[type=tel],body[data-theme="ink"] .contactform textarea{background:#3f3830;border-color:#857763;color:#f5efe0}
@@ -342,6 +366,26 @@
     .gem-badge .gem-title{font-size:10px;letter-spacing:1.5px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
+    /* A dragged button keeps its desktop pixel spot on wide screens, but
+       pixels mean nothing once the canvas narrows: left:286px of an 804px
+       canvas is mid-page, of a ~365px phone canvas it hangs off the right
+       edge and the text wraps one word per line over the nearest image.
+       On small screens a placed button reflows into the text as a centred
+       block, exactly like an undragged one, and keeps its inline colours.
+       !important is what beats the dragged inline style. */
+    .canvas a.btn[style],.canvas a.bigbtn[style]{
+      position:static !important;
+      left:auto !important;right:auto !important;top:auto !important;bottom:auto !important;
+      transform:none !important;
+    }
+    .canvas a.btn[style]{
+      display:block !important;width:fit-content !important;height:auto !important;
+      margin:12px auto !important;padding:12px 24px !important;text-align:center;
+    }
+    .canvas a.bigbtn[style]{
+      width:fit-content !important;height:auto !important;max-width:100% !important;
+      margin:20px auto !important;
+    }
     /* giant inline titles (40px toolbar sizes and up) stay dramatic on
        phones instead of running off the screen. The t-big class is stamped
        by the sanitizer when the inline size is really 40px or more, so
@@ -358,6 +402,7 @@
     .canvas .gallery img{width:100%}
     .canvas .card{padding:14px 14px}
     .contactform{margin:22px 0 0;padding:16px 14px}
+    .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
   }
   @media (hover:none){.contactform .dropzone{padding:18px 14px}}
 
