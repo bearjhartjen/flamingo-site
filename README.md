@@ -85,11 +85,28 @@ The hidden Flank ledger lives here too, as the unlisted `site/flank/`
 directory. It is built from `data/The Flank.md` by `scripts/build_flank.py`
 on every build. Only the Financials page links to it, and each ledger page
 links back. The ledger is edited on the Desktop (`~/Desktop/The Flank.md`
-is the source of truth); the `flamingo-ledger-watcher` service notices
-within seconds, copies it into `data/`, rebuilds, and stages both. `sh
+is the source of truth, and the only copy in plain text); the
+`flamingo-ledger-watcher` service notices within seconds, syncs it into
+`data/` with every private note encrypted, rebuilds, and stages both. `sh
 scripts/sync-ledger.sh` does the same by hand. Install the watcher with
 `sh scripts/install-watcher.sh`, remove it with `sh
 scripts/uninstall-watcher.sh`.
+
+### The private notes are encrypted, not just hidden
+
+Every transaction in the ledger carries a `- **Private:** yes/no` line.
+On sync, `scripts/encrypt_flank.py` replaces each "yes" note with an
+encrypted `[[FCEnc ...]]` token (AES-256-CBC, key derived from a
+passphrase with PBKDF2 — see `scripts/flank_crypto.py`), so neither
+`data/` nor the published page ever holds the private note text. The
+published page decrypts them in the browser when the owner types the
+passphrase into the lock box; the passphrase lives only in a local
+keyfile outside this repository
+(`~/.config/flamingo-site/flank-notes.key`) and is never committed.
+Building the site never needs the passphrase — only the sync does.
+`python3 scripts/encrypt_flank.py --check` roundtrip-verifies the repo
+copy against the Desktop original, and `--decrypt` prints the private
+notes locally.
 
 ## How editing works
 
@@ -150,12 +167,15 @@ third-party actions):
 - `data/site.json` — settings + the page/menu list
 - `data/pages/<slug>.html` — one page each; plain allowlisted HTML,
   cleaned on every save
-- `data/The Flank.md` — the ledger, synced from `~/Desktop/The Flank.md`
+- `data/The Flank.md` — the ledger, synced (with private notes
+  encrypted) from `~/Desktop/The Flank.md`
 - `assets/logo.png` — masthead picture (embedded into each page)
 - `assets/uploads/` — pictures used by pages (copied to `site/uploads/`)
 - `scripts/build.py` — builds `site/` from `data/` (stdlib only, owns the
   sanitizer and the `--check` verifier)
 - `scripts/build_flank.py` — builds `site/flank/` from the ledger (stdlib)
+- `scripts/flank_crypto.py`, `scripts/encrypt_flank.py` — ledger note
+  encryption (sync / check / decrypt)
 - `scripts/sync-ledger.sh`, `scripts/watch-ledger.py` — Desktop-ledger flow
 - `.githooks/pre-commit` — rebuilds + stages `site/` on every commit
   (install with `scripts/install-hooks.sh`)

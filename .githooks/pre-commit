@@ -21,15 +21,23 @@ SITE="$ROOT/site"
 DATA="$ROOT/data"
 
 # 0. Sync the ledger. The authoritative copy lives on the Desktop, outside
-#    the repo; copy it in when it differs so one commit always carries the
-#    ledger and the matching site/flank/ build.
+#    the repo, and is the only plaintext copy. The sync replaces every
+#    private note with its encrypted token, so the repo copy never holds
+#    private note text. A failed sync aborts the commit -- it must never
+#    fall back to copying plaintext.
 SRC="$HOME/Desktop/The Flank.md"
-DST="$ROOT/data/The Flank.md"
+ENC="$ROOT/scripts/encrypt_flank.py"
 if [ -f "$SRC" ]; then
-  if [ ! -f "$DST" ] || ! cmp -s "$SRC" "$DST"; then
-    mkdir -p "$(dirname "$DST")"
-    cp "$SRC" "$DST"
-    printf 'pre-commit: synced "%s" -> data/The Flank.md\n' "$SRC"
+  if [ -f "$ENC" ]; then
+    if ! out=$(python3 "$ENC" 2>&1); then
+      printf '%s\n' "$out" >&2
+      printf 'pre-commit: ledger encryption FAILED. Commit aborted -- the repo copy must never hold plaintext notes.\n' >&2
+      printf 'pre-commit: (is the passphrase keyfile present? see scripts/flank_crypto.py)\n' >&2
+      exit 1
+    fi
+    printf 'pre-commit: ledger synced with private notes encrypted\n'
+  else
+    printf 'pre-commit: scripts/encrypt_flank.py missing; skipping ledger sync.\n' >&2
   fi
 else
   printf 'pre-commit: "%s" not found; skipping ledger sync.\n' "$SRC"

@@ -22,6 +22,7 @@ ROOT=$(git rev-parse --show-toplevel) || {
 
 SRC="$HOME/Desktop/The Flank.md"
 DST="$ROOT/data/The Flank.md"
+ENC="$ROOT/scripts/encrypt_flank.py"
 BUILD="$ROOT/scripts/build.py"
 SITE="$ROOT/site"
 
@@ -45,22 +46,16 @@ if [ ! -f "$SRC" ]; then
   exit 1
 fi
 
-# "Changed" = the repo copy is missing or differs in content.
-if [ ! -f "$DST" ] || ! cmp -s "$SRC" "$DST"; then
-  changed=1
-else
-  changed=0
-fi
-
 n=$(count_transactions "$SRC")
 
 if [ "$CHECK" -eq 1 ]; then
   printf 'Ledger source:  %s (%s transactions)\n' "$SRC" "$n"
   printf 'Repo copy:      %s\n' "$DST"
-  if [ "$changed" -eq 1 ]; then
-    printf 'Status:         WOULD update (source differs from repo copy)\n'
+  if [ -f "$ENC" ]; then
+    printf 'Encryption:     would run: python3 %s\n' "$ENC"
+    python3 "$ENC" --check || true
   else
-    printf 'Status:         up to date (no copy needed)\n'
+    printf 'Encryption:     scripts/encrypt_flank.py not found\n'
   fi
   if [ -f "$BUILD" ]; then
     printf 'Build:          would run: python3 %s\n' "$BUILD"
@@ -72,14 +67,32 @@ if [ "$CHECK" -eq 1 ]; then
   exit 0
 fi
 
-# Normal run: copy when needed, then rebuild.
-if [ "$changed" -eq 1 ]; then
-  mkdir -p "$(dirname "$DST")"
-  cp "$SRC" "$DST"
-  printf 'Copied ledger into %s\n' "$DST"
-else
-  printf 'Ledger already up to date; nothing copied.\n'
+# Normal run: encrypt the private notes into the repo copy (the Desktop
+# file is the only plaintext), then rebuild. The encrypt step is
+# deterministic and writes only when its output differs, so "changed"
+# reports whether this run actually brought new ledger content in.
+if [ ! -f "$ENC" ]; then
+  printf 'sync-ledger: scripts/encrypt_flank.py not found; cannot sync safely.\n' >&2
+  exit 1
 fi
+
+if [ -f "$DST" ]; then
+  before=$(sha256sum "$DST" | cut -d' ' -f1)
+else
+  before=""
+fi
+
+if ! python3 "$ENC"; then
+  printf 'sync-ledger: ledger encryption FAILED; repo copy left untouched.\n' >&2
+  exit 1
+fi
+
+if [ -f "$DST" ]; then
+  after=$(sha256sum "$DST" | cut -d' ' -f1)
+else
+  after=""
+fi
+if [ "$before" != "$after" ]; then changed=1; else changed=0; fi
 
 if [ ! -f "$BUILD" ]; then
   printf 'sync-ledger: scripts/build.py not found; cannot build.\n' >&2
@@ -99,7 +112,7 @@ else
 fi
 
 printf '\nSummary\n'
-printf '  Ledger changed:  %s\n' "$answer"
+printf '  Ledger changed:  %s (encrypted copy updated)\n' "$answer"
 printf '  Transactions:    %s\n' "$n"
 printf '  Site written to: %s\n' "$SITE"
 

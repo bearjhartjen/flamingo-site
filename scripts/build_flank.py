@@ -22,6 +22,14 @@ The main site builder (scripts/build.py) calls this automatically, so a
 normal build already includes the ledger. The root 404.html, favicon.png
 and CNAME stay owned by scripts/build.py.
 
+The private notes arrive here already encrypted: the Desktop ledger is
+synced into data/The Flank.md by scripts/encrypt_flank.py, which replaces
+each "Private: yes" note with an [[FCEnc ...]] token (see
+scripts/flank_crypto.py). This builder embeds the ciphertext in the page
+and the page's lock code decrypts it in the browser (PBKDF2 + AES-CBC via
+the Web Crypto API). A private row found with plaintext notes is a hard
+build error, never a warning.
+
 The build is idempotent: same inputs produce byte-identical output.
 Stdlib only -- no pip packages, no image libraries.
 """
@@ -36,13 +44,18 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import flank_crypto as fc
+
 ROOT = Path(__file__).resolve().parent.parent
 
 DEFAULT_DATA = ROOT / "data" / "The Flank.md"
 DEFAULT_LOGO = ROOT / "assets" / "logo-flank.png"
 DEFAULT_OUT = ROOT / "site" / "flank"
 
-# Transactions blurred until the code is entered. Everything else is public.
+# Fallback only: which transactions are private when a row carries no
+# "- **Private:**" field at all. The field in the ledger is the source of
+# truth; scripts/encrypt_flank.py encrypts every "yes" row on sync.
 PRIVATE_TX = frozenset({6, 18, 22, 24, 25, 27, 30, 31, 33, 34, 36, 39, 40, 44,
                         48, 53, 54, 55, 56, 58, 59, 60, 61, 62, 65, 68})
 
@@ -61,18 +74,72 @@ def logo_data_uri(path: Path) -> str:
 
 
 # --------------------------------------------------------------------------- parse
-def parse_ledger(text: str):
-    blocks = re.split(r"^##\s+Transaction\s+(\d+)\s*$", text, flags=re.M)
-    txs = []
-    for i in range(1, len(blocks), 2):
-        num = int(blocks[i])
-        fields = {}
-        for line in blocks[i + 1].splitlines():
-            m = re.match(r"^-\s+\*\*(.+?):\*\*\s*(.*)$", line.strip())
-            if m:
-                fields[m.group(1).strip().lower()] = m.group(2).strip()
-        txs.append((num, fields))
-    return txs
+def parse_records(data_path: Path):
+    """Parse the ledger markdown into the record list embedded in the page.
+
+    Private rows must arrive already encrypted (scripts/encrypt_flank.py
+    does that on sync): a "Private: yes" row whose Notes still hold
+    plaintext is a hard build error, so a stale sync can never publish
+    note text -- the repo copy is not allowed to carry it at all.
+    """
+    records = []
+    unflagged = []
+    for num, f in fc.parse_ledger(data_path.read_text(encoding="utf-8")):
+        w_val, w_txt = money(f.get("withdraw of"))
+        d_val, d_txt = money(f.get("deposit of"))
+        b_val, b_txt = money(f.get("new balance"))
+        iso, disp = parse_date(f.get("transaction was made on"))
+        raw_notes = f.get("notes", "")
+        flag = fc.private_flag(f.get("private"))
+        if flag is None:
+            flag = num in PRIVATE_TX
+            unflagged.append(num)
+        enc = None
+        nlen = 0
+        notes = ""
+        if flag:
+            tok = fc.parse_token(raw_notes)
+            if tok is None:
+                if raw_notes.strip():
+                    raise SystemExit(
+                        f"transaction {num} is marked private but its notes are "
+                        f"plaintext in {data_path.name} -- run "
+                        "scripts/encrypt_flank.py before building (the repo copy "
+                        "must never hold plaintext notes)"
+                    )
+                # private with an empty note: nothing to encrypt
+            else:
+                nlen, iv_b64, ct_b64 = tok
+                enc = {"i": iv_b64, "c": ct_b64}
+        else:
+            notes = raw_notes.replace("\\$", "$")
+        empty = w_val is None and d_val is None and b_val is None and not notes and enc is None
+        records.append(
+            {
+                "n": num,
+                "withdraw": w_val,
+                "withdrawText": w_txt,
+                "deposit": d_val,
+                "depositText": d_txt,
+                "balance": b_val,
+                "balanceText": b_txt,
+                "silver": f.get("silver holdings", ""),
+                "notes": notes,
+                "enc": enc,
+                "nlen": nlen,
+                "date": iso,
+                "dateText": disp,
+                "empty": empty,
+                "private": flag,
+            }
+        )
+    if unflagged:
+        print(
+            f"note: {len(unflagged)} transaction(s) without a Private: field, "
+            f"falling back to the built-in set: {unflagged}"
+        )
+    filled = [r for r in records if not r["empty"]]
+    return records, filled
 
 
 def money(raw):
@@ -106,37 +173,6 @@ def parse_date(raw):
     if s.lower() == "unknown":
         return None, "Unknown"
     return None, s
-
-
-def parse_records(data_path: Path):
-    """Parse the ledger markdown into the record list embedded in the page."""
-    records = []
-    for num, f in parse_ledger(data_path.read_text(encoding="utf-8")):
-        w_val, w_txt = money(f.get("withdraw of"))
-        d_val, d_txt = money(f.get("deposit of"))
-        b_val, b_txt = money(f.get("new balance"))
-        iso, disp = parse_date(f.get("transaction was made on"))
-        notes = f.get("notes", "").replace("\\$", "$")
-        empty = w_val is None and d_val is None and b_val is None and not notes
-        records.append(
-            {
-                "n": num,
-                "withdraw": w_val,
-                "withdrawText": w_txt,
-                "deposit": d_val,
-                "depositText": d_txt,
-                "balance": b_val,
-                "balanceText": b_txt,
-                "silver": f.get("silver holdings", ""),
-                "notes": notes,
-                "date": iso,
-                "dateText": disp,
-                "empty": empty,
-                "private": num in PRIVATE_TX,
-            }
-        )
-    filled = [r for r in records if not r["empty"]]
-    return records, filled
 
 
 # --------------------------------------------------------------------------- pages
@@ -503,8 +539,8 @@ try{window.addEventListener("storage",function(e){if(e&&e.key===k){if(document.r
   </div>
 
   <div class="lockbox" id="lockbox">
-    <div id="lockprompt">Some transactions are locked. Enter the code to reveal them.</div>
-    <input type="password" id="code" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="•••••">
+    <div id="lockprompt">Some transactions are locked. Enter the password to reveal them.</div>
+    <input type="password" id="code" autocomplete="off" maxlength="64" placeholder="&bull;&bull;&bull;&bull;&bull;">
     <button class="btn" id="lockbtn">Unlock</button>
     <div class="lockmsg" id="lockmsg"></div>
   </div>
@@ -518,6 +554,21 @@ const money = n => n === null || n === undefined
   ? "\u2014"
   : "$" + n.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* Locked private rows carry no readable text -- only ciphertext. Until the
+   password unlocks them they show a blurred placeholder sized to the note's
+   real length (nlen), so the locked table keeps the same shape it always had. */
+function placeholderText(nlen){
+  let s = "";
+  const base = "Private note. ";
+  while (s.length < nlen) s += base;
+  return s.slice(0, nlen);
+}
+function noteCell(t){
+  if (t.notes) return esc(t.notes);
+  if (t.enc) return esc(placeholderText(typeof t.nlen === "number" ? t.nlen : 40));
+  return "";
+}
 
 /* ------------------------------------------------------------------ summary */
 const totals = TX.reduce((a,t)=>{
@@ -877,7 +928,7 @@ function render(){
       + '<td class="r">' + dCell + "</td>"
       + '<td class="r bal">' + money(t.balance) + "</td>"
       + '<td class="silver">' + esc(t.silver || "—") + "</td>"
-      + '<td class="notes">' + esc(t.notes || "") + "</td>"
+      + '<td class="notes">' + noteCell(t) + "</td>"
       + "</tr>";
   }).join("");
 }
@@ -888,13 +939,17 @@ document.getElementById("print").addEventListener("click", ()=>window.print());
 render();
 
 /* ------------------------------------------------------------------ lock
-   Only the private transactions (see PRIVATE_TX in the builder) load
-   blurred; every other row is public. The code typed at the bottom of the
-   page is SHA-256 hashed in the browser and compared against a stored hash,
-   so the code itself never appears in the page source. Unlock lasts for
-   this browser tab only (sessionStorage): a fresh visit locks again.
-   This keeps honest visitors out, not a determined reader of the source. */
-const CODE_HASH = "b6568e6a00d2bd0444c92d1de175744c3e55b539f116538f83e96aa4ba5aab58";
+   The private notes are AES-encrypted inside the page data (see
+   scripts/flank_crypto.py in the repo). The password typed below is turned
+   into an AES-256 key with PBKDF2 (SHA-256, 600000 rounds, fixed public
+   salt) and the notes are decrypted right here in the browser -- the
+   password itself is never stored in the page or the repo. A wrong
+   password fails the padding and length checks, so it reveals nothing.
+   The derived key is kept in sessionStorage, so the unlock lasts this
+   browser tab only; a fresh visit locks again. Decryption needs the Web
+   Crypto API, which browsers only provide in secure contexts (https:// or
+   localhost) -- there is no pure-JS fallback, by design. */
+const ENC = { salt: "__ENCSALT__", iters: 600000 };  /* salt: base64 */
 const lockTable = document.getElementById("ledger");
 const lockprompt = document.getElementById("lockprompt");
 const codeInput = document.getElementById("code");
@@ -904,102 +959,90 @@ const lockmsg = document.getElementById("lockmsg");
 function setLocked(locked){
   lockTable.classList.toggle("locked", locked);
   lockprompt.textContent = locked
-    ? "Some transactions are locked. Enter the code to reveal them."
+    ? "Some transactions are locked. Enter the password to reveal them."
     : "Unlocked for this visit.";
   lockbtn.textContent = locked ? "Unlock" : "Lock";
   codeInput.value = "";
   lockmsg.textContent = "";
   codeInput.style.display = locked ? "" : "none";
+  if (locked){
+    /* re-locking wipes the decrypted notes; they are re-derived from the
+       ciphertext the next time the password is entered */
+    for (const t of TX) if (t.enc) t.notes = "";
+  }
   render();
 }
 
-async function sha256hex(s){
-  if (window.crypto && crypto.subtle){
-    try {
-      const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-      return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
-    } catch(e){ /* fall through to the pure-JS version */ }
-  }
-  return jsSha256(s);
+const b64bytes = b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+const bytesB64 = u8 => btoa(String.fromCharCode.apply(null, u8));
+
+async function deriveKeyBits(password){
+  const material = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: b64bytes(ENC.salt), iterations: ENC.iters },
+    material, 256));
 }
 
-/* Pure-JS SHA-256, used when crypto.subtle is unavailable. Plain HTTP is
-   not a secure context, so browsers withhold the WebCrypto API there and
-   the check above would always fail on an http:// page. This computes the
-   same digest without it. */
-function jsSha256(str){
-  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
-    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
-    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
-    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
-    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
-    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
-    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
-    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
-  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
-  const bytes = unescape(encodeURIComponent(str));
-  const bitLen = bytes.length * 8;
-  let msg = bytes + "\x80";
-  while (msg.length % 64 !== 56) msg += "\x00";
-  msg += String.fromCharCode(0, 0, 0, 0,
-    (bitLen >>> 24) & 255, (bitLen >>> 16) & 255, (bitLen >>> 8) & 255, bitLen & 255);
-  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
-  const blocks = Math.ceil(msg.length / 64);
-  for (let b = 0; b < blocks; b++){
-    const w = new Array(64);
-    for (let t = 0; t < 16; t++){
-      const o = b * 64 + t * 4;
-      w[t] = (msg.charCodeAt(o) << 24) | (msg.charCodeAt(o + 1) << 16) |
-             (msg.charCodeAt(o + 2) << 8) | msg.charCodeAt(o + 3);
-    }
-    for (let t = 16; t < 64; t++){
-      const s0 = rotr(w[t-15], 7) ^ rotr(w[t-15], 18) ^ (w[t-15] >>> 3);
-      const s1 = rotr(w[t-2], 17) ^ rotr(w[t-2], 19) ^ (w[t-2] >>> 10);
-      w[t] = (w[t-16] + s0 + w[t-7] + s1) | 0;
-    }
-    let [a, b0, c, d, e, f, g, h] = H;
-    for (let t = 0; t < 64; t++){
-      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
-      const ch = (e & f) ^ (~e & g);
-      const t1 = (h + S1 + ch + K[t] + w[t]) | 0;
-      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
-      const mj = (a & b0) ^ (a & c) ^ (b0 & c);
-      const t2 = (S0 + mj) | 0;
-      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b0; b0 = a; a = (t1 + t2) | 0;
-    }
-    H = H.map((v, i) => (v + [a, b0, c, d, e, f, g, h][i]) | 0);
-  }
-  const hex = H.map(v => ("00000000" + (v >>> 0).toString(16)).slice(-8)).join("");
-  return hex;
+const importAesKey = raw =>
+  crypto.subtle.importKey("raw", raw, { name: "AES-CBC" }, false, ["decrypt"]);
+
+async function decryptNote(key, t){
+  const buf = await crypto.subtle.decrypt(
+    { name: "AES-CBC", iv: b64bytes(t.enc.i) }, key, b64bytes(t.enc.c));
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  if (typeof t.nlen === "number" && text.length !== t.nlen)
+    throw new Error("decrypted length does not match");
+  return text;
+}
+
+/* Decrypt the first note as the password test, then the rest. A wrong
+   password almost always dies on the PKCS#7 padding; anything that slips
+   past that fails the strict UTF-8 decode or the exact length check. */
+async function revealWith(rawBits){
+  const key = await importAesKey(rawBits);
+  const priv = TX.filter(t => t.enc);
+  if (priv.length) await decryptNote(key, priv[0]);
+  for (const t of priv) t.notes = await decryptNote(key, t);
 }
 
 async function tryUnlock(){
   lockmsg.textContent = "";
-  let hex = "";
-  try { hex = await sha256hex(codeInput.value.trim()); }
-  catch(e){ lockmsg.textContent = "Wrong code."; return; }
-  if (!hex){ lockmsg.textContent = "Wrong code."; return; }
-  if (hex === CODE_HASH){
-    try { sessionStorage.setItem("flankUnlocked","1"); } catch(e){}
+  if (!(window.crypto && crypto.subtle)){
+    lockmsg.textContent =
+      "This browser will not decrypt here: unlock needs a secure context (https:// or localhost).";
+    return;
+  }
+  try {
+    const rawBits = await deriveKeyBits(codeInput.value);
+    await revealWith(rawBits);
+    try { sessionStorage.setItem("flankKey", bytesB64(rawBits)); } catch(e){}
     setLocked(false);
-  } else {
-    lockmsg.textContent = "Wrong code.";
+  } catch(e){
+    lockmsg.textContent = "Wrong password.";
   }
 }
 
 lockbtn.addEventListener("click", ()=>{
   if (lockTable.classList.contains("locked")) tryUnlock();
   else {
-    try { sessionStorage.removeItem("flankUnlocked"); } catch(e){}
+    try { sessionStorage.removeItem("flankKey"); } catch(e){}
     setLocked(true);
   }
 });
 codeInput.addEventListener("keydown", e=>{ if (e.key === "Enter") tryUnlock(); });
 
-(function(){
-  let open = false;
-  try { open = sessionStorage.getItem("flankUnlocked") === "1"; } catch(e){}
-  setLocked(!open);
+(async function(){
+  let rawBits = null;
+  try { const b = sessionStorage.getItem("flankKey"); if (b) rawBits = b64bytes(b); } catch(e){}
+  if (!rawBits){ setLocked(true); return; }
+  try {
+    await revealWith(rawBits);
+    setLocked(false);
+  } catch(e){
+    try { sessionStorage.removeItem("flankKey"); } catch(e2){}
+    setLocked(true);
+  }
 })();
 </script>
 </body>
@@ -1040,13 +1083,17 @@ try{window.addEventListener("storage",function(e){if(e&&e.key===k){if(document.r
 
     <h2>Where the numbers come from</h2>
     <p>The authoritative source is <code>The Flank.md</code>, a markdown file
-    kept on the owner&rsquo;s Desktop. This website is generated from it:
+    kept on the owner&rsquo;s Desktop &mdash; the only copy of the ledger in
+    plain text. This website is generated from it:
     <code>scripts/build_flank.py</code> reads that file and writes the ledger
     pages into <code>site/flank/</code> &mdash; the ledger itself and this
-    page &mdash; as part of the main site build. The ledger is a read-only
-    viewer with nothing to log into and nothing to edit: when the ledger
-    changes, the markdown is edited and the build is re-run. It is plain,
-    dependency-free Python &mdash; no packages to install.</p>
+    page &mdash; as part of the main site build. On the way in, the notes of
+    the private transactions are encrypted
+    (<code>scripts/encrypt_flank.py</code>), so the copy in this repository
+    and the published page carry those notes only as ciphertext. The ledger
+    is a read-only viewer with nothing to log into and nothing to edit: when
+    the ledger changes, the markdown is edited and the build is re-run. It is
+    plain, dependency-free Python &mdash; no packages to install.</p>
 
     <h2>What the graph plots</h2>
     <p>The plotted figures are <b>US dollar holdings only</b>. There is one
@@ -1079,13 +1126,22 @@ try{window.addEventListener("storage",function(e){if(e&&e.key===k){if(document.r
     as-is, for example from GitHub Pages. Only the live silver spot flag needs
     a connection; without one it shows the last price seen.</p>
 
-    <h2>Why some transaction notes are blurred</h2>
+    <h2>Why some transaction notes are locked</h2>
     <p>Most of the ledger is public, but the notes on __PRIVCOUNT__ transactions
-    load blurred, because they name real people. The code box below the table
-    reveals those notes for that browser tab only
-    &mdash; a fresh visit locks them again. This keeps casual visitors out, not
-    someone reading the page source &mdash; the ledger data is still embedded
-    in the page.</p>
+    name real people. Those notes are not merely hidden &mdash; they are stored
+    <b>encrypted</b>. The repo copy of the ledger and this page carry them only
+    as AES-256 ciphertext; the readable text exists solely in the owner&rsquo;s
+    local copy of the ledger file. Until the password is entered, those rows
+    load blurred.</p>
+    <p>The box below the table takes the password, runs it through PBKDF2
+    (600,000 rounds) in the browser to derive the AES key, and decrypts the
+    notes on the spot &mdash; a wrong password simply fails. The unlocked state
+    lasts for that browser tab only; a fresh visit locks again. The password is
+    never stored in the page, the repo, or the published site. Amounts, dates
+    and balances stay public on every row. One honest limit: the protection is
+    only as strong as the password behind it &mdash; this stops casual visitors
+    and a reader of the page source, not someone willing to brute-force a
+    short password offline against the encrypted text.</p>
   </div>
 
   <footer>
@@ -1128,7 +1184,7 @@ def build(data_path: Path, logo_path: Path, out_dir: Path):
 
     index_html = render(
         INDEX, CSS=CSS, DATA=data_json, LOGO=logo_uri, COUNT=str(len(filled)),
-        PRIVCOUNT=str(privcount),
+        PRIVCOUNT=str(privcount), ENCSALT=fc.SALT_B64,
     )
     (out_dir / "index.html").write_text(index_html, encoding="utf-8")
     print("wrote", out_dir / "index.html", f"{(out_dir / 'index.html').stat().st_size // 1024} KiB")
@@ -1148,6 +1204,7 @@ def check(data_path: Path, logo_path: Path):
         n = len(filled)
         index_html = (tmp / "index.html").read_text(encoding="utf-8")
         about_html = (tmp / "about.html").read_text(encoding="utf-8")
+        data_text = data_path.read_text(encoding="utf-8")
 
         ok = True
 
@@ -1189,18 +1246,36 @@ def check(data_path: Path, logo_path: Path):
         expect("table.locked tr.priv td.notes" in index_html, "index.html blurs private rows' notes when locked")
         expect("table.locked td.notes{" not in index_html, "index.html no longer blurs the whole notes column")
         expect("t.private" in index_html, "index.html flags private rows for the blur")
-        expect("flankUnlocked" in index_html, "index.html keeps the unlock to the tab session")
-        expect("jsSha256" in index_html, "index.html has a pure-JS SHA-256 fallback (works over plain HTTP)")
-        expect("This browser cannot check the code" not in index_html,
-               "index.html never refuses to check the code")
+        expect("flankKey" in index_html, "index.html keeps the derived key to the tab session")
+        expect("PBKDF2" in index_html and "AES-CBC" in index_html,
+               "index.html decrypts in the browser with PBKDF2 + AES-CBC")
+        expect("CODE_HASH" not in index_html and "jsSha256" not in index_html,
+               "the old code-hash lock is fully gone")
+        expect("secure context" in index_html,
+               "graceful message when WebCrypto is unavailable (plain http)")
+        expect("placeholderText" in index_html and "Private note. " in index_html,
+               "locked private rows show a blurred placeholder sized to the note")
+        expect('const ENC = { salt: "' + fc.SALT_B64 + '"' in index_html,
+               "index.html carries the public PBKDF2 salt (base64) for the browser")
         expect('id="lockveil"' not in index_html, "index.html has no blur-explainer veil")
         expect("lockveil" not in index_html, "no veil markup, styles or selectors left on the page")
         expect(logo_path.name == "logo-flank.png", "ledger uses the black logo, not the color masthead")
-        expect("b6568e6a00d2bd0444c92d1de175744c3e55b539f116538f83e96aa4ba5aab58" in index_html, "index.html stores the code as a hash")
-        expect("73774" not in index_html, "index.html never contains the code in plaintext")
+        # The passphrase itself must never be embedded. Checked against the
+        # keyfile rather than spelled out here -- a literal in this source
+        # would put the password in the repository, which is exactly what
+        # the encryption exists to prevent.
+        if fc.KEYFILE.is_file():
+            passphrase = fc.load_passphrase()
+            for label, text_ in (("index.html", index_html), ("about.html", about_html),
+                                 ("the repo ledger", data_text)):
+                expect(passphrase not in text_,
+                       f"{label} never contains the passphrase in plaintext")
+        else:
+            print("SKIP  passphrase-absence check (keyfile not present)")
         expect("scripts/build_flank.py" in about_html, "about.html names the build script")
         expect('href="https://gold-api.com/"' in about_html, "about.html links the feed it names")
-        expect("Why some transaction notes are blurred" in about_html, "about.html explains the per-transaction blur")
+        expect("Why some transaction notes are locked" in about_html, "about.html explains the encrypted notes")
+        expect("AES-256 ciphertext" in about_html, "about.html states the notes are stored encrypted")
         expect('href="index.html"' in about_html, "about.html links back to index.html")
         expect("US dollar holdings" in about_html, "about.html states the dollar-only scope")
         expect(
@@ -1214,12 +1289,59 @@ def check(data_path: Path, logo_path: Path):
 
         m = re.search(r"const TX = (\[.*\]);\n", index_html)
         expect(m is not None, "embedded ledger data is present")
+        tx = None
         if m:
             tx = json.loads(m.group(1))
             expect(len(tx) == n, f"embedded ledger parses back to {n} records")
             priv = sorted(t["n"] for t in tx if t.get("private"))
             expect(priv == sorted(PRIVATE_TX),
                    f"embedded data flags the {len(PRIVATE_TX)} private transactions")
+            encd = [t for t in tx if t.get("enc")]
+            expect(len(encd) == len(priv),
+                   f"every private record carries an encrypted blob ({len(encd)})")
+            expect(all(t.get("notes") == "" for t in encd),
+                   "no private record embeds readable notes")
+            expect(all(isinstance(t.get("nlen"), int) and t["nlen"] > 0 for t in encd),
+                   "every encrypted blob carries its note length for the placeholder")
+
+        # The repo copy and the built pages must not contain any private note
+        # text. When the Desktop original and the passphrase keyfile are both
+        # present, also decrypt every embedded blob and compare it to the
+        # original note -- the full roundtrip. Skipped on machines without
+        # them (e.g. CI): the build itself never needs the passphrase.
+        desktop = Path.home() / "Desktop" / "The Flank.md"
+        if not (desktop.is_file() and fc.KEYFILE.is_file()):
+            print("SKIP  roundtrip (Desktop copy or passphrase keyfile not present)")
+        elif tx is not None:
+            src = dict(fc.parse_ledger(desktop.read_text(encoding="utf-8")))
+            key = fc.derive_key(fc.load_passphrase())
+            rt_fail = 0
+            for t in tx:
+                if not t.get("enc"):
+                    continue
+                expected = src.get(t["n"], {}).get("notes", "").replace("\\$", "$")
+                try:
+                    plain = fc.decrypt_note(
+                        key, t["n"], fc.b64_bytes(t["enc"]["i"]), fc.b64_bytes(t["enc"]["c"]))
+                except fc.CryptoError as exc:
+                    print(f"FAIL  transaction {t['n']}: decryption failed: {exc}")
+                    ok = False
+                    rt_fail += 1
+                    continue
+                if plain != expected or len(plain) != t["nlen"]:
+                    print(f"FAIL  transaction {t['n']}: decrypted note != Desktop note")
+                    ok = False
+                    rt_fail += 1
+                    continue
+                if expected and (expected in data_text or expected in index_html
+                                 or expected in about_html):
+                    print(f"FAIL  transaction {t['n']}: plaintext note text in the repo copy or built pages")
+                    ok = False
+                    rt_fail += 1
+            if rt_fail == 0:
+                expect(True, "every blob decrypts to the exact Desktop note, plaintext nowhere")
+            expect(data_text.count("**Private:** yes") == sum(1 for t in tx if t.get("enc")),
+                   "the repo ledger marks exactly the encrypted rows private")
 
         if not ok:
             raise SystemExit("check FAILED")

@@ -18,7 +18,6 @@ Usage:
 """
 
 import hashlib
-import shutil
 import subprocess
 import sys
 import time
@@ -27,6 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = Path.home() / "Desktop" / "The Flank.md"
 LEDGER = ROOT / "data" / "The Flank.md"
+ENCRYPT = ROOT / "scripts" / "encrypt_flank.py"
 BUILD = ROOT / "scripts" / "build.py"
 SITE = ROOT / "site"
 
@@ -52,14 +52,23 @@ def run(cmd: list[str]) -> tuple[int, str]:
 
 
 def sync_and_build() -> bool:
-    """Copy the ledger in, rebuild the site, stage both. True on success."""
+    """Encrypt the ledger in, rebuild the site, stage both. True on success."""
     if not SOURCE.exists():
         log(f"waiting for {SOURCE}")
         return False
 
+    # The Desktop file is the only plaintext copy of the ledger. The sync
+    # replaces each private note with its encrypted token, so the repo copy
+    # never holds private note text. A failed encryption is a hard stop --
+    # never a plaintext fallback.
     LEDGER.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(SOURCE, LEDGER)
-    log("ledger copied into the repository")
+    code, out = run([sys.executable, str(ENCRYPT)])
+    if code != 0:
+        log("ledger encryption FAILED (repo copy left untouched):")
+        for line in out.splitlines():
+            log(f"  {line}")
+        return False
+    log("ledger synced with private notes encrypted")
 
     code, out = run([sys.executable, str(BUILD)])
     if code != 0:

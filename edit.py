@@ -30,6 +30,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+BUILDER_PORT = 8767   # set from args in main() before the server starts
 DATA = ROOT / "data" / "site.json"
 PAGES = ROOT / "data" / "pages"
 LOGO = ROOT / "assets" / "logo.png"
@@ -274,6 +275,12 @@ EDITOR_CSS = site_build.CSS + r'''
   .ld-pages button:hover{background:#141414;color:#fff;border-color:#141414}
   .ld-pages button.on{background:#141414;color:#fff;border-color:#141414}
   .ld-box label.ld-check{display:flex;align-items:center;gap:7px;margin:8px 0 0;font-size:12.5px;color:#222}
+  .ld-box label.dlg-field input[type=color]{width:46px;height:28px;padding:2px;border:1px solid #999;border-radius:4px;background:#fff;cursor:pointer}
+  .ld-box label.dlg-field[hidden]{display:none}
+  #linkFillLabel,#linkFgLabel{flex-direction:row;align-items:center;gap:10px;justify-content:space-between;margin:10px 0 3px}
+  #builderupdated{background:#263238;color:#fff;padding:10px 16px;font:13px "Helvetica Neue",Arial,sans-serif}
+  #builderupdated button{margin:0 8px;padding:4px 12px;background:#1c4fd8;border:none;border-radius:3px;color:#fff;cursor:pointer;font-size:12px}
+  #builderupdated span{color:#b0bec5;font-size:12px}
   .ld-btns{display:flex;gap:8px;margin-top:14px}
   .ld-btns button{flex:1;padding:8px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;border-radius:2px;cursor:pointer}
   #linkApply{background:#141414;color:#fff;border:1px solid #141414}
@@ -304,6 +311,7 @@ EDITOR_CSS = site_build.CSS + r'''
   #imgInspector input{width:150px;font-size:11px;padding:4px 6px;border:1px solid #999;border-radius:2px}
   .editing #imgInspector.on{display:flex}
   .editing a.bigbtn{cursor:move}
+  .editing a.btn{cursor:move}
   .canvas a.bigbtn.sel{outline:3px solid #1c4fd8;outline-offset:3px}
   .canvas a.bigbtn.dragging{opacity:.85;box-shadow:0 18px 40px rgba(0,0,0,.3)}
   .editing a.bigbtn{user-select:none}
@@ -394,6 +402,11 @@ __CSS__
   <a id="btn-preview" href="#" target="_blank" rel="noopener" class="barlink">Preview</a>
   <button id="btn-quit" class="warn">Quit</button>
 </div>
+<div id="builderupdated" hidden>
+  New builder code is ready — Restart &amp; load it now.
+  <button type="button" id="builderreload">Restart now</button>
+  <span>(saving first keeps your changes)</span>
+</div>
 <div class="toolbar" id="toolbar">
   <div class="toolgroup"><span class="groupname">Edit</span>
   <button data-cmd="undo" id="btn-undo" title="Undo (Ctrl+Z)" disabled>Undo</button>
@@ -482,6 +495,8 @@ __CSS__
     <div class="ld-pages" id="linkPages"></div>
     <label class="ld-check"><input type="checkbox" id="linkBlank"> Open in a new tab</label>
     <label class="ld-check"><input type="checkbox" id="linkBtn"> Show as a button</label>
+    <label class="dlg-field" id="linkFillLabel" hidden>Box color<input type="color" id="linkFill" value="#1c4fd8"></label>
+    <label class="dlg-field" id="linkFgLabel" hidden>Text color<input type="color" id="linkFg" value="#ffffff"></label>
     <div class="ld-btns">
       <button id="linkApply" type="button">Apply</button>
       <button id="linkRemove" type="button">Remove link</button>
@@ -617,6 +632,65 @@ __CSS__
 <script>
 let SITE = __SITE_JSON__;
 let SLUG = "__SLUG__";
+/* ---------- builder self-update: never need Quit to pick up new code.
+   The page and /api/pping carry (pid, stamp-of-edit.py). New pid = the
+   server restarted itself -> reload and get the fresh code. Same pid but
+   a new stamp = edit.py changed on disk -> offer in-page Restart; the
+   server swaps itself (os.execv), then the poll reloads. Unsaved work is
+   saved first; if a dialog is open the banner only ever offers. */
+let BPING0 = "__BPING__";
+let __fcRestarted = false;
+function flushDialogGuard(){ return !!document.querySelector(".ld-back:not([hidden])"); }
+function restartBuilderNow(){
+  const go = async () => {
+    if (dirty) {
+      const okSave = await save();
+      if (!okSave) { status.textContent = "Fix the save first, then press Restart again."; return; }
+    }
+    __fcRestarted = true;
+    let ok = false;
+    try {
+      const r = await fetch("/api/restart", { method: "POST" });
+      ok = r.ok;
+    } catch (_) { ok = false; }
+    if (!ok) {
+      __fcRestarted = false;
+      status.textContent = "The builder refused to restart — Quit and relaunch.";
+      return;
+    }
+    setTimeout(checkBuilderStamp, 1200);   // prompt reload at next poll
+  };
+  go();
+}
+function checkBuilderStamp(){
+  api("/api/ping").then(j => {
+    if (!j || !j.pid) return;
+    const busy = flushDialogGuard();
+    // execv keeps the process id, so a deliberate restart is seen as a
+    // stamp change with __fcRestarted set: that is fresh code, reload now
+    if (j.pid !== BPING0.pid) {
+      if (busy) { showUpdatedBanner(); return; }
+      location.reload(); return;
+    }
+    if (j.stamp === BPING0.stamp) return;
+    if (__fcRestarted) {
+      if (busy) { showUpdatedBanner(); return; }
+      location.reload(); return;
+    }
+    showUpdatedBanner();   // edit.py changed on disk — offer, never force
+  }).catch(() => {});    // server gone (Quit pressed) — leave the page alone
+}
+function showUpdatedBanner(){
+  const bar = document.getElementById("builderupdated");
+  if (!bar) return;
+  const openDialog = flushDialogGuard();
+  bar.hidden = false;
+  bar.querySelector("span").textContent = openDialog
+    ? "(close the open dialog first — a click here doesn't touch it)"
+    : "(saving first keeps your changes)";
+}
+setInterval(checkBuilderStamp, 20000);
+setTimeout(checkBuilderStamp, 2500);
 const CUSTOM_CSS_PREVIEW_ENABLED = __CUSTOM_CSS_ENABLED__;
 let editing = false, dirty = false, selImg = null, galleryMode = false, replaceTarget = null, mediaTarget = null, mediaRange = null;
 let editRevision = 0;
@@ -637,7 +711,7 @@ function globalSettings(site){
 let serverSiteSnapshot = JSON.stringify(globalSettings(SITE));
 
 async function api(path, payload){
-  const o = {method: payload === undefined ? "GET" : "POST"};
+  const o = {method: payload === undefined ? "GET" : "POST", cache: "no-store"};
   if (payload !== undefined) { o.headers = {"Content-Type": "application/json"}; o.body = JSON.stringify(payload); }
   const r = await fetch(path, o);
   const j = await r.json().catch(() => ({}));
@@ -1093,6 +1167,7 @@ $("#pageDelete").onclick = async () => {
   if (p && await deletePage(p.slug, p.nav)) { $("#pageDlg").hidden = true; pageSettingsSlug = null; }
 };
 $("#btn-help").onclick = () => { $("#helpDlg").hidden = false; };
+$("#builderreload").onclick = restartBuilderNow;
 $("#helpClose").onclick = () => { $("#helpDlg").hidden = true; };
 $("#btn-html-source").onclick = () => {
   if (!editing) { status.textContent = "Press Edit before opening page HTML"; return; }
@@ -1320,6 +1395,16 @@ function applyWheelColor(hex){
   if (!r) { r = activeRange(); if (r) restoreRange(r); }
   if (!r) return;
   hex = hex.toLowerCase();
+  // on a button the wheel paints the box fill, with readable text after
+  const host = r.startContainer.nodeType === 3
+    ? r.startContainer.parentNode : r.startContainer;
+  if (!host || !host.closest) return;
+  const anc = host.closest("a.bigbtn, a.btn");
+  if (anc && canvas.contains(anc)) {
+    anc.style.color = autoFg(hex);
+    anc.style.backgroundColor = hex;
+    return;
+  }
   if (r.collapsed) {
     const b = nodeBlock(r.startContainer);
     if (b) paintWheel(b, hex);
@@ -1818,9 +1903,12 @@ const linkDlg = $("#linkdlg"), linkTitle = $("#linkdlgTitle"),
       linkText = $("#linkText"), linkUrl = $("#linkUrl"),
       linkHint = $("#linkHint"), linkPages = $("#linkPages"),
       linkBlank = $("#linkBlank"), linkBtnBox = $("#linkBtn"),
+      linkFill = $("#linkFill"), linkFg = $("#linkFg"),
+      linkFillLabel = $("#linkFillLabel"), linkFgLabel = $("#linkFgLabel"),
       linkApply = $("#linkApply"), linkRemove = $("#linkRemove"),
       linkCancel = $("#linkCancel"), linkStat = $("#linkStat");
 let linkEditTarget = null;
+let linkRange0 = null;      // range captured when the link dialog opens
 function escapeHtml(s){
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
@@ -1873,12 +1961,38 @@ function refreshLinkDialog(){
     b.classList.toggle("on", b.dataset.href === cur);
   });
 }
+/* the box/text pickers only matter when the small-button look is on.
+   forceFg is true only while the box colour is being changed by hand —
+   opening a saved button must keep its own text colour untouched. */
+function syncLinkFill(forceFg){
+  const on = linkBtnBox.checked;
+  linkFillLabel.hidden = !on;
+  linkFgLabel.hidden = !on;
+  if (on && forceFg && linkFg.value) { linkFg.value = autoFg(linkFill.value); }
+}
+function autoFg(bg){
+  try {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec((bg || "").trim());
+    if (!m) return "#ffffff";
+    const lin = c => {
+      const v = parseInt(c, 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    const lum = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+    return lum > 0.179 ? "#141414" : "#ffffff";
+  } catch (_) { return "#ffffff"; }
+}
 function openLinkDialog(mode){
   if (!editing) return;
   const r = activeRange();
   if (!r) { status.textContent = "click into the page text first, then Link"; return; }
+  linkRange0 = r.cloneRange();
   linkEditTarget = anchorForRange(r);
-  const btnMode = mode === "btn";
+  if (linkEditTarget && linkEditTarget.classList.contains("bigbtn")) {
+    openBigbtnDialog(linkEditTarget);
+    return;   // a big box belongs to its own dialog
+  }
+  const btnMode = mode === "btn" || (linkEditTarget && linkEditTarget.classList.contains("btn"));
   linkTitle.textContent = linkEditTarget ? (btnMode ? "Edit button" : "Edit link")
                                          : (btnMode ? "Insert button" : "Insert link");
   if (linkEditTarget) {
@@ -1886,12 +2000,17 @@ function openLinkDialog(mode){
     linkUrl.value = linkEditTarget.getAttribute("href") || "";
     linkBlank.checked = linkEditTarget.getAttribute("target") === "_blank";
     linkBtnBox.checked = linkEditTarget.classList.contains("btn");
+    const st = linkEditTarget.style;
+    linkFill.value = cssColorToHex(st.backgroundColor) || "#1c4fd8";
+    linkFg.value = cssColorToHex(st.color) || autoFg(linkFill.value);
   } else {
     linkText.value = r.collapsed ? "" : r.toString().slice(0, 200);
     linkUrl.value = btnMode ? "https://" : "";
     linkBlank.checked = btnMode;
     linkBtnBox.checked = btnMode;
+    linkFill.value = "#1c4fd8"; linkFg.value = "#ffffff";
   }
+  syncLinkFill(false);
   linkRemove.style.display = linkEditTarget ? "" : "none";
   // page quick-pick, rebuilt every open so renames show up
   linkPages.innerHTML = "";
@@ -1920,9 +2039,19 @@ function applyLink(){
   const href = linkUrl.value.trim();
   const label = linkText.value.trim();
   const blank = linkBlank.checked, btn = linkBtnBox.checked;
-  const r = activeRange();
-  if (!r) return;
-  restoreRange(r);
+  const bg = /^#[0-9a-f]{6}$/i.test(linkFill.value) ? linkFill.value.toLowerCase() : "#1c4fd8";
+  const fg = /^#[0-9a-f]{6}$/i.test(linkFg.value) ? linkFg.value.toLowerCase() : "#ffffff";
+  // the selection often moves into the dialog fields by the time Apply is
+  // pressed; the range captured at dialog-open is the intended anchor
+  const live = activeRange();
+  const fallback = linkEditTarget ? null : (linkRange0 || null);
+  const r = live || fallback;
+  if (!r && !linkEditTarget) {
+    linkHint.textContent = "Lost the insertion point — click where it should go, then try again.";
+    linkHint.style.color = "#b3261e";
+    return;   // leave the dialog open so the message is actually read
+  }
+  if (r) { restoreRange(r); }
   canvas.focus();
   if (linkEditTarget && canvas.contains(linkEditTarget)) {
     if (label) linkEditTarget.textContent = label;
@@ -1930,16 +2059,35 @@ function applyLink(){
     if (blank) { linkEditTarget.setAttribute("target", "_blank"); linkEditTarget.setAttribute("rel", "noopener"); }
     else { linkEditTarget.removeAttribute("target"); linkEditTarget.removeAttribute("rel"); }
     linkEditTarget.classList.toggle("btn", btn);
+    if (btn) {
+      // colors go straight onto the box; dragged geometry already present
+      // on the style object is preserved untouched
+      linkEditTarget.style.color = fg;
+      linkEditTarget.style.backgroundColor = bg;
+    } else {
+      linkEditTarget.style.removeProperty("background-color");
+    }
     const cur = getRange();
     if (cur) { cur.selectNodeContents(linkEditTarget); cur.collapse(false); restoreRange(cur); }
   } else if (r.collapsed) {
-    if (!label) { linkHint.textContent = "Give the link some words first."; linkHint.style.color = "#b3261e"; linkText.focus(); return; }
-    let tag = '<a href="' + escapeHtml(href) + '"';
-    if (blank) tag += ' target="_blank" rel="noopener"';
-    if (btn) tag += ' class="btn"';
-    let tagHtml = tag + ">" + escapeHtml(label) + "</a>";
-    if (btn) tagHtml = "<p>" + tagHtml + "</p>";
-    document.execCommand("insertHTML", false, tagHtml);
+    if (btn) {
+      // a button is its own box after the caret's block, like the big button
+      if (!label) { linkHint.textContent = "Give the button some words first."; linkHint.style.color = "#b3261e"; linkText.focus(); return; }
+      const a = document.createElement("a");
+      a.className = "btn"; a.href = href;
+      a.setAttribute("style", "color:" + fg + ";background-color:" + bg);
+      a.textContent = label;
+      if (blank) { a.setAttribute("target", "_blank"); a.setAttribute("rel", "noopener"); }
+      const block = nodeBlock(r.startContainer);
+      const top = block ? topBlock(block) : null;
+      if (top && top.parentNode === canvas) top.parentNode.insertBefore(a, top.nextSibling);
+      else canvas.appendChild(a);
+    } else {
+      if (!label) { linkHint.textContent = "Give the link some words first."; linkHint.style.color = "#b3261e"; linkText.focus(); return; }
+      let tag = '<a href="' + escapeHtml(href) + '"';
+      if (blank) tag += ' target="_blank" rel="noopener"';
+      document.execCommand("insertHTML", false, tag + ">" + escapeHtml(label) + "</a>");
+    }
   } else {
     document.execCommand("createLink", false, "#fc-newlink");
     const made = Array.from(canvas.querySelectorAll('a[href="#fc-newlink"]'));
@@ -1947,7 +2095,11 @@ function applyLink(){
     made.forEach(a => {
       a.setAttribute("href", href);
       if (blank) { a.setAttribute("target", "_blank"); a.setAttribute("rel", "noopener"); }
-      if (btn) a.classList.add("btn");
+      if (btn) {
+        a.classList.add("btn");
+        a.style.color = fg;
+        a.style.backgroundColor = bg;
+      }
     });
     if (made.length === 1 && label && label !== made[0].textContent) made[0].textContent = label;
   }
@@ -1986,6 +2138,8 @@ linkRemove.onclick = removeLink;
 linkCancel.onclick = closeLinkDialog;
 linkText.oninput = refreshLinkDialog;
 linkUrl.oninput = refreshLinkDialog;
+linkBtnBox.onchange = () => syncLinkFill(true);
+linkFill.oninput = () => syncLinkFill(true);
 linkDlg.addEventListener("mousedown", e => { if (e.target === linkDlg) closeLinkDialog(); });
 linkDlg.addEventListener("keydown", e => {
   if (e.key === "Enter" && !linkApply.disabled) { e.preventDefault(); applyLink(); }
@@ -2002,6 +2156,7 @@ const bigDlg = $("#bigbtndlg"), bigTitle = $("#bigbtnTitle"),
       bigApply = $("#bigbtnApply"), bigRemove = $("#bigbtnRemove"),
       bigCancel = $("#bigbtnCancel");
 let bigTarget = null;   // the box being edited, or null for a fresh insert
+let bigRange0 = null;   // range captured when the big dialog opens
 function bigbtnValidate(h){ const v = linkValidate(h); return v; }
 function refreshBigDialog(){
   const v = bigbtnValidate(bigUrl.value);
@@ -2034,6 +2189,7 @@ function openBigbtnDialog(target){
     bigBlank.checked = false;
   }
   bigRemove.style.display = bigTarget ? "" : "none";
+  bigRange0 = activeRange() ? activeRange().cloneRange() : null;
   bigPages.innerHTML = "";
   SITE.pages.forEach(p => {
     const b = document.createElement("button");
@@ -2083,7 +2239,9 @@ function applyBig(){
     a.setAttribute("style", "background-color:" + bg + ";color:" + fg);
     a.textContent = words;
     if (blank) { a.setAttribute("target", "_blank"); a.setAttribute("rel", "noopener"); }
-    const r = activeRange();
+    const rr = activeRange();
+    const r = (rr && canvas.contains(rr.commonAncestorContainer)) ? rr
+      : ((bigRange0 && canvas.contains(bigRange0.commonAncestorContainer)) ? bigRange0 : null);
     const block = r ? nodeBlock(r.startContainer) : null;
     const top = block ? topBlock(block) : null;
     if (top && top.parentNode === canvas) top.parentNode.insertBefore(a, top.nextSibling);
@@ -2107,15 +2265,15 @@ bigDlg.addEventListener("keydown", e => {
   if (e.key === "Enter" && !bigApply.disabled) { e.preventDefault(); applyBig(); }
   else if (e.key === "Escape") { e.preventDefault(); closeBigDialog(); }
 });
-/* dragging a big button box */
+/* dragging a button box (big or small) */
 let bigDrag = null;
 canvas.addEventListener("mousedown", e => {
   if (!editing) return;
-  const el = e.target.closest && e.target.closest("a.bigbtn");
+  const el = e.target.closest && e.target.closest("a.bigbtn, a.btn");
   if (!el) return;
   e.preventDefault();   // no text selection, no native link drag
   const cr = canvas.getBoundingClientRect(), er = el.getBoundingClientRect();
-  bigDrag = {el, moved:false, x0:e.clientX, y0:e.clientY,
+  bigDrag = {el, isBig: el.classList.contains("bigbtn"), moved:false, x0:e.clientX, y0:e.clientY,
              offX:e.clientX - er.left, offY:e.clientY - er.top,
              cw:cr.width, ch:cr.height, cl:cr.left, ct:cr.top,
              w:er.width, h:er.height};
@@ -2137,11 +2295,18 @@ document.addEventListener("mousemove", e => {
 });
 document.addEventListener("mouseup", e => {
   if (!bigDrag) return;
-  const el = bigDrag.el, moved = bigDrag.moved;
+  const el = bigDrag.el, moved = bigDrag.moved, isBig = bigDrag.isBig;
   el.classList.remove("dragging");
   bigDrag = null;
   if (moved) { pushHist(); markDirty(); }
-  else openBigbtnDialog(el);   // a plain click edits the box
+  else if (isBig) { openBigbtnDialog(el); }   // a plain click edits the big box
+  else {
+    // a plain click on a small button opens the link dialog on it
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    openLinkDialog("btn");
+  }
 });
 // full color wheel: live-paints any color as the selection changes
 $("#colorwheel").addEventListener("input", e => {
@@ -2353,7 +2518,7 @@ async function save(){
   // page cleaner. The canonical form is
   // style="color:X;background-color:Y;font-size:Zpx;font-family:W;line-height:L;letter-spacing:T" — anything else is dropped.
   // The server re-validates every property, so nothing hostile survives there.
-  canvas.querySelectorAll("a.bigbtn[style]").forEach(el => {
+  canvas.querySelectorAll("a.bigbtn[style], a.btn[style]").forEach(el => {
     // the button box: geometry + colors in the server's canonical order
     const st = el.style;
     const keep = [];
@@ -2374,10 +2539,19 @@ async function save(){
     const fsz = (st.fontSize || "").trim();
     const f = /^(\\d{1,3})px$/.exec(fsz.replace(/\\s+/g, ""));
     if (f && +f[1] >= SIZE_MIN && +f[1] <= SIZE_MAX) keep.push("font-size:" + (+f[1]) + "px");
+    const ffm = (st.fontFamily || "").trim();
+    const ffk = ffm.toLowerCase().replace(/["'\\s]+/g, "");
+    if (FONT_CANON[ffk]) keep.push("font-family:" + FONT_CANON[ffk]);
+    const lht = (st.lineHeight || "").trim();
+    const lm = /^(\\d+(?:\\.\\d{1,2})?)$/.exec(lht.replace(/\\s+/g, ""));
+    if (lm && +lm[1] >= LEAD_MIN && +lm[1] <= LEAD_MAX) keep.push("line-height:" + String(Math.round(+lm[1] * 100) / 100));
+    const lsp = (st.letterSpacing || "").trim();
+    const tm = /^(-?\\d+(?:\\.\\d{1,2})?)px$/i.exec(lsp.replace(/\\s+/g, ""));
+    if (tm && +tm[1] >= TRACK_MIN && +tm[1] <= TRACK_MAX) keep.push("letter-spacing:" + String(Math.round(+tm[1] * 100) / 100) + "px");
     el.setAttribute("style", keep.join(";"));
   });
   canvas.querySelectorAll("[style]").forEach(el => {
-    if (el.classList.contains("bigbtn")) return;   // handled above
+    if (el.classList.contains("bigbtn") || el.classList.contains("btn")) return;   // handled above
     const wasCentered = el.classList.contains("ac");
     const wasRight = el.classList.contains("ar");
     const t = (el.style.textAlign || "").toLowerCase();
@@ -2406,7 +2580,7 @@ async function save(){
     if (f && +f[1] >= SIZE_MIN && +f[1] <= SIZE_MAX) {
       keep.push("font-size:" + (+f[1]) + "px");
     }
-    const ffk = ffm.toLowerCase().replace(/\\s+/g, "");
+    const ffk = ffm.toLowerCase().replace(/["'\\s]+/g, "");
     if (FONT_CANON[ffk]) keep.push("font-family:" + FONT_CANON[ffk]);
     const lm = /^(\\d+(?:\\.\\d{1,2})?)$/.exec(lht.replace(/\\s+/g, ""));
     if (lm && +lm[1] >= LEAD_MIN && +lm[1] <= LEAD_MAX) {
@@ -2449,6 +2623,8 @@ async function save(){
     }
     dirty = false; clearDraft(SLUG);
     renderAll(); updateSaveBtn();
+    const updateBar = document.getElementById("builderupdated");
+    if (updateBar) updateBar.hidden = true;
     status.textContent = cleanChanged
       ? "Saved and staged; unsupported markup was cleaned. Preview before publishing."
       : "Saved and staged — commit/push in GitKraken to publish";
@@ -2533,6 +2709,10 @@ initEditor();
     page = page.replace("__FORMPREVIEW__", form_leftover)
     page = page.replace("__SITE_JSON__", json.dumps(site, ensure_ascii=False).replace("<", "\\u003c"))
     page = page.replace("__SLUG__", slug)
+    st = Path(__file__).stat()
+    stamp = f"{st.st_mtime_ns}-{st.st_size}"
+    bping = json.dumps({"pid": os.getpid(), "stamp": stamp})
+    page = page.replace('"__BPING__"', bping)
     page = page.replace("__CUSTOM_CSS__", site_build.safe_custom_css(site.get("custom_css", "")) if apply_custom_css else "")
     page = page.replace("__CUSTOM_CSS_ENABLED__", "true" if apply_custom_css else "false")
     return page.encode("utf-8")
@@ -2605,6 +2785,18 @@ class Handler(BaseHTTPRequestHandler):
                 if not site_build.SLUG_RE.match(slug):
                     return self._json(400, {"error": "bad slug"})
                 self._json(200, {"slug": slug, "body": read_body(slug)})
+            elif url.path == "/api/ping":
+                # lets the open builder page notice new builder code on disk
+                # (edit.py itself), or a restarted server (fresh code live)
+                st = Path(__file__).stat()
+                stamp = f"{st.st_mtime_ns}-{st.st_size}"
+                self._json(200, {"pid": os.getpid(), "stamp": stamp})
+                return
+            elif url.path == "/api/restart":
+                # swap this process for a fresh one running the on-disk
+                # edit.py — the page polls the pid and reloads on change.
+                # POST-only (state changing); GET here is refused.
+                self._json(405, {"error": "use POST"})
             elif url.path.endswith(".html"):
                 # Serve a built page directly, e.g. /financials.html or the
                 # unlisted /flank/index.html ledger, so the local preview
@@ -2723,6 +2915,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(403, {"error": "forbidden"})
         url = urllib.parse.urlparse(self.path)
         try:
+            if url.path == "/api/restart":
+                # swap this process for a fresh one running the on-disk
+                # edit.py — the page polls /api/ping and reloads on change
+                self._json(200, {"ok": True})
+                def _relaunch():
+                    os.execv(sys.executable, [sys.executable, "-u",
+                              str(Path(__file__).resolve()),
+                              "--port", str(BUILDER_PORT), "--no-open"])
+                threading.Timer(0.4, _relaunch).start()
+                return
             if url.path == "/api/save":
                 doc = self._read_json()
                 with _MUTEX:
@@ -2936,6 +3138,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
     if args.host not in ("127.0.0.1", "localhost"):
         raise SystemExit("refusing to bind off loopback")
+    global BUILDER_PORT
+    BUILDER_PORT = args.port
     rebuild()
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     srv.daemon_threads = True

@@ -467,7 +467,7 @@ def _clean_len_px(style: str | None, prop: str, lo: int, hi: int) -> str | None:
 
 
 def _style_attr_box(style: str | None) -> str:
-    """Canonical style for a.bigbtn: geometry first, then the text properties.
+    """Canonical style for a.bigbtn / a.btn: geometry first, then text properties.
 
     position may only be the literal `absolute` (dragging), margin only the
     literal `0px` (dragging cancels the auto-centering). Everything else is
@@ -564,9 +564,10 @@ class _Sanitize(HTMLParser):
             href = _clean_href(ad.get("href", ""))
             if not href:
                 return
-            cls = " ".join(c for c in ad.get("class", "").split() if c in ("btn", "bigbtn"))
+            rawCls = [c for c in ad.get("class", "").split() if c in ("btn", "bigbtn")]
+            cls = "bigbtn" if "bigbtn" in rawCls else ("btn" if rawCls else "")
             cls_attr = f' class="{cls}"' if cls else ""
-            style_attr = _style_attr_box(ad.get("style", "")) if cls == "bigbtn" else ""
+            style_attr = _style_attr_box(ad.get("style", "")) if cls in ("btn", "bigbtn") else ""
             # new tabs: only a literal _blank target survives, always with noopener
             tgt_attr = ' target="_blank"' if ad.get("target", "") == "_blank" else ""
             rel_attr = ' rel="noopener"' if tgt_attr else ""
@@ -2123,8 +2124,22 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             dropped = sanitize('<a class="bigbtn" href="x.html" style="%s">Go</a>' % bad_geom)
             expect("style=" not in dropped and "Go" in dropped,
                    f"bigbtn drops hostile geometry {bad_geom}")
-        expect(".canvas a.bigbtn" in CSS and "position:relative" in CSS,
-               "bigbtn CSS present and canvas anchors absolute children")
+        bigbtn_css_ok = ".canvas a.bigbtn" in CSS and "position:relative" in CSS and ".canvas a.btn" in CSS
+        expect(bigbtn_css_ok, "button CSS present and canvas anchors absolute children")
+        abtn = sanitize('<a class="btn" href="contact.html" '
+                        'style="position:absolute;left:10px;top:20px;width:160px;height:48px;'
+                        'margin:0px;background-color:#121212;color:#faf3e6">Go</a>')
+        expect(abtn == '<a href="contact.html" class="btn" '
+                       'style="position:absolute;margin:0px;left:10px;top:20px;width:160px;'
+                       'height:48px;color:#faf3e6;background-color:#121212">Go</a>',
+               "a.btn keeps href, class and canonical geometry+color style")
+        expect(sanitize(abtn) == abtn, "a.btn survives a second sanitize pass")
+        expect(sanitize('<a class="btn bigbtn" href="x.html">Go</a>') == '<a href="x.html" class="bigbtn">Go</a>',
+               "a pair of button classes canonicalises to the big one")
+        expect("class=\"bigbtn btn\"" not in sanitize('<a class="btn bigbtn" href="x.html" style="background-color:#111">Go</a>'),
+               "no combined button class can reach _style_attr_box and drop styles")
+        expect(sanitize('<a class="btn" href="x.html">Go</a>') == '<a href="x.html" class="btn">Go</a>',
+               "a.btn without a style keeps no style attribute")
         tabled = sanitize('<table><tbody><tr><th>H</th></tr><tr><td>x</td></tr></tbody></table>')
         expect(tabled == '<table><tbody><tr><th>H</th></tr><tr><td>x</td></tr></tbody></table>',
                "sanitizer keeps plain tables")
