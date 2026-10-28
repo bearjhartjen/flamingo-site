@@ -16,6 +16,7 @@
     --rule:#c9c2b4;
     --rule2:#e8e2d6;
     --link:#0b2a8c;
+    --gold:#c9a227;
   }
   body[data-theme="parchment"]{
     --paper:#f7f1e1;
@@ -38,6 +39,7 @@
     --rule:#6b6152;
     --rule2:#544b3e;
     --link:#9db8ff;
+    --gold:#d29922;
   }
   body[data-theme="midnight"]{
     --paper:#221c2c;
@@ -49,6 +51,7 @@
     --rule:#4d3c6b;
     --rule2:#3b2d54;
     --link:#d3b8ff;
+    --gold:#e3b83b;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -311,12 +314,21 @@
   .evcal .ev-day{position:relative;min-height:52px;padding:4px 2px 2px;font:13px Georgia,Times,serif;color:var(--ink2);background:var(--paper);border:1px solid var(--rule2);border-radius:2px;cursor:default;text-align:left}
   body[data-theme="ink"] .evcal .ev-day,body[data-theme="midnight"] .evcal .ev-day{background:var(--paper2)}
   body[data-theme="ink"] .evcal .ev-day.empty,body[data-theme="midnight"] .evcal .ev-day.empty{background:transparent}
-  body[data-theme="ink"] .evcal .ev-day .ev-dot,body[data-theme="midnight"] .evcal .ev-day .ev-dot{background:#7ee2a8}
+  body[data-theme="ink"] .evcal .ev-day .ev-dot,body[data-theme="midnight"] .evcal .ev-day .ev-dot{color:var(--ev-mark,#7ee2a8)}
   .evcal .ev-day.empty{background:transparent;border-color:transparent}
   .evcal .ev-day.today{box-shadow:inset 0 0 0 2px var(--ink)}
   .evcal .ev-day.ev-set{border-color:var(--ink)}
   .evcal .ev-day.ev-set:hover{transform:scale(1.06);z-index:2}
-  .evcal .ev-day .ev-dot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#1a7f37}
+  .evcal .ev-day .ev-dot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:var(--ev-mark-size,17px);line-height:1;color:var(--ev-mark,#1a7f37);background:none;border-radius:0}
+  .evcal .ev-day.ev-open{box-shadow:inset 0 0 0 2px var(--ink)}
+  .evcal .evcal-detail,.evcal .ev-detail{margin:8px 0 4px;padding:10px 12px;border:1px solid var(--rule);
+    border-radius:4px;background:var(--paper);text-align:left}
+  body[data-theme="ink"] .evcal .ev-detail,body[data-theme="midnight"] .evcal .ev-detail{background:var(--paper2)}
+  .evcal .ev-detail .ev-detail-head{margin:0 0 6px;font:700 13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;color:var(--ink)}
+  .evcal .ev-detail .ev-detail-item{margin:0 0 6px;font:13.5px Georgia,Times,serif;color:var(--ink2)}
+  .evcal .ev-detail .ev-detail-item:last-child{margin-bottom:0}
+  .evcal .ev-detail .ev-detail-time{font:700 12px "Helvetica Neue",Arial,sans-serif;color:var(--ev-mark,#1a7f37);margin-right:6px}
   .evcal .ev-day .ev-tag{display:none}
   .evcal .evcal-legend{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;margin:8px 0 4px;font:italic 12px Georgia,Times,serif;color:var(--muted)}
   .evcal .evcal-legend .ev-mi{padding:2px 8px;border-radius:2px;background:var(--paper);border:1px solid var(--rule2);font-style:normal;font-size:11.5px;color:var(--ink2);text-align:left;display:inline-block}
@@ -328,6 +340,140 @@
     .evcal{padding:12px 10px 6px}
     .evcal .ev-day{min-height:44px;font-size:12px}
   }
+  /* ---------- The Flank button (Financials): the one public door into
+     the ledger, dressed so it reads as the page's main action. Selector
+     keys on the href, so no data-file change is involved. The swirls are
+     masked to var(--ink) so they follow the theme; they spin gold on
+     hover. Reduced motion keeps the lift/color but drops the spin. */
+  .canvas a.btn[href^="flank/"]{
+    position:relative;padding:10px 44px;border-width:2px;font-weight:700;
+    box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--gold),0 8px 18px rgba(0,0,0,.14);
+    transition:transform .18s ease,box-shadow .18s ease;
+  }
+  .canvas a.btn[href^="flank/"]::before,
+  .canvas a.btn[href^="flank/"]::after{
+    content:"";position:absolute;top:50%;width:20px;height:20px;margin-top:-10px;
+    background-color:var(--ink);pointer-events:none;
+    -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12a1 1 0 0 1 1 1a2 2 0 0 1-2 2a3 3 0 0 1-3-3a4 4 0 0 1 4-4a5 5 0 0 1 5 5a6 6 0 0 1-6 6a7 7 0 0 1-7-7a8 8 0 0 1 8-8' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'/></svg>") center/contain no-repeat;
+            mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12a1 1 0 0 1 1 1a2 2 0 0 1-2 2a3 3 0 0 1-3-3a4 4 0 0 1 4-4a5 5 0 0 1 5 5a6 6 0 0 1-6 6a7 7 0 0 1-7-7a8 8 0 0 1 8-8' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'/></svg>") center/contain no-repeat;
+  }
+  .canvas a.btn[href^="flank/"]::before{left:13px}
+  .canvas a.btn[href^="flank/"]::after{right:13px;transform:scaleX(-1)}
+  .canvas a.btn[href^="flank/"]:hover{transform:translateY(-1px)}
+  .canvas a.btn[href^="flank/"]:hover::before,
+  .canvas a.btn[href^="flank/"]:hover::after{background-color:var(--gold)}
+  @media (prefers-reduced-motion:no-preference){
+    .canvas a.btn[href^="flank/"]:hover::before{transform:rotate(200deg)}
+    .canvas a.btn[href^="flank/"]:hover::after{transform:scaleX(-1) rotate(200deg)}
+  }
+
+  /* ---------- Stress City: the Stress Express station. The scene is
+     generated from data/stress.json by build.py — the page keeps only a
+     marker paragraph. All states are styled up front; data-stress-state
+     on the card picks the pose, the accent color and the smoke. ---------- */
+  .stresscard{
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
+    padding:16px 18px 14px;margin:18px 0 16px;
+    --stress-good:#1a7f37;--stress-warn:#b7791f;--stress-bad:#b3372e;
+    --stress-acc:var(--ink);
+  }
+  body[data-theme="ink"] .stresscard{
+    background:#332e28;border-color:#6b6152;
+    --stress-good:#7ee2a8;--stress-warn:#e3b83b;--stress-bad:#ff8a80;
+  }
+  body[data-theme="midnight"] .stresscard{
+    background:#2b2336;border-color:#4d3c6b;
+    --stress-good:#8fe6ae;--stress-warn:#e3b83b;--stress-bad:#ff9d9d;
+  }
+  .stresscard[data-stress-state="parked"],
+  .stresscard[data-stress-state="boarding"]{--stress-acc:var(--stress-good)}
+  .stresscard[data-stress-state="entering"],
+  .stresscard[data-stress-state="departing"]{--stress-acc:var(--stress-warn)}
+  .stresscard[data-stress-state="fullspeed"],
+  .stresscard[data-stress-state="overloaded"]{--stress-acc:var(--stress-bad)}
+  .stress-kicker{margin:0;font:600 10.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
+  .stress-state{margin:4px 0 2px;font:700 24px Georgia,Times,serif;color:var(--stress-acc)}
+  .stress-sub{margin:0 0 10px;font:italic 13.5px Georgia,Times,serif;color:var(--muted)}
+  .stress-scene{position:relative;height:128px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);overflow:hidden}
+  .stress-skyline{position:absolute;left:0;right:0;bottom:30px;display:flex;align-items:flex-end;gap:6px;padding:0 12px;opacity:.55;pointer-events:none}
+  .stress-bld{flex:none;width:26px;background:var(--rule2);border-radius:2px 2px 0 0}
+  .stress-bld.b1{height:44px}.stress-bld.b2{height:66px}.stress-bld.b3{height:36px}
+  .stress-bld.b4{height:56px}.stress-bld.b5{height:30px}.stress-bld.b6{height:48px}
+  .stress-track{position:absolute;left:0;right:0;bottom:20px;height:6px;border-top:2px solid var(--ink)}
+  .stress-track::after{content:"";position:absolute;left:0;right:0;top:8px;height:5px;
+    background:repeating-linear-gradient(90deg,var(--rule) 0 3px,transparent 3px 10px)}
+  .stress-platform{position:absolute;left:0;bottom:0;width:36%;height:20px;background:var(--rule2);border-top:3px solid var(--gold);z-index:3}
+  .stress-platform::before{content:"Station";position:absolute;left:9px;top:2px;
+    font:600 9px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .stress-crowd{position:absolute;left:9px;bottom:23px;display:none;gap:4px;z-index:3}
+  .stresscard[data-stress-state="overloaded"] .stress-crowd{display:flex}
+  .stress-crowd span{width:8px;height:13px;background:var(--stress-bad);border-radius:3px 3px 0 0}
+  .stress-speed{position:absolute;bottom:30px;left:6%;width:74px;height:14px;display:none;z-index:1}
+  .stresscard[data-stress-state="fullspeed"] .stress-speed{display:block}
+  .stress-speed::before,.stress-speed::after{content:"";position:absolute;height:2px;border-radius:2px;background:var(--muted)}
+  .stress-speed::before{left:0;top:2px;width:62px}
+  .stress-speed::after{left:14px;top:9px;width:48px}
+  .stress-train{position:absolute;bottom:22px;left:36%;z-index:2;display:flex;align-items:flex-end;gap:5px;transition:left 1.1s ease}
+  .stresscard[data-stress-state="entering"] .stress-train{left:8%}
+  .stresscard[data-stress-state="departing"] .stress-train{left:62%}
+  .stresscard[data-stress-state="fullspeed"] .stress-train{left:104%}
+  .stress-car{position:relative;width:38px;height:20px;background:var(--ink);border-radius:3px 3px 1px 1px}
+  .stress-car::after{content:"";position:absolute;bottom:-4px;left:7px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold);box-shadow:17px 0 0 var(--gold)}
+  .stress-car:nth-child(n+2)::before{content:"";position:absolute;left:7px;top:4px;width:8px;height:7px;
+    background:var(--gold);border-radius:1px;box-shadow:15px 0 0 var(--gold)}
+  .stress-eng{width:56px;height:26px;border-radius:9px 4px 1px 1px}
+  .stress-eng .stress-chim{position:absolute;left:5px;top:-8px;width:7px;height:8px;background:var(--ink);border-radius:2px 2px 0 0}
+  .stress-eng .stress-cab{position:absolute;left:6px;top:5px;width:13px;height:9px;background:var(--gold);border-radius:2px}
+  .stress-puff{position:absolute;left:1px;top:-13px;width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:0}
+  .stresscard[data-stress-state="parked"] .stress-puff,
+  .stresscard[data-stress-state="boarding"] .stress-puff{display:none}
+  @media (prefers-reduced-motion:no-preference){
+    .stresscard .stress-puff{animation:stresspuff 1.8s linear infinite}
+    .stresscard .stress-puff.p2{animation-delay:.6s}
+    .stresscard .stress-puff.p3{animation-delay:1.2s}
+  }
+  @keyframes stresspuff{
+    0%{opacity:0;transform:translate(0,0) scale(.6)}
+    25%{opacity:.55}
+    100%{opacity:0;transform:translate(11px,-17px) scale(1.25)}
+  }
+  .stress-board{margin-top:12px}
+  .stress-bar-label{margin:0 0 6px;font:600 10.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
+  .stress-bar{height:16px;border:1px solid var(--ink);border-radius:2px;background:var(--paper);overflow:hidden}
+  .stress-fill{height:100%;background:var(--stress-acc)}
+  .stress-pct{margin:6px 0 0;font:italic 13px Georgia,Times,serif;color:var(--muted)}
+  .stress-updated{margin:10px 0 0;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--faint)}
+
+  /* ---------- Settings page: visitor-side site dynamics (theme only for
+     now). Choices ride the same fc-theme localStorage key the star script
+     and the ledger already read, so a pick here follows the visitor
+     across every page and onto the ledger. ---------- */
+  .setpanel{
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
+    padding:18px 20px;margin:18px 0 16px;
+  }
+  body[data-theme="ink"] .setpanel{background:#332e28;border-color:#6b6152}
+  body[data-theme="midnight"] .setpanel{background:#2b2336;border-color:#4d3c6b}
+  .setpanel-title{margin:0 0 2px;font:700 17px Georgia,Times,serif;color:var(--ink)}
+  .setpanel-sub{margin:0 0 14px;font:italic 13px Georgia,Times,serif;color:var(--muted)}
+  .setgrid{display:flex;flex-wrap:wrap;gap:10px}
+  .settheme{
+    display:flex;flex-direction:column;align-items:center;gap:7px;width:118px;
+    padding:12px 8px 10px;border:1px solid var(--rule);border-radius:6px;
+    background:var(--paper);cursor:pointer;color:var(--ink2);
+    font:13px Georgia,Times,serif;
+  }
+  .settheme:hover{border-color:var(--ink)}
+  .settheme.set-cur{outline:2px solid var(--ink);outline-offset:2px}
+  .setchip{position:relative;display:block;width:56px;height:40px;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+  .setchip-dot{position:absolute;width:9px;height:9px;border-radius:50%}
+  .setchip-reset{display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--ink);font-style:normal}
+  .setname{font-weight:700;font-size:13.5px;color:var(--ink)}
+  .setdesc{font-size:11px;line-height:1.35;color:var(--muted);text-align:center}
+  .setsaved{margin:12px 0 0;font:italic 13px Georgia,Times,serif;color:var(--ink2)}
+  .setsaved[hidden]{display:none}
+
   footer{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
@@ -397,6 +543,13 @@
     .canvas .card{padding:14px 14px}
     .contactform{margin:22px 0 0;padding:16px 14px}
     .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
+    .canvas a.btn[href^="flank/"]{padding:9px 30px}
+    .canvas a.btn[href^="flank/"]::before{left:9px}
+    .canvas a.btn[href^="flank/"]::after{right:9px}
+    .stress-scene{height:108px}
+    .stress-bld{width:20px}
+    .stress-state{font-size:19px}
+    .settheme{width:104px}
   }
   @media (hover:none){.contactform .dropzone{padding:18px 14px}}
 

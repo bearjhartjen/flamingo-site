@@ -702,6 +702,7 @@ CSS = r'''  :root{
     --rule:#c9c2b4;
     --rule2:#e8e2d6;
     --link:#0b2a8c;
+    --gold:#c9a227;
   }
   body[data-theme="parchment"]{
     --paper:#f7f1e1;
@@ -724,6 +725,7 @@ CSS = r'''  :root{
     --rule:#6b6152;
     --rule2:#544b3e;
     --link:#9db8ff;
+    --gold:#d29922;
   }
   body[data-theme="midnight"]{
     --paper:#221c2c;
@@ -735,6 +737,7 @@ CSS = r'''  :root{
     --rule:#4d3c6b;
     --rule2:#3b2d54;
     --link:#d3b8ff;
+    --gold:#e3b83b;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -997,12 +1000,21 @@ CSS = r'''  :root{
   .evcal .ev-day{position:relative;min-height:52px;padding:4px 2px 2px;font:13px Georgia,Times,serif;color:var(--ink2);background:var(--paper);border:1px solid var(--rule2);border-radius:2px;cursor:default;text-align:left}
   body[data-theme="ink"] .evcal .ev-day,body[data-theme="midnight"] .evcal .ev-day{background:var(--paper2)}
   body[data-theme="ink"] .evcal .ev-day.empty,body[data-theme="midnight"] .evcal .ev-day.empty{background:transparent}
-  body[data-theme="ink"] .evcal .ev-day .ev-dot,body[data-theme="midnight"] .evcal .ev-day .ev-dot{background:#7ee2a8}
+  body[data-theme="ink"] .evcal .ev-day .ev-dot,body[data-theme="midnight"] .evcal .ev-day .ev-dot{color:var(--ev-mark,#7ee2a8)}
   .evcal .ev-day.empty{background:transparent;border-color:transparent}
   .evcal .ev-day.today{box-shadow:inset 0 0 0 2px var(--ink)}
   .evcal .ev-day.ev-set{border-color:var(--ink)}
   .evcal .ev-day.ev-set:hover{transform:scale(1.06);z-index:2}
-  .evcal .ev-day .ev-dot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#1a7f37}
+  .evcal .ev-day .ev-dot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:var(--ev-mark-size,17px);line-height:1;color:var(--ev-mark,#1a7f37);background:none;border-radius:0}
+  .evcal .ev-day.ev-open{box-shadow:inset 0 0 0 2px var(--ink)}
+  .evcal .evcal-detail,.evcal .ev-detail{margin:8px 0 4px;padding:10px 12px;border:1px solid var(--rule);
+    border-radius:4px;background:var(--paper);text-align:left}
+  body[data-theme="ink"] .evcal .ev-detail,body[data-theme="midnight"] .evcal .ev-detail{background:var(--paper2)}
+  .evcal .ev-detail .ev-detail-head{margin:0 0 6px;font:700 13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;color:var(--ink)}
+  .evcal .ev-detail .ev-detail-item{margin:0 0 6px;font:13.5px Georgia,Times,serif;color:var(--ink2)}
+  .evcal .ev-detail .ev-detail-item:last-child{margin-bottom:0}
+  .evcal .ev-detail .ev-detail-time{font:700 12px "Helvetica Neue",Arial,sans-serif;color:var(--ev-mark,#1a7f37);margin-right:6px}
   .evcal .ev-day .ev-tag{display:none}
   .evcal .evcal-legend{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;margin:8px 0 4px;font:italic 12px Georgia,Times,serif;color:var(--muted)}
   .evcal .evcal-legend .ev-mi{padding:2px 8px;border-radius:2px;background:var(--paper);border:1px solid var(--rule2);font-style:normal;font-size:11.5px;color:var(--ink2);text-align:left;display:inline-block}
@@ -1014,6 +1026,140 @@ CSS = r'''  :root{
     .evcal{padding:12px 10px 6px}
     .evcal .ev-day{min-height:44px;font-size:12px}
   }
+  /* ---------- The Flank button (Financials): the one public door into
+     the ledger, dressed so it reads as the page's main action. Selector
+     keys on the href, so no data-file change is involved. The swirls are
+     masked to var(--ink) so they follow the theme; they spin gold on
+     hover. Reduced motion keeps the lift/color but drops the spin. */
+  .canvas a.btn[href^="flank/"]{
+    position:relative;padding:10px 44px;border-width:2px;font-weight:700;
+    box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--gold),0 8px 18px rgba(0,0,0,.14);
+    transition:transform .18s ease,box-shadow .18s ease;
+  }
+  .canvas a.btn[href^="flank/"]::before,
+  .canvas a.btn[href^="flank/"]::after{
+    content:"";position:absolute;top:50%;width:20px;height:20px;margin-top:-10px;
+    background-color:var(--ink);pointer-events:none;
+    -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12a1 1 0 0 1 1 1a2 2 0 0 1-2 2a3 3 0 0 1-3-3a4 4 0 0 1 4-4a5 5 0 0 1 5 5a6 6 0 0 1-6 6a7 7 0 0 1-7-7a8 8 0 0 1 8-8' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'/></svg>") center/contain no-repeat;
+            mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 12a1 1 0 0 1 1 1a2 2 0 0 1-2 2a3 3 0 0 1-3-3a4 4 0 0 1 4-4a5 5 0 0 1 5 5a6 6 0 0 1-6 6a7 7 0 0 1-7-7a8 8 0 0 1 8-8' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'/></svg>") center/contain no-repeat;
+  }
+  .canvas a.btn[href^="flank/"]::before{left:13px}
+  .canvas a.btn[href^="flank/"]::after{right:13px;transform:scaleX(-1)}
+  .canvas a.btn[href^="flank/"]:hover{transform:translateY(-1px)}
+  .canvas a.btn[href^="flank/"]:hover::before,
+  .canvas a.btn[href^="flank/"]:hover::after{background-color:var(--gold)}
+  @media (prefers-reduced-motion:no-preference){
+    .canvas a.btn[href^="flank/"]:hover::before{transform:rotate(200deg)}
+    .canvas a.btn[href^="flank/"]:hover::after{transform:scaleX(-1) rotate(200deg)}
+  }
+
+  /* ---------- Stress City: the Stress Express station. The scene is
+     generated from data/stress.json by build.py — the page keeps only a
+     marker paragraph. All states are styled up front; data-stress-state
+     on the card picks the pose, the accent color and the smoke. ---------- */
+  .stresscard{
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
+    padding:16px 18px 14px;margin:18px 0 16px;
+    --stress-good:#1a7f37;--stress-warn:#b7791f;--stress-bad:#b3372e;
+    --stress-acc:var(--ink);
+  }
+  body[data-theme="ink"] .stresscard{
+    background:#332e28;border-color:#6b6152;
+    --stress-good:#7ee2a8;--stress-warn:#e3b83b;--stress-bad:#ff8a80;
+  }
+  body[data-theme="midnight"] .stresscard{
+    background:#2b2336;border-color:#4d3c6b;
+    --stress-good:#8fe6ae;--stress-warn:#e3b83b;--stress-bad:#ff9d9d;
+  }
+  .stresscard[data-stress-state="parked"],
+  .stresscard[data-stress-state="boarding"]{--stress-acc:var(--stress-good)}
+  .stresscard[data-stress-state="entering"],
+  .stresscard[data-stress-state="departing"]{--stress-acc:var(--stress-warn)}
+  .stresscard[data-stress-state="fullspeed"],
+  .stresscard[data-stress-state="overloaded"]{--stress-acc:var(--stress-bad)}
+  .stress-kicker{margin:0;font:600 10.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
+  .stress-state{margin:4px 0 2px;font:700 24px Georgia,Times,serif;color:var(--stress-acc)}
+  .stress-sub{margin:0 0 10px;font:italic 13.5px Georgia,Times,serif;color:var(--muted)}
+  .stress-scene{position:relative;height:128px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);overflow:hidden}
+  .stress-skyline{position:absolute;left:0;right:0;bottom:30px;display:flex;align-items:flex-end;gap:6px;padding:0 12px;opacity:.55;pointer-events:none}
+  .stress-bld{flex:none;width:26px;background:var(--rule2);border-radius:2px 2px 0 0}
+  .stress-bld.b1{height:44px}.stress-bld.b2{height:66px}.stress-bld.b3{height:36px}
+  .stress-bld.b4{height:56px}.stress-bld.b5{height:30px}.stress-bld.b6{height:48px}
+  .stress-track{position:absolute;left:0;right:0;bottom:20px;height:6px;border-top:2px solid var(--ink)}
+  .stress-track::after{content:"";position:absolute;left:0;right:0;top:8px;height:5px;
+    background:repeating-linear-gradient(90deg,var(--rule) 0 3px,transparent 3px 10px)}
+  .stress-platform{position:absolute;left:0;bottom:0;width:36%;height:20px;background:var(--rule2);border-top:3px solid var(--gold);z-index:3}
+  .stress-platform::before{content:"Station";position:absolute;left:9px;top:2px;
+    font:600 9px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .stress-crowd{position:absolute;left:9px;bottom:23px;display:none;gap:4px;z-index:3}
+  .stresscard[data-stress-state="overloaded"] .stress-crowd{display:flex}
+  .stress-crowd span{width:8px;height:13px;background:var(--stress-bad);border-radius:3px 3px 0 0}
+  .stress-speed{position:absolute;bottom:30px;left:6%;width:74px;height:14px;display:none;z-index:1}
+  .stresscard[data-stress-state="fullspeed"] .stress-speed{display:block}
+  .stress-speed::before,.stress-speed::after{content:"";position:absolute;height:2px;border-radius:2px;background:var(--muted)}
+  .stress-speed::before{left:0;top:2px;width:62px}
+  .stress-speed::after{left:14px;top:9px;width:48px}
+  .stress-train{position:absolute;bottom:22px;left:36%;z-index:2;display:flex;align-items:flex-end;gap:5px;transition:left 1.1s ease}
+  .stresscard[data-stress-state="entering"] .stress-train{left:8%}
+  .stresscard[data-stress-state="departing"] .stress-train{left:62%}
+  .stresscard[data-stress-state="fullspeed"] .stress-train{left:104%}
+  .stress-car{position:relative;width:38px;height:20px;background:var(--ink);border-radius:3px 3px 1px 1px}
+  .stress-car::after{content:"";position:absolute;bottom:-4px;left:7px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold);box-shadow:17px 0 0 var(--gold)}
+  .stress-car:nth-child(n+2)::before{content:"";position:absolute;left:7px;top:4px;width:8px;height:7px;
+    background:var(--gold);border-radius:1px;box-shadow:15px 0 0 var(--gold)}
+  .stress-eng{width:56px;height:26px;border-radius:9px 4px 1px 1px}
+  .stress-eng .stress-chim{position:absolute;left:5px;top:-8px;width:7px;height:8px;background:var(--ink);border-radius:2px 2px 0 0}
+  .stress-eng .stress-cab{position:absolute;left:6px;top:5px;width:13px;height:9px;background:var(--gold);border-radius:2px}
+  .stress-puff{position:absolute;left:1px;top:-13px;width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:0}
+  .stresscard[data-stress-state="parked"] .stress-puff,
+  .stresscard[data-stress-state="boarding"] .stress-puff{display:none}
+  @media (prefers-reduced-motion:no-preference){
+    .stresscard .stress-puff{animation:stresspuff 1.8s linear infinite}
+    .stresscard .stress-puff.p2{animation-delay:.6s}
+    .stresscard .stress-puff.p3{animation-delay:1.2s}
+  }
+  @keyframes stresspuff{
+    0%{opacity:0;transform:translate(0,0) scale(.6)}
+    25%{opacity:.55}
+    100%{opacity:0;transform:translate(11px,-17px) scale(1.25)}
+  }
+  .stress-board{margin-top:12px}
+  .stress-bar-label{margin:0 0 6px;font:600 10.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
+  .stress-bar{height:16px;border:1px solid var(--ink);border-radius:2px;background:var(--paper);overflow:hidden}
+  .stress-fill{height:100%;background:var(--stress-acc)}
+  .stress-pct{margin:6px 0 0;font:italic 13px Georgia,Times,serif;color:var(--muted)}
+  .stress-updated{margin:10px 0 0;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--faint)}
+
+  /* ---------- Settings page: visitor-side site dynamics (theme only for
+     now). Choices ride the same fc-theme localStorage key the star script
+     and the ledger already read, so a pick here follows the visitor
+     across every page and onto the ledger. ---------- */
+  .setpanel{
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
+    padding:18px 20px;margin:18px 0 16px;
+  }
+  body[data-theme="ink"] .setpanel{background:#332e28;border-color:#6b6152}
+  body[data-theme="midnight"] .setpanel{background:#2b2336;border-color:#4d3c6b}
+  .setpanel-title{margin:0 0 2px;font:700 17px Georgia,Times,serif;color:var(--ink)}
+  .setpanel-sub{margin:0 0 14px;font:italic 13px Georgia,Times,serif;color:var(--muted)}
+  .setgrid{display:flex;flex-wrap:wrap;gap:10px}
+  .settheme{
+    display:flex;flex-direction:column;align-items:center;gap:7px;width:118px;
+    padding:12px 8px 10px;border:1px solid var(--rule);border-radius:6px;
+    background:var(--paper);cursor:pointer;color:var(--ink2);
+    font:13px Georgia,Times,serif;
+  }
+  .settheme:hover{border-color:var(--ink)}
+  .settheme.set-cur{outline:2px solid var(--ink);outline-offset:2px}
+  .setchip{position:relative;display:block;width:56px;height:40px;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+  .setchip-dot{position:absolute;width:9px;height:9px;border-radius:50%}
+  .setchip-reset{display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--ink);font-style:normal}
+  .setname{font-weight:700;font-size:13.5px;color:var(--ink)}
+  .setdesc{font-size:11px;line-height:1.35;color:var(--muted);text-align:center}
+  .setsaved{margin:12px 0 0;font:italic 13px Georgia,Times,serif;color:var(--ink2)}
+  .setsaved[hidden]{display:none}
+
   footer{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
@@ -1083,6 +1229,13 @@ CSS = r'''  :root{
     .canvas .card{padding:14px 14px}
     .contactform{margin:22px 0 0;padding:16px 14px}
     .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
+    .canvas a.btn[href^="flank/"]{padding:9px 30px}
+    .canvas a.btn[href^="flank/"]::before{left:9px}
+    .canvas a.btn[href^="flank/"]::after{right:9px}
+    .stress-scene{height:108px}
+    .stress-bld{width:20px}
+    .stress-state{font-size:19px}
+    .settheme{width:104px}
   }
   @media (hover:none){.contactform .dropzone{padding:18px 14px}}
 '''
@@ -1108,27 +1261,110 @@ STAR_SUB = "Click me"
 # text on the contact page, so the form exposes nothing new.
 CONTACT_EMAIL = "flamingoncactusgroup@gmail.com"
 
-CONTACT_FORM_HTML = (
-  '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
-  '  <input type="hidden" name="_subject" value="New message from the Flamingo and Cactus contact form">\n'
-  '  <input type="hidden" name="_template" value="table">\n'
-  '  <input type="hidden" name="_captcha" value="false">\n'
-  '  <input type="hidden" name="_next" value="https://' + CUSTOM_DOMAIN + '/contact.html?sent=1">\n'
-  '  <input type="text" name="_honey" style="display:none">\n'
-  '  <input type="hidden" id="cf-sentat" name="sent_at" value="">\n'
-  '  <label for="cf-name">Your name<span class="sub">You can put &quot;Random&quot; if you would rather not say who you are.</span></label>\n'
-  '  <input type="text" id="cf-name" name="name" required maxlength="120" autocomplete="name" placeholder="e.g. Random">\n'
-  '  <label for="cf-contact">Email or phone<span class="sub">Optional &mdash; only if you want a reply.</span></label>\n'
-  '  <input type="text" id="cf-contact" name="contact" maxlength="160" autocomplete="email" placeholder="Optional">\n'
-  '  <label for="cf-note">Note</label>\n'
-  '  <textarea id="cf-note" name="note" required maxlength="5000" placeholder="Anything you want us to know&hellip;"></textarea>\n'
-  '  <label id="cf-files-label">Files<span class="sub">Optional — multiple files on supported browsers, 10 MB total.</span></label>\n'
-  '  <input type="file" id="cf-photo" name="attachment" aria-labelledby="cf-files-label">\n'
-  '  <p class="filehint" id="cf-filehint">No files yet.</p>\n'
-  '  <p class="cf-status" id="cf-status" hidden></p>\n'
-  '  <noscript><p class="filehint">With JavaScript off, send one file per message.</p></noscript>\n'
-  '  <button type="submit">Send it our way</button>\n'
-  "</form>"
+# The contact form's own words live in data/form.json so the builder can
+# edit them; the plumbing (where it posts, the honeypot, the behaviour
+# script) stays here where it cannot be broken by accident.
+FORM_DEFAULTS = {
+    "subject": "New message from the Flamingo and Cactus contact form",
+    "name_label": "Your name",
+    "name_sub": 'You can put "Random" if you would rather not say who you are.',
+    "name_placeholder": "e.g. Random",
+    "contact_label": "Email or phone",
+    "contact_sub": "Optional — only if you want a reply.",
+    "contact_placeholder": "Optional",
+    "note_label": "Note",
+    "note_placeholder": "Anything you want us to know…",
+    "files_label": "Files",
+    "files_sub": "Optional — multiple files on supported browsers, 10 MB total.",
+    "button": "Send it our way",
+    "show_contact": True,
+    "show_files": True,
+}
+
+FORM_TEXT_KEYS = ("subject", "name_label", "name_sub", "name_placeholder",
+                  "contact_label", "contact_sub", "contact_placeholder",
+                  "note_label", "note_placeholder", "files_label",
+                  "files_sub", "button")
+FORM_BOOL_KEYS = ("show_contact", "show_files")
+
+
+def load_form_config(data_dir) -> dict:
+    """The contact form's words: data/form.json over the built-in defaults."""
+    cfg = dict(FORM_DEFAULTS)
+    try:
+        doc = json.loads((Path(data_dir) / "form.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return cfg
+    if not isinstance(doc, dict):
+        return cfg
+    return sanitize_form_config(doc, cfg)
+
+
+def sanitize_form_config(doc, base: dict | None = None) -> dict:
+    """Keep only the known form keys, with sane types and lengths."""
+    cfg = dict(FORM_DEFAULTS if base is None else base)
+    if not isinstance(doc, dict):
+        return cfg
+    for key, val in doc.items():
+        if key in FORM_TEXT_KEYS and isinstance(val, str):
+            cfg[key] = val[:400]
+        elif key in FORM_BOOL_KEYS:
+            cfg[key] = bool(val)
+    return cfg
+
+
+def contact_form_html(cfg: dict | None = None) -> str:
+    """The contact form, with its words taken from the config."""
+    cfg = dict(FORM_DEFAULTS, **(cfg or {}))
+
+    def esc(text, attr=False):
+        return html.escape(str(text), quote=True)
+
+    contact_block = (
+        f'  <label for="cf-contact">{esc(cfg["contact_label"])}'
+        f'<span class="sub">{esc(cfg["contact_sub"])}</span></label>\n'
+        f'  <input type="text" id="cf-contact" name="contact" maxlength="160" '
+        f'autocomplete="email" placeholder="{esc(cfg["contact_placeholder"], True)}">'
+    )
+    if not cfg["show_contact"]:
+        contact_block = '  <div style="display:none">' + contact_block + "</div>\n"
+    files_block = (
+        f'  <label id="cf-files-label">{esc(cfg["files_label"])}'
+        f'<span class="sub">{esc(cfg["files_sub"])}</span></label>\n'
+        '  <input type="file" id="cf-photo" name="attachment" aria-labelledby="cf-files-label">\n'
+        '  <p class="filehint" id="cf-filehint">No files yet.</p>'
+    )
+    if not cfg["show_files"]:
+        files_block = '  <div style="display:none">' + files_block + "</div>\n"
+    markup = (
+        '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
+        f'  <input type="hidden" name="_subject" value="{esc(cfg["subject"], True)}">\n'
+        '  <input type="hidden" name="_template" value="table">\n'
+        '  <input type="hidden" name="_captcha" value="false">\n'
+        '  <input type="hidden" name="_next" value="https://' + CUSTOM_DOMAIN + '/contact.html?sent=1">\n'
+        '  <input type="text" name="_honey" style="display:none">\n'
+        '  <input type="hidden" id="cf-sentat" name="sent_at" value="">\n'
+        f'  <label for="cf-name">{esc(cfg["name_label"])}'
+        f'<span class="sub">{esc(cfg["name_sub"])}</span></label>\n'
+        f'  <input type="text" id="cf-name" name="name" required maxlength="120" '
+        f'autocomplete="name" placeholder="{esc(cfg["name_placeholder"], True)}">\n'
+        + contact_block +
+        f'  <label for="cf-note">{esc(cfg["note_label"])}</label>\n'
+        f'  <textarea id="cf-note" name="note" required maxlength="5000" '
+        f'placeholder="{esc(cfg["note_placeholder"], True)}"></textarea>\n'
+        + files_block + '\n'
+        '  <p class="cf-status" id="cf-status" hidden></p>\n'
+        '  <noscript><p class="filehint">With JavaScript off, send one file per message.</p></noscript>\n'
+        f'  <button type="submit">{esc(cfg["button"])}</button>\n'
+        "</form>"
+    )
+    script = (CONTACT_FORM_SCRIPT
+              .replace("__BUTTON_JSON__", json.dumps(str(cfg["button"])))
+              .replace("__SUBJECT_JSON__", json.dumps(str(cfg["subject"]))))
+    return markup + script
+
+
+CONTACT_FORM_SCRIPT = (
   '<script>(function(){try{'
   # Submission handling: stay on the page and get an explicit answer.
   # Text-only notes POST as JSON to FormSubmit's AJAX endpoint, and the page
@@ -1144,7 +1380,7 @@ CONTACT_FORM_HTML = (
   'if(!inp||!hint||!form)return;'
   'var all=[],extras=[],MAX_BYTES=10000000,busy=false,watch=null,picker=null,lastStamp="";'
   'function getBtn(){return form.querySelector("button[type=submit]");}'
-  'function restoreBtn(){var b=getBtn();if(b){b.disabled=false;b.textContent="Send it our way";}}'
+  'function restoreBtn(){var b=getBtn();if(b){b.disabled=false;b.textContent=__BUTTON_JSON__;}}'
   # The two big panels are built up front and sit just before the form.
   # showDone() swaps the form out for the success panel; showError() keeps
   # the form (with everything the visitor typed) and explains the way out.
@@ -1249,7 +1485,7 @@ CONTACT_FORM_HTML = (
   'form.submit();return;}'
   'busy=true;'
   'var f=function(n){var el=form.querySelector("[name="+n+"]");return el?el.value:"";};'
-  'var payload={_subject:f("_subject")||"New message from the Flamingo and Cactus contact form",_template:"table",_captcha:"false",'
+  'var payload={_subject:f("_subject")||__SUBJECT_JSON__,_template:"table",_captcha:"false",'
   'sent_at:(document.getElementById("cf-sentat")||{}).value||lastStamp,'
   'name:f("name"),contact:f("contact"),note:f("note")};'
   'var c=payload.contact.replace(/^\\s+|\\s+$/g,"");'
@@ -1274,6 +1510,96 @@ CONTACT_FORM_HTML = (
   'window.addEventListener("pageshow",function(){busy=false;restoreBtn();});'
   'render();}catch(_){}})();</script>'
 )
+
+# The form as published when nothing has been customised.
+CONTACT_FORM_HTML = contact_form_html()
+
+
+def calendar_static_html(events: list, year: int, month: int,
+                         nav: bool = False, cfg: dict | None = None) -> str:
+    """A month grid for the events, rendered on the server.
+
+    The live page draws the same grid with its own script; this static
+    version is what the builder shows in the canvas while the owner edits
+    the events, and it doubles as the no-JS fallback."""
+    import calendar as _calendar
+    cfg = dict(CAL_DEFAULTS, **(cfg or {}))
+    symbol = html.escape(cfg.get("symbol") or "●")
+    color = cfg.get("color") or "#1a7f37"
+    size = int(cfg.get("size") or 17)
+    month = max(1, min(12, int(month)))
+    year = int(year)
+    month_name = _MONTH_SHORT[month - 1]
+    first_dow = _calendar.monthrange(year, month)[0]
+    days = _calendar.monthrange(year, month)[1]
+    today = datetime.date.today()
+    by_day: dict = {}
+    for ev in events:
+        if ev.get("y") == year and ev.get("m") == month:
+            by_day.setdefault(int(ev.get("d", 0)), []).append(ev)
+    cells = ['<span class="ev-day empty"></span>'] * first_dow
+    for day in range(1, days + 1):
+        mine = by_day.get(day, [])
+        cls = "ev-day"
+        if mine:
+            cls += " ev-set"
+        if (day == today.day and year == today.year and month == today.month):
+            cls += " today"
+        tip = " | ".join(ev.get("day", "") + ((" · " + ev["times"]) if ev.get("times") else "")
+                         + " — " + ev.get("label", "") for ev in mine)
+        attrs = (f' data-cal-day="{year:04d}-{month:02d}-{day:02d}" data-d="{day}"'
+                 f' title="{html.escape(tip, quote=True)}"'
+                 f' aria-label="{html.escape(tip, quote=True)}"')
+        dot = (f'<span class="ev-dot" style="color:{color}">{symbol}</span>'
+               if mine else "")
+        cells.append(f'<span class="{cls}"{attrs}>{day}{dot}</span>')
+    bar = ""
+    if nav:
+        bar = ('<div class="evcal-bar">'
+               '<button type="button" data-cal-prev aria-label="Previous month">&lsaquo;</button>'
+               f'<span class="evcal-label">{html.escape(month_name)} {year}</span>'
+               '<button type="button" data-cal-next aria-label="Next month">&rsaquo;</button>'
+               "</div>")
+    empty = ('<div class="evcal-empty" hidden>No events found for this month.</div>'
+             if not by_day else "")
+    return (
+        f'<div class="evcal" data-cal-block style="display:block;--ev-mark:{color};--ev-mark-size:{size}px">'
+        f'{bar}'
+        '<div class="evcal-head" aria-hidden="true">'
+        "<span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>"
+        "<span>Thu</span><span>Fri</span><span>Sat</span></div>"
+        f'<div class="evcal-grid">{"".join(cells)}</div>'
+        f'{empty}</div>'
+    )
+
+
+def page_events(body_html: str) -> list[dict]:
+    """Every dated event in the given markup (the public wrapper)."""
+    return _parse_list_events(body_html)
+
+
+def place_calendar_static(body_html: str, year: int | None = None,
+                          month: int | None = None,
+                          cfg: dict | None = None) -> str:
+    """Swap an `[event calendar]` marker for a static month grid.
+
+    The live page draws its own interactive calendar; this is the same
+    grid rendered on the server, used by the builder so the owner can see
+    the month they are editing."""
+    events = _parse_list_events(body_html)
+    marker_re = re.compile(r"<(?:p|li)[^>]*>\s*\[event calendar\]\s*</(?:p|li)>",
+                           flags=re.IGNORECASE)
+    if not marker_re.search(body_html):
+        return body_html
+    if year is None or month is None:
+        today = datetime.date.today()
+        y, m = today.year, today.month
+        if events:
+            near = min(events, key=lambda e: (e["y"], e["m"], e["d"]))
+            y, m = near["y"], near["m"]
+        year, month = y, m
+    grid = calendar_static_html(events, year, month, nav=True, cfg=cfg)
+    return marker_re.sub(lambda _m: grid, body_html, count=1)
 
 
 def place_form(body_html: str, form_html: str) -> tuple:
@@ -1316,7 +1642,7 @@ _MONTH_ALTS = "|".join(alt for group in _EVENT_MONTH_NAMES for alt in group)
 _EVENT_DATE_RE = re.compile(
     r"\b(" + _MONTH_ALTS + r")\.?[,]?\s+(\d{1,2})(?:st|nd|rd|th)?(?!\d)", re.I)
 _EVENT_SPAN_RE = re.compile(
-    r"from\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\s*"
+    r"(?:\bfrom\s+)?(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\s*"
     r"(?:to|until|till|through|thru|&ndash;|&mdash;|[&#8211;]|&#8212;|[\u2013\u2014]|\u2014|-)\s*"
     r"(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)", re.I)
 _EVENT_AT_RE = re.compile(
@@ -1393,18 +1719,32 @@ def _parse_list_events(body_html: str) -> list[dict]:
         for pat in _EVENT_SPAN_RE, _EVENT_AT_RE, _EVENT_DATE_RE, _EVENT_YEAR_RE:
             label = pat.sub(" ", label)
         label = re.sub(r"\s+", " ", label)
-        label = re.sub(r"^[\s,.:;-]+|[\s,.:;-]+$", "", label)
+        label = re.sub(r"^[\s,.:;\-\u2013\u2014]+|[\s,.:;\-\u2013\u2014]+$", "", label)
         if len(label) > 84:
             cut = label[:84]
             sp = cut.rfind(" ")
             label = (label[:sp] if sp > 40 else cut).rstrip(" ,.;:-") + "…"
+        link = None
+        hit = re.search(r"<a\b[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>", frag, re.I | re.S)
+        if hit:
+            link = {"url": html.unescape(hit.group(1)),
+                    "text": re.sub(r"<[^>]*>", "", hit.group(2)).strip()}
         events.append({
             "y": stamp.year, "m": stamp.month, "d": stamp.day,
             "wd": _WEEKDAYS[stamp.weekday()],
             "ms": _MONTH_SHORT[stamp.month - 1],
             "key": f"{stamp.month}/{stamp.day}",
+            # which paragraph the event came from (index among the page's
+            # <p>/<li> blocks) so an editor can rewrite that one entry
+            "idx": i,
+            # the paragraph's own markup, so a link inside it survives an edit
+            "html": frag,
             # search runs on the full untruncated text; label is display-only
             "match": stamp.strftime("%B %d, %Y ") + text,
+            # the whole line, for the day detail that opens on a click
+            "full": text,
+            # a link inside the line, if there is one
+            "link": link,
             "times": (f"{unit1} – {unit2}" if unit1 and unit2
                       else single if single else ""),
             "day": f"{_WEEKDAYS[stamp.weekday()]}, {_MONTH_SHORT[stamp.month - 1]} {stamp.day}, {stamp.year}",
@@ -1413,6 +1753,48 @@ def _parse_list_events(body_html: str) -> list[dict]:
         if len(events) >= 80:
             break
     return events
+
+
+# How the calendar marks the days that have events: the symbol and its
+# colour. The owner picks these in the builder; they live in
+# data/calendar.json so the published calendar and the editor's drawing of
+# it always match.
+CAL_DEFAULTS = {
+    "symbol": "●",
+    "color": "#1a7f37",
+    "size": 17,
+}
+
+CAL_SYMBOLS = ("●", "•", "■", "▲", "▼", "★", "◆", "✦", "✚", "♦")
+
+
+def sanitize_calendar_config(doc, base: dict | None = None) -> dict:
+    """Keep only the known calendar keys, with sane values."""
+    cfg = dict(CAL_DEFAULTS if base is None else base)
+    if not isinstance(doc, dict):
+        return cfg
+    symbol = str(doc.get("symbol", "") or "").strip()
+    if symbol:
+        cfg["symbol"] = symbol[:4]
+    color = str(doc.get("color", "") or "").strip()
+    if re.fullmatch(r"#[0-9a-fA-F]{3,8}", color):
+        cfg["color"] = color
+    try:
+        size = int(doc.get("size", cfg.get("size", 17)))
+    except (TypeError, ValueError):
+        size = int(cfg.get("size", 17))
+    cfg["size"] = max(8, min(48, size))
+    return cfg
+
+
+def load_calendar_config(data_dir) -> dict:
+    """The calendar's marker: data/calendar.json over the defaults."""
+    cfg = dict(CAL_DEFAULTS)
+    try:
+        doc = json.loads((Path(data_dir) / "calendar.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return cfg
+    return sanitize_calendar_config(doc, cfg)
 
 
 EVENTS_CALENDAR_MARKUP = (
@@ -1432,34 +1814,43 @@ EVENTS_CALENDAR_MARKUP = (
     "</div>"
     '<div class="evcal-grid" id="ev-grid"></div>'
     '<div class="evcal-empty" id="ev-empty" hidden>No events found for this month.</div>'
-    '<div class="evcal-legend" id="ev-legend"></div>'
+    '<div class="ev-detail" id="ev-detail" hidden></div>'
     "</div>"
 )
 
 
-def place_calendar(body_html: str) -> tuple[str, str]:
+def place_calendar(body_html: str, cfg: dict | None = None) -> tuple[str, str]:
     """Swap an `[event calendar]` marker paragraph for the month calendar.
 
     The calendar is generated from the dated items already on the page — the
     list itself is untouched and still rendered keeps right below it. Returns
     (page_body, extra_script): extra_script is '' with no marker."""
     import json as _json
+    cfg = dict(CAL_DEFAULTS, **(cfg or {}))
     events = _parse_list_events(body_html)
     marker_re = re.compile(r"<(?:p|li)[^>]*>\s*\[event calendar\]\s*</(?:p|li)>",
                            flags=re.IGNORECASE)
     if not marker_re.search(body_html):
         return body_html, ""
-    data = _json.dumps(events, ensure_ascii=True).replace("</", "<\\/")
+    # the source index and markup are for the editor only — the published
+    # page does not need them
+    data = _json.dumps([{k: v for k, v in ev.items() if k not in ("idx", "html")}
+                        for ev in events], ensure_ascii=True).replace("</", "<\\/")
     script = ('<script>/* events calendar: derived from the list on this '
               'page; the list stays the source of truth */(function(){'
               'var EV=' + data + ";"
+              'var MARK=' + json.dumps(cfg.get("symbol") or "●") + ',' +
+              'MARKCOLOR=' + json.dumps(cfg.get("color") or "#1a7f37") + ';'
+              'MARKSIZE=' + json.dumps(str(int(cfg.get("size") or 17))) + ';'
               'var cal=document.getElementById("evcal");if(!cal)return;'
               'cal.style.display="block";'
+              'cal.style.setProperty("--ev-mark",MARKCOLOR);'
+              'cal.style.setProperty("--ev-mark-size",MARKSIZE+"px");'
               'var grid=document.getElementById("ev-grid"),'
               'monthSel=document.getElementById("ev-month"),'
               'yearSel=document.getElementById("ev-year"),'
               'empty=document.getElementById("ev-empty"),'
-              'legend=document.getElementById("ev-legend"),'
+              'detail=document.getElementById("ev-detail"),'
               'search=document.getElementById("ev-search"),'
               'reset=document.getElementById("ev-reset");'
               'var months=["January","February","March","April","May","June",'
@@ -1486,30 +1877,56 @@ def place_calendar(body_html: str) -> tuple[str, str]:
               'var first=new Date(y,mo-1,1), days=new Date(y,mo,0).getDate(), dow=first.getDay();'
               'grid.innerHTML="";'
               'for(var i=0;i<dow;i++){var blank=document.createElement("span");blank.className="ev-day empty";grid.appendChild(blank);}'
-              'var nOn=0,legendKids=[];'
+              'var nOn=0;'
+              # clicking a day opens its events; clicking it again closes them
+              'var openDay=0;'
+              'function closeDay(){if(!detail)return;detail.hidden=true;detail.innerHTML="";openDay=0;'
+              'var cs=grid.querySelectorAll(".ev-open");for(var i=0;i<cs.length;i++)cs[i].classList.remove("ev-open");}'
+              'function openDayFor(d){if(!detail)return;var mine=[];'
+              'for(var i=0;i<EV.length;i++){var e=EV[i];if(e.y===cy&&e.m===cm&&e.d===d)mine.push(e);}'
+              'if(!mine.length)return;'
+              'detail.innerHTML="";'
+              'var head=document.createElement("p");head.className="ev-detail-head";'
+              'try{head.textContent=new Date(cy,cm-1,d).toLocaleDateString("en-US",'
+              '{weekday:"long",month:"long",day:"numeric",year:"numeric"});}catch(_){head.textContent="";}'
+              'detail.appendChild(head);'
+              'for(var k=0;k<mine.length;k++){var ev=mine[k];'
+              'var item=document.createElement("p");item.className="ev-detail-item";'
+              'if(ev.times){var tm=document.createElement("span");tm.className="ev-detail-time";tm.textContent=ev.times;item.appendChild(tm);}'
+              'var txt=ev.full||ev.label||"";'
+              'if(ev.link&&ev.link.url&&ev.link.text){'
+              'var li=txt.lastIndexOf(ev.link.text);'
+              'if(li>=0){item.appendChild(document.createTextNode(txt.slice(0,li)));'
+              'var a=document.createElement("a");a.href=ev.link.url;a.textContent=ev.link.text;'
+              'a.target="_blank";a.rel="noopener";item.appendChild(a);'
+              'item.appendChild(document.createTextNode(txt.slice(li+ev.link.text.length)));}'
+              'else{item.appendChild(document.createTextNode(txt));}}'
+              'else{item.appendChild(document.createTextNode(txt));}'
+              'detail.appendChild(item);}'
+              'detail.hidden=false;'
+              'var cs=grid.querySelectorAll(".ev-day");'
+              'for(var i=0;i<cs.length;i++){if(cs[i].getAttribute("data-d")==String(d))cs[i].classList.add("ev-open");}'
+              'openDay=d;}'
+              'grid.addEventListener("click",function(e){'
+              'var cell=(e.target.closest)?e.target.closest(".ev-day"):null;if(!cell)return;'
+              'var dd=cell.getAttribute("data-d");if(!dd)return;var d=+dd;'
+              'if(openDay===d){closeDay();return;}closeDay();openDayFor(d);});'
               'for(var d=1;d<=days;d++){(function(d){'
               'var mine=[];for(var i=0;i<EV.length;i++){var e=EV[i];if(e.y===y&&e.m===mo&&e.d===d&&evOn(e))mine.push(e);}'
               'var cell=document.createElement("span");cell.className="ev-day";cell.textContent=d;'
               'if(d===new Date().getDate()&&y===new Date().getFullYear()&&mo===new Date().getMonth()+1)cell.classList.add("today");'
               'if(mine.length){nOn++;cell.classList.add("ev-set");'
-              'var dot=document.createElement("span");dot.className="ev-dot";cell.appendChild(dot);'
+              'var dot=document.createElement("span");dot.className="ev-dot";dot.textContent=MARK;dot.style.color=MARKCOLOR;dot.style.fontSize=MARKSIZE+"px";cell.appendChild(dot);'
               'var tip=[];for(var j=0;j<mine.length;j++)tip.push(mine[j].day+(mine[j].times?" · "+mine[j].times:"")+" — "+mine[j].label);'
               'cell.setAttribute("role","img");'
               'cell.setAttribute("aria-label",tip.join(" | "));'
-              'for(j=0;j<mine.length;j++)legendKids.push(mine[j]);'
+              'cell.setAttribute("data-d",d);'
               'cell.style.display="";}'
               'else{cell.style.display=q()?"none":"";}'
               'grid.appendChild(cell);})(d);}'
               'empty.hidden=!!nOn;'
               'empty.textContent=q()?"No events match your search.":"No events found for this month.";'
-              'legend.innerHTML="";'
-              'legendKids.sort(function(a,b){return (a.y*10000+a.m*100+a.d)-(b.y*10000+b.m*100+b.d);});'
-              'for(i=0;i<legendKids.length;i++){(function(e){'
-              'var chip=document.createElement("span");chip.className="ev-mi";'
-              'var b=document.createElement("b");b.textContent=e.day;chip.appendChild(b);'
-              'chip.appendChild(document.createTextNode((e.times?" · "+e.times:"")+" · "+e.label));'
-              'legend.appendChild(chip);})(legendKids[i]);}'
-              'var chips=legend.children.length; legend.style.display=chips?"":"none";'
+              'closeDay();'
               '}'
               'function setSearch(){var s=q();reset.hidden=!s;'
               'if(s){var first=null;'
@@ -1594,7 +2011,10 @@ def nav_html(pages, current: str) -> str:
 def render_page(title: str, tagline: str, footer: str, theme: str,
                 pages, slug: str, body_html: str, logo_uri: str,
                 description: str = "", custom_css: str = "",
-                star_animation: str = "comic") -> str:
+                star_animation: str = "comic",
+                stress: int | None = None,
+                form_html: str = "",
+                cal_cfg: dict | None = None) -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
     page_title = page_meta.get("title", "").strip() or title
     desc = page_meta.get("description", "").strip() or description.strip() or tagline.strip() or title
@@ -1605,16 +2025,21 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
     if any(p["slug"] == slug and p.get("form") for p in pages):
         # `[contact form]` typed anywhere in the page body marks the spot;
         # without it the form lands after the whole page body.
-        placed, leftover = place_form(body_html, CONTACT_FORM_HTML)
+        placed, leftover = place_form(body_html, form_html or CONTACT_FORM_HTML)
         if leftover:
             form_block = f"  {leftover}\n"
     else:
         # The marker is reserved for the generated contact form; never let
         # the literal implementation token leak onto a page without a form.
         placed = re.sub(r"<p[^>]*>\s*\[contact form\]\s*</p>", "", body_html)
-    placed, cal_script = place_calendar(placed)
+    placed, cal_script = place_calendar(placed, cal_cfg)
+    if stress is not None and slug == "stress":
+        # The Stress Express station: generated from data/stress.json,
+        # woven into the stress page at its marker paragraph.
+        placed = place_stress(placed, stress)
+    placed, set_script = place_settings(placed, theme)
     if placed:
-        canvas = f'  <div class="canvas">\n{placed}{cal_script}\n  </div>\n'
+        canvas = f'  <div class="canvas">\n{placed}{cal_script}{set_script}\n  </div>\n'
     footer_text = html.escape(footer) + "\n" if footer.strip() else ""
     footer_block = ('  <footer>\n' + footer_text +
                     '  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>\n'
@@ -1808,6 +2233,240 @@ __CSS__
 """
 
 
+# ---------------------------------------------------------------------------
+# Stress City: `[stress express]` marker paragraph swapped for the station
+# scene. The level lives in data/stress.json so it can move without a
+# content edit; the scene itself is generated here so the sanitizer never
+# has to pass it. When developer sign-in arrives (Cloudflare Worker), that
+# layer rewrites stress.json — nothing else needs to change.
+
+
+def load_stress(data_dir: Path) -> int:
+    """Stress level 0-100 from data/stress.json; 20 when absent or broken."""
+    try:
+        doc = json.loads((Path(data_dir) / "stress.json").read_text(
+            encoding="utf-8"))
+        return max(0, min(100, int(doc.get("level", 20))))
+    except (OSError, ValueError, TypeError, AttributeError):
+        return 20
+
+
+def stress_state(level: int) -> str:
+    """Tier name for a stress level: where the Stress Express is."""
+    if level <= 15:
+        return "parked"
+    if level <= 35:
+        return "boarding"
+    if level <= 55:
+        return "entering"
+    if level <= 75:
+        return "departing"
+    if level <= 90:
+        return "fullspeed"
+    return "overloaded"
+
+
+STRESS_STATES = {
+    "parked": ("Parked at the Platform",
+               "All quiet on the rails. Nothing is running late."),
+    "boarding": ("Boarding",
+                 "Passengers are gathering. Things are picking up."),
+    "entering": ("Entering the Station",
+                 "The Stress Express is rolling in — mind the rush."),
+    "departing": ("Departing",
+                  "The train is pulling out. Busy tracks ahead."),
+    "fullspeed": ("Full Speed",
+                  "The Stress Express is at full steam. Hang on to something."),
+    "overloaded": ("Overloaded",
+                   "More passengers than seats. Every platform is packed."),
+}
+
+
+def stress_scene(level: int) -> str:
+    """The Stress Express station card, generated from the level."""
+    state = stress_state(level)
+    name, sub = STRESS_STATES[state]
+    crowd = "".join("<span></span>" for _ in range(6))
+    buildings = "".join(f'<div class="stress-bld b{i}"></div>'
+                        for i in range(1, 7))
+    stamp = datetime.datetime.now().strftime("%B %-d, %Y")
+    return (
+        f'<div class="stresscard" data-stress-state="{state}" '
+        f'data-stress-level="{level}">\n'
+        '  <p class="stress-kicker">Stress City \u00b7 Central Station</p>\n'
+        f'  <p class="stress-state">{name}</p>\n'
+        f'  <p class="stress-sub">{sub}</p>\n'
+        '  <div class="stress-scene">\n'
+        f'    <div class="stress-skyline">{buildings}</div>\n'
+        '    <div class="stress-track"></div>\n'
+        '    <div class="stress-platform"></div>\n'
+        f'    <div class="stress-crowd">{crowd}</div>\n'
+        '    <div class="stress-speed"></div>\n'
+        '    <div class="stress-train">\n'
+        '      <div class="stress-car stress-eng">'
+        '<span class="stress-chim"></span><span class="stress-cab"></span>'
+        '<span class="stress-puff"></span><span class="stress-puff p2"></span>'
+        '<span class="stress-puff p3"></span></div>\n'
+        '      <div class="stress-car"></div>\n'
+        '      <div class="stress-car"></div>\n'
+        '    </div>\n'
+        '  </div>\n'
+        '  <div class="stress-board">\n'
+        '    <p class="stress-bar-label">How overwhelmed we are</p>\n'
+        '    <div class="stress-bar">'
+        f'<div class="stress-fill" style="width:{level}%"></div></div>\n'
+        f'    <p class="stress-pct">The Stress Express is {level}% full.</p>\n'
+        '  </div>\n'
+        f'  <p class="stress-updated">Timetable updated {stamp}.</p>\n'
+        "</div>\n"
+    )
+
+
+def place_stress(body_html: str, level: int) -> str:
+    """Swap a `[stress express]` marker paragraph for the station scene.
+
+    Without the marker the scene lands at the end of the page body."""
+    scene = stress_scene(level)
+    placed, n = re.subn(r"<p[^>]*>\s*\[stress express\]\s*</p>",
+                        lambda _m: scene, body_html, count=1,
+                        flags=re.IGNORECASE)
+    if n:
+        return placed
+    if not body_html.strip():
+        return scene
+    return body_html + scene
+
+
+# ---------------------------------------------------------------------------
+# Settings page: `[site settings]` marker paragraph swapped for the
+# visitor-side panel. Themes ride the existing fc-theme localStorage key —
+# the same one the star script and the ledger already read — so a pick
+# here follows the visitor across every page. "Site default" removes the
+# key and falls back to the theme baked into every page.
+
+
+SETTINGS_NAMES = {
+    "classic": "Classic",
+    "parchment": "Parchment",
+    "ink": "Ink",
+    "midnight": "Midnight",
+}
+
+SETTINGS_CHIPS = {
+    "classic": ("#faf3e6", "#c9c2b4", "#141414", "#0b2a8c", "#c9a227"),
+    "parchment": ("#f7f1e1", "#b8ab88", "#2b2417", "#1a3a7c", "#c9a227"),
+    "ink": ("#262220", "#6b6152", "#f5efe0", "#9db8ff", "#c9a227"),
+    "midnight": ("#221c2c", "#4d3c6b", "#f0e9f7", "#d3b8ff", "#c9a227"),
+}
+
+SETTINGS_DESCS = {
+    "classic": "Warm paper, ink black",
+    "parchment": "Aged paper, soft brown",
+    "ink": "Charcoal slate, cream text",
+    "midnight": "Deep violet night",
+}
+
+
+def settings_chip(theme: str) -> str:
+    """A little palette preview: paper field, ink/link/gold dots."""
+    paper, rule, ink, link, gold = SETTINGS_CHIPS[theme]
+    return (
+        f'<span class="setchip" style="background:{paper};border-color:{rule}">'
+        f'<span class="setchip-dot" style="left:7px;top:7px;background:{ink}"></span>'
+        f'<span class="setchip-dot" style="left:24px;top:15px;background:{link}"></span>'
+        f'<span class="setchip-dot" style="right:7px;bottom:7px;background:{gold}"></span>'
+        "</span>"
+    )
+
+
+def settings_panel_html(default_theme: str) -> str:
+    cards = []
+    for theme in ("classic", "parchment", "ink", "midnight"):
+        cards.append(
+            f'<button type="button" class="settheme" data-theme-choice="{theme}">\n'
+            f'  {settings_chip(theme)}\n'
+            f'  <span class="setname">{SETTINGS_NAMES[theme]}</span>\n'
+            f'  <span class="setdesc">{SETTINGS_DESCS[theme]}</span>\n'
+            "</button>"
+        )
+    cards.append(
+        '<button type="button" class="settheme" data-theme-choice="">\n'
+        '  <span class="setchip setchip-reset">\u21ba</span>\n'
+        '  <span class="setname">Site default</span>\n'
+        f'  <span class="setdesc">The site\u2019s own look \u2014 '
+        f'{SETTINGS_NAMES.get(default_theme, default_theme)} right now</span>\n'
+        "</button>"
+    )
+    return (
+        '<div class="setpanel" id="site-settings">\n'
+        '  <p class="setpanel-title">Site dynamics</p>\n'
+        '  <p class="setpanel-sub">How the site looks on this device. '
+        'Your choice is saved in this browser and follows you across every '
+        'page \u2014 and onto the Flank ledger.</p>\n'
+        f'  <div class="setgrid">\n' + "\n".join(cards) + "\n  </div>\n"
+        '  <p class="setsaved" id="set-saved" hidden></p>\n'
+        "</div>"
+    )
+
+
+SETTINGS_SCRIPT = r'''
+<script>
+(function(){
+var THEMES=["classic","parchment","ink","midnight"];
+var NAMES={classic:"Classic",parchment:"Parchment",ink:"Ink",midnight:"Midnight"};
+var DEFAULT="__DEFAULT__";
+var body=document.body;
+var panel=document.querySelector(".setpanel");
+if(!panel)return;
+var cards=panel.querySelectorAll(".settheme");
+var note=document.getElementById("set-saved");
+function saved(){var t=null;try{t=localStorage.getItem("fc-theme")}catch(_){}return THEMES.indexOf(t)>-1?t:null;}
+function mark(){
+  var cur=saved()||"";
+  for(var i=0;i<cards.length;i++){
+    var want=cards[i].getAttribute("data-theme-choice")||"";
+    if(want===cur){cards[i].classList.add("set-cur");}
+    else{cards[i].classList.remove("set-cur");}
+  }
+}
+function label(){var tb=document.getElementById("theme-toggle");
+  if(tb)tb.textContent=(body.getAttribute("data-theme")==="midnight")?"Light mode":"Dark mode";}
+function say(msg){if(note){note.textContent=msg;note.hidden=false;}}
+function pick(t){
+  var was=saved();
+  try{
+    if(t){localStorage.setItem("fc-theme",t);}
+    else{localStorage.removeItem("fc-theme");}
+  }catch(_){}
+  body.setAttribute("data-theme",t||DEFAULT);
+  label();mark();
+  var name=t?NAMES[t]:"the site default";
+  if(t&&t===was){say(name+" is already on for this device.");}
+  else{say("Saved \u2014 "+name+" is now on for this device.");}
+}
+for(var i=0;i<cards.length;i++){(function(c){
+  c.addEventListener("click",function(){pick(c.getAttribute("data-theme-choice")||"");});
+})(cards[i]);}
+mark();
+})();
+</script>
+'''
+
+
+def place_settings(body_html: str, default_theme: str) -> tuple:
+    """Swap a `[site settings]` marker for the panel.
+
+    Returns (placed, script): script is '' when the marker is absent, so
+    pages without it carry no settings code."""
+    panel = settings_panel_html(default_theme)
+    placed, n = re.subn(r"<p[^>]*>\s*\[site settings\]\s*</p>",
+                        lambda _m: panel, body_html, count=1,
+                        flags=re.IGNORECASE)
+    if not n:
+        return body_html, ""
+    return placed, SETTINGS_SCRIPT.replace("__DEFAULT__", default_theme)
+
+
 def read_body(pages_dir: Path, slug: str) -> str:
     p = pages_dir / f"{slug}.html"
     return p.read_text(encoding="utf-8") if p.is_file() else ""
@@ -1816,6 +2475,9 @@ def read_body(pages_dir: Path, slug: str) -> str:
 def build(data_path: Path, pages_dir: Path, logo_path: Path,
           uploads_dir: Path, out_dir: Path):
     site = load_site(data_path)
+    stress = load_stress(data_path.parent)
+    form_html = contact_form_html(load_form_config(data_path.parent))
+    cal_cfg = load_calendar_config(data_path.parent)
     logo_uri = logo_data_uri(logo_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1828,7 +2490,8 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
             render_page(site["title"], site["tagline"], site["footer"],
         site["theme"], site["pages"], p["slug"], clean, logo_uri,
                         site.get("description", ""), site.get("custom_css", ""),
-                        site.get("star_animation", "comic")))
+                        site.get("star_animation", "comic"),
+                        stress=stress, form_html=form_html, cal_cfg=cal_cfg))
     nf = (NOTFOUND.replace("__CSS__", CSS + "\n" + safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
@@ -2375,6 +3038,77 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             nav_block = idx.split('<nav class="sitenav">')[1].split("</nav>")[0]
             expect("flank" not in nav_block,
                    "ledger stays out of the nav (unlisted page)")
+        stress_json = data_path.parent / "stress.json"
+        expect(stress_json.is_file(),
+               "data/stress.json exists (the Stress Express timetable)")
+        stress_built = tmp / "stress.html"
+        expect(stress_built.is_file(), "site/stress.html built")
+        if stress_built.is_file():
+            stress_html = stress_built.read_text(encoding="utf-8")
+            expect("data-stress-level=" in stress_html,
+                   "stress page embeds the level from stress.json")
+            expect("The Stress Express is" in stress_html,
+                   "stress page carries the express's boarding call")
+            expect("[stress express]" not in stress_html,
+                   "stress marker was swapped for the scene")
+            expect("stress-fill" in stress_html,
+                   "stress page carries the progress bar")
+            expect('class="stresscard"' in stress_html,
+                   "stress page carries the station card")
+        settings_built = tmp / "settings.html"
+        expect(settings_built.is_file(), "site/settings.html built")
+        # the contact form's own wording (data/form.json) reaches the page
+        form_cfg = load_form_config(data_path.parent)
+        if (data_path.parent / "form.json").is_file():
+            expect(form_cfg["button"] in contact_built,
+                   "the contact form uses the wording from data/form.json")
+            if not form_cfg["show_files"]:
+                expect("cf-photo" in contact_built,
+                       "a hidden file field still keeps its input for the script")
+        expect('b.textContent=' in contact_built,
+               "the contact script restores the configured button text")
+        # the static month grid the builder draws
+        static = place_calendar_static("<p>[event calendar]</p>"
+                                       "<div class=\"evsrc\"><p>November 14th, 2026, "
+                                       "9 am to 3 pm — Test Fair</p></div>")
+        expect("[event calendar]" not in static,
+               "the static calendar replaces its marker")
+        expect(static.count("ev-day") >= 28,
+               "the static calendar draws a month of days")
+        expect('data-cal-day="2026-11-14"' in static,
+               "the static calendar marks the day an event sits on")
+        expect("ev-dot" in static,
+               "the static calendar dots the days that have events")
+        if settings_built.is_file():
+            settings_html = settings_built.read_text(encoding="utf-8")
+            expect("[site settings]" not in settings_html,
+                   "settings marker was swapped for the panel")
+            expect("settheme" in settings_html,
+                   "settings page carries the theme cards")
+            expect("fc-theme" in settings_html,
+                   "settings page writes the shared fc-theme key")
+            expect('class="setpanel"' in settings_html,
+                   "settings page carries the panel")
+        financials_built = tmp / "financials.html"
+        if financials_built.is_file():
+            fin_html = financials_built.read_text(encoding="utf-8")
+            expect('a.btn[href^="flank/"]::before' in fin_html,
+                   "financials carries the Flank button's swirl dressing")
+        expect('>Settings</a>' in idx,
+               "nav carries the Settings link")
+        stress_meta = next((p for p in site["pages"] if p["slug"] == "stress"), {})
+        settings_meta = next((p for p in site["pages"] if p["slug"] == "settings"), {})
+        if not stress_meta.get("hidden"):
+            expect('>Stress City</a>' in idx,
+                   "nav carries the Stress City link")
+        if not settings_meta.get("hidden"):
+            expect('>Settings</a>' in idx,
+                   "nav carries the Settings link")
+        sitemap = (tmp / "sitemap.xml").read_text(encoding="utf-8")
+        if not stress_meta.get("hidden"):
+            expect("stress.html" in sitemap, "sitemap lists Stress City")
+        if not settings_meta.get("hidden"):
+            expect("settings.html" in sitemap, "sitemap lists Settings")
         if not ok:
             raise SystemExit("check FAILED")
         print(f"check passed in {tmp}")

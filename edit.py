@@ -15,6 +15,7 @@ Stdlib only. Binds to loopback only.
 
 import argparse
 import base64
+import datetime
 import html
 import json
 import os
@@ -33,6 +34,8 @@ ROOT = Path(__file__).resolve().parent
 BUILDER_PORT = 8767   # set from args in main() before the server starts
 DATA = ROOT / "data" / "site.json"
 PAGES = ROOT / "data" / "pages"
+FORM_PATH = ROOT / "data" / "form.json"
+CAL_PATH = ROOT / "data" / "calendar.json"
 LOGO = ROOT / "assets" / "logo.png"
 UPLOADS = ROOT / "assets" / "uploads"
 SITE = ROOT / "site"
@@ -254,7 +257,10 @@ EDITOR_CSS = site_build.CSS + r'''
   }
   .toolbar #fontSel:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
   /* the live-site star would sit under the dark page list: shift it right */
-  .star-badge{left:300px;top:120px;}
+  /* the badges belong to the page, not to the toolbar: keep them clear
+     of the sticky toolbar and under its z-index so its buttons work */
+  .star-badge{left:300px;top:360px;z-index:5;}
+  .gem-badge{z-index:5;}
   .gem-badge{top:120px;}
   .toolbar input[type=color]{
     width:26px;height:22px;padding:1px;border:1px solid #999;border-radius:2px;
@@ -328,7 +334,60 @@ EDITOR_CSS = site_build.CSS + r'''
     display:none;color:var(--faint);font-style:italic;
     padding:8px 0 40px;pointer-events:none;
   }
+  /* the two generated blocks the owner edits through their own dialogs:
+     the contact form and the events calendar. They are drawn here exactly
+     as the published site draws them, with a builder-only label so it is
+     clear what they are. */
+  #canvas [data-form-block],#canvas [data-cal-wrap]{border-radius:4px;margin:14px 0}
+  .editing #canvas [data-form-block]{outline:2px dashed #1c4fd8;outline-offset:4px}
+  .editing #canvas [data-cal-wrap]{outline:2px dashed #1c4fd8;outline-offset:4px}
+  .editing #canvas [data-form-block]::before{
+    content:"CONTACT FORM — press Form to change its wording";
+    display:block;margin:6px 0 2px;
+    font:600 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.4px;
+    text-transform:uppercase;color:#29447a}
+  .editing #canvas [data-cal-wrap]::before{
+    content:"CALENDAR — press Events to add or change events; click a day to add one";
+    display:block;margin:6px 0 2px;
+    font:600 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.4px;
+    text-transform:uppercase;color:#29447a}
+  /* the event list stays out of the editor's way: the calendar is the one
+     place events are made, and the list is what it is drawn from */
+  #canvas .evsrc{display:none}
+  .evcal-label{font:600 15px "Helvetica Neue",Arial,sans-serif;color:var(--ink)}
+  .editing .evcal .ev-day{cursor:pointer}
+  .editing .evcal .ev-day:hover{transform:scale(1.06);z-index:2}
+  #eventsList .evrow{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #e6e6e6}
+  #eventsList .evrow .evwhen{font:700 12px "Helvetica Neue",Arial,sans-serif;color:#1c4fd8;white-space:nowrap}
+  #eventsList .evrow .evwhat{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:13px Georgia,serif;color:#222}
+  #eventsList .evrow button{border:1px solid #999;background:#fff;border-radius:3px;padding:3px 9px;font-size:12px;cursor:pointer}
+  #eventsList .evrow button:hover{border-color:#1c4fd8;color:#1c4fd8}
+  #eventsList .evrow button.del:hover{border-color:#a1261e;color:#a1261e}
+  .dlg-field textarea{min-height:64px}
+  .linkbtn{border:1px solid #1c4fd8;background:#fff;color:#1c4fd8;border-radius:3px;
+    padding:2px 8px;font-size:12px;cursor:pointer}
+  .linkbtn:hover{background:#1c4fd8;color:#fff}
+  .cal-size{display:inline-flex;align-items:center;gap:6px}
+  .cal-size button{border:1px solid #999;background:#fff;border-radius:3px;width:30px;height:28px;cursor:pointer;font:16px "Helvetica Neue",Arial,sans-serif}
+  .cal-size button:hover{border-color:#1c4fd8;color:#1c4fd8}
+  .cal-size input{padding:4px 6px}
+  .cal-preview{margin-left:10px;line-height:1}
+  .dlg-field textarea.short{min-height:38px}
 '''
+
+
+def inert_form_html(cfg: dict) -> str:
+    """The contact form as it is shown in the editor: it never sends.
+
+    The behaviour script is dropped, the submit is blocked and the send
+    button becomes a plain button, so the owner can read (and change) the
+    form without a note ever leaving the machine."""
+    text = site_build.contact_form_html(cfg)
+    text = re.sub(r"<script>[\s\S]*?</script>", "", text, count=1)
+    text = text.replace("<form ", '<form onsubmit="return false;" ', 1)
+    text = text.replace('<button type="submit">', '<button type="button">', 1)
+    text = text.replace('type="file"', 'type="file" disabled', 1)
+    return text
 
 
 def editor_page(site: dict, slug: str, body: str, live: str | None,
@@ -337,24 +396,20 @@ def editor_page(site: dict, slug: str, body: str, live: str | None,
     site["live"] = live
     logo_uri = site_build.logo_data_uri(LOGO)
     form_here = any(p.get("slug") == slug and p.get("form") for p in site.get("pages", []))
-    # Keep the source marker in the editable canvas; render a separate inert
-    # preview on every editor page so enabling the form takes effect live.
-    # The preview must never send for real: drop the behaviour script, stop
-    # the inline submit and turn the send button into a plain button.
-    preview_form = re.sub(r"<script>[\s\S]*?</script>", "",
-                          site_build.CONTACT_FORM_HTML, count=1)
-    preview_form = preview_form.replace("<form ", '<form onsubmit="return false;" ', 1)
-    preview_form = preview_form.replace('<button type="submit">Send it our way</button>',
-                                        '<button type="button">Send it our way</button>', 1)
-    inert = ('<div id="formpreview" contenteditable="false">'
-             + preview_form
-             + "</div>")
+    # The contact form and the events calendar are real pieces of the site,
+    # so the editor shows the real thing where it will sit. Both are
+    # generated blocks: they are drawn here and swapped back for their
+    # marker paragraph when the page is saved.
+    form_cfg = site_build.load_form_config(DATA)
     if form_here:
-        marker = '<p data-form-marker="contact" class="form-placeholder" contenteditable="false">Contact form goes here — preview below</p>'
-        canvas_body, _ = site_build.place_form(body, marker)
-        form_leftover = inert
+        block = ('<div data-form-block contenteditable="false">'
+                 + inert_form_html(form_cfg) + "</div>")
+        canvas_body, leftover = site_build.place_form(body, block)
+        if leftover:
+            canvas_body = canvas_body + leftover
     else:
-        canvas_body, form_leftover = body, inert
+        canvas_body = body
+    canvas_body = site_build.place_calendar_static(canvas_body)
     page = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -406,6 +461,7 @@ __CSS__
   <span class="status" id="status">viewing</span>
   <span class="spacer"></span>
   <button id="btn-page-settings" title="Page title, visibility, badge and contact form">Page settings</button>
+  <button id="btn-calendar-top" title="Change the shape, size and colour of the calendar marker">Calendar marker</button>
   <button id="btn-edit">Edit</button>
   <button id="btn-save" disabled>Save</button>
   <a id="btn-preview" href="#" target="_blank" rel="noopener" class="barlink">Preview</a>
@@ -480,6 +536,9 @@ __CSS__
   <button data-cmd="section" title="Insert a nice section panel">Section</button>
   <button data-cmd="table" title="Insert a 2x2 table">Table</button>
   <button data-cmd="form" id="btn-form-marker" title="Place the contact form at the cursor">Form location</button>
+  <button data-cmd="formedit" id="btn-form-edit" title="Change the wording of the contact form on this page">Form</button>
+  <button data-cmd="events" id="btn-events" title="Add or change the events and the calendar">Events</button>
+  <button data-cmd="calendar" id="btn-calendar" title="Change the shape, size and colour of the calendar marker">Calendar</button>
   </div>
   <div class="toolgroup"><span class="groupname">Image</span>
   <button data-cmd="small" disabled>Small</button>
@@ -583,6 +642,83 @@ __CSS__
     <p id="mediaEmpty" class="dlg-note" hidden>No uploaded images yet.</p>
   </div>
 </div>
+<div class="ld-back" id="formDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="formDlgTitle">
+    <h3 id="formDlgTitle">Contact form wording</h3>
+    <p class="dlg-note">These are the words on the contact form. The form itself keeps working the same way — only the wording changes.</p>
+    <label class="dlg-field">Email subject<input id="formSubject" maxlength="200" autocomplete="off"></label>
+    <label class="dlg-field">Name field label<input id="formNameLabel" maxlength="120" autocomplete="off"></label>
+    <label class="dlg-field">Name field hint<textarea class="short" id="formNameSub" maxlength="300"></textarea></label>
+    <label class="dlg-field">Name field placeholder<input id="formNamePh" maxlength="120" autocomplete="off"></label>
+    <label class="dlg-field">Email or phone field label<input id="formContactLabel" maxlength="120" autocomplete="off"></label>
+    <label class="dlg-field">Email or phone field hint<textarea class="short" id="formContactSub" maxlength="300"></textarea></label>
+    <label class="dlg-field">Email or phone field placeholder<input id="formContactPh" maxlength="120" autocomplete="off"></label>
+    <label class="dlg-field">Note field label<input id="formNoteLabel" maxlength="120" autocomplete="off"></label>
+    <label class="dlg-field">Note field placeholder<input id="formNotePh" maxlength="200" autocomplete="off"></label>
+    <label class="dlg-field">Files field label<input id="formFilesLabel" maxlength="120" autocomplete="off"></label>
+    <label class="dlg-field">Files field hint<textarea class="short" id="formFilesSub" maxlength="300"></textarea></label>
+    <label class="dlg-field">Send button text<input id="formButton" maxlength="60" autocomplete="off"></label>
+    <div class="dlg-row">
+      <label><input type="checkbox" id="formShowContact"> Show the email-or-phone field</label>
+      <label><input type="checkbox" id="formShowFiles"> Show the file picker</label>
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="formApply">Apply to the form</button>
+      <button type="button" id="formReset">Original wording</button>
+      <button type="button" id="formCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="eventsDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="eventsDlgTitle">
+    <h3 id="eventsDlgTitle">Events</h3>
+    <p class="dlg-note">Every event here becomes a mark on the calendar. Click a day on the calendar to add or change an event on it.</p>
+    <div id="eventsList"></div>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="eventAdd">Add an event</button>
+      <button type="button" id="eventsClose">Done</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="calDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="calDlgTitle">
+    <h3 id="calDlgTitle">Calendar marker</h3>
+    <p class="dlg-note">How the days that have events are marked on the calendar — on the published site too.</p>
+    <div class="dlg-row">
+      <label class="dlg-field">Shape<select id="calSymbol"></select></label>
+      <label class="dlg-field">Colour<input id="calColor" type="color" value="#1a7f37"></label>
+    </div>
+    <label class="dlg-field">Size
+      <span class="cal-size">
+        <button type="button" id="calSmaller" title="Smaller">&minus;</button>
+        <input id="calSize" type="number" min="8" max="48" step="1" style="width:76px">
+        <button type="button" id="calBigger" title="Bigger">+</button>
+        <span id="calPreview" class="cal-preview">&bull;</span>
+      </span>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="calApply">Done</button>
+      <button type="button" id="calCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="eventDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="eventDlgTitle">
+    <h3 id="eventDlgTitle">Add an event</h3>
+    <p class="dlg-note" id="evWhen">Saturday, November 14, 2026</p>
+    <div id="evDayList"></div>
+    <label class="dlg-field">Year<input id="evYear" type="number" min="2000" max="2100"></label>
+    <label class="dlg-field">Time (optional)<input id="evTime" maxlength="60" autocomplete="off" placeholder="e.g. 9 am to 3 pm"></label>
+    <label class="dlg-field">What is it<textarea id="evTitle" maxlength="300"></textarea></label>
+    <p class="dlg-note">A link goes right in the text, in square brackets: check the Rotary website <b>[here](https://owegorotary.org/)</b></p>
+    <p class="dlg-note">The shape, size and colour of the mark on the calendar: <button type="button" id="evMarkerBtn" class="linkbtn">change the marker</button></p>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="evSave">Add event</button>
+      <button type="button" class="danger" id="evDelete" hidden>Remove event</button>
+      <button type="button" id="evCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="ld-back" id="helpDlg" hidden>
   <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <h3 id="helpTitle">Using the site editor</h3>
@@ -632,7 +768,6 @@ __CSS__
   <nav class="sitenav" id="nav"></nav>
   <div class="hr"></div>
   <div class="canvas" id="canvas">__BODY__</div>
-  __FORMPREVIEW__
   <div id="hint">Blank page — press Edit and start typing, use the toolbar for blocks, or drop a picture in.</div>
   <footer id="foot"></footer>
 </div>
@@ -642,6 +777,10 @@ __CSS__
 <script>
 let SITE = __SITE_JSON__;
 let SLUG = "__SLUG__";
+/* the contact form's wording: what the server has on disk (FORM) and the
+   original wording it falls back to (FORM_BASE) */
+let FORM = __FORM_JSON__;
+let FORM_BASE = __FORM_DEFAULTS__;
 /* ---------- builder self-update: never need Quit to pick up new code.
    The page and /api/pping carry (pid, stamp-of-edit.py). New pid = the
    server restarted itself -> reload and get the fresh code. Same pid but
@@ -763,6 +902,7 @@ function persistDraft(){
     localStorage.setItem(draftKey(SLUG), JSON.stringify({
       body: canvas.innerHTML,
         site: globalSettings(SITE), siteBase:serverSiteSnapshot,
+      form: FORM,
       savedAt: Date.now()
     }));
   } catch (e) { status.textContent = "Unsaved changes — browser draft storage is full"; }
@@ -834,6 +974,7 @@ async function restoreDraft(){
   if (choice === "later") return false;
   if (choice === "discard") { clearDraft(SLUG); return false; }
   canvas.innerHTML = draft.body; selImg = null; replaceTarget = null;
+  if (draft.form && typeof draft.form === "object") FORM = Object.assign({}, FORM, draft.form);
   const siteSettingsCurrent = !!draft.siteBase && draft.siteBase === serverSiteSnapshot;
   if (draft.site && siteSettingsCurrent) SITE = Object.assign({}, SITE, draft.site);
   dirty = true; ensureExitBlock(); renderAll(); histReset(); updateSaveBtn();
@@ -926,18 +1067,318 @@ function renderAll(){
 }
 $("#link-built").addEventListener("click", previewCurrent);
 $("#btn-preview").addEventListener("click", previewCurrent);
+/* ---------- the contact form and the events calendar ------------------
+   Both are generated blocks: the editor draws the real thing where it
+   will sit, and swaps it back for its marker paragraph when the page is
+   saved. The form's wording lives in data/form.json; the events live in
+   the event list on the page and the calendar is drawn from them. */
+const MONTH_NAMES = ["January","February","March","April","May","June","July",
+                     "August","September","October","November","December"];
+let CAL_Y = 0, CAL_M = 0, EVENTS = [], EVENT_EDIT = null, EVENT_DAY = null, evTimer = null;
+let CAL_CFG = {symbol: "●", color: "#1a7f37", size: 17};
+const FORM_FIELDS = [
+  ["subject", "#formSubject"], ["name_label", "#formNameLabel"],
+  ["name_sub", "#formNameSub"], ["name_placeholder", "#formNamePh"],
+  ["contact_label", "#formContactLabel"], ["contact_sub", "#formContactSub"],
+  ["contact_placeholder", "#formContactPh"], ["note_label", "#formNoteLabel"],
+  ["note_placeholder", "#formNotePh"], ["files_label", "#formFilesLabel"],
+  ["files_sub", "#formFilesSub"], ["button", "#formButton"]
+];
+function formBlockEl(){ return canvas.querySelector("[data-form-block]"); }
+function calWrapEl(){ return canvas.querySelector("[data-cal-wrap]"); }
+function evSrcEl(){ return canvas.querySelector(".evsrc"); }
+function escText(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escAttr(s){ return escText(s).replace(/"/g,"&quot;"); }
+function markerPara(text){ const p = document.createElement("p"); p.textContent = text; return p; }
+
+async function renderFormBlock(){
+  const page = SITE.pages.find(p => p.slug === SLUG);
+  let block = formBlockEl();
+  if (!page || !page.form) { if (block) block.remove(); return; }
+  let j;
+  try { j = await api("/api/form", {form: FORM}); } catch(e){ return; }
+  if (j && j.form) FORM = j.form;
+  if (!block) {
+    const marker = Array.from(canvas.querySelectorAll("p")).find(el => el.textContent.trim() === "[contact form]");
+    block = document.createElement("div");
+    block.setAttribute("data-form-block", "");
+    block.contentEditable = "false";
+    if (marker) marker.replaceWith(block); else canvas.appendChild(block);
+  }
+  block.innerHTML = j.html || "";
+}
+
+let calReq = 0;
+async function renderCalBlock(){
+  const src = evSrcEl() ? evSrcEl().innerHTML : "";
+  const mine = ++calReq;
+  let j;
+  try { j = await api("/api/events", {block: src, y: CAL_Y, m: CAL_M, symbol: CAL_CFG.symbol, color: CAL_CFG.color, size: CAL_CFG.size}); }
+  catch(e){ return; }
+  if (mine !== calReq) return;   // a newer request already drew the calendar
+  EVENTS = j.events || [];
+  CAL_Y = j.y || CAL_Y; CAL_M = j.m || CAL_M;
+  let wrap = calWrapEl();
+  if (!wrap) {
+    const marker = Array.from(canvas.querySelectorAll("p")).find(el => el.textContent.trim() === "[event calendar]");
+    if (!marker) return;
+    wrap = document.createElement("div");
+    wrap.setAttribute("data-cal-wrap", "");
+    wrap.contentEditable = "false";
+    marker.replaceWith(wrap);
+  }
+  wrap.innerHTML = j.html || "";
+}
+function scheduleEventsRefresh(){
+  clearTimeout(evTimer);
+  evTimer = setTimeout(() => { renderCalBlock(); }, 450);
+}
+
+/* ---- the event list on the page is what the calendar is drawn from ---- */
+function safeUrl(url){
+  const u = String(url || "").trim();
+  if (!u) return "";
+  if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
+  if (/^[/#?]/.test(u)) return u;           // a page of this site
+  return "";
+}
+/* the text of an event may carry links written as [words](address) */
+function textToEventHtml(text){
+  let out = escText(text);
+  out = out.replace(/\\[([^\\]]*)\\]\\(([^)\\s]+)\\)/g, function(m, words, url){
+    const ok = safeUrl(url);
+    if (!ok) return words;
+    return '<a href="' + escAttr(ok) + '">' + words + "</a>";
+  });
+  return out;
+}
+/* an event that came from the page: show its text with the link inline */
+function eventInlineText(ev){
+  if (ev && ev.html) {
+    let h = String(ev.html).replace(/<a\\b[^>]*href="([^"]*)"[^>]*>([\\s\\S]*?)<\\/a>/gi,
+      function(m, url, words){ return "[" + words.replace(/<[^>]*>/g, "") + "](" + url + ")"; });
+    h = h.replace(/<[^>]*>/g, "");
+    const m = /^[A-Z][a-z]+ \\d{1,2}(?:st|nd|rd|th), \\d{4}(?:,\\s*[^—]*)?\\s*[—-]\\s*([\\s\\S]*)$/.exec(h.trim());
+    if (m) return m[1].trim();
+    if (h.trim()) return h.trim();
+  }
+  return (ev && ev.label) || "";
+}
+function eventOrdinal(n){
+  const s = ["th","st","nd","rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+function eventPara(ev){
+  let text = MONTH_NAMES[ev.month - 1] + " " + eventOrdinal(ev.day) + ", " + ev.year;
+  if (ev.time) text += ", " + ev.time;
+  text += " — " + ev.title;
+  return textToEventHtml(text);
+}
+function ensureEvSrc(){
+  let block = evSrcEl();
+  if (block) return block;
+  block = document.createElement("div");
+  block.className = "evsrc";
+  const wrap = calWrapEl();
+  if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(block, wrap.nextSibling);
+  else canvas.appendChild(block);
+  return block;
+}
+function writeEvent(ev, editIdx){
+  const block = ensureEvSrc();
+  const paras = Array.from(block.querySelectorAll("p, li"));
+  const p = document.createElement("p");
+  p.innerHTML = eventPara(ev);
+  if (editIdx != null && paras[editIdx]) paras[editIdx].replaceWith(p);
+  else block.appendChild(p);
+  // show the month the event now sits in
+  CAL_Y = ev.year; CAL_M = ev.month;
+  markDirty();
+  renderCalBlock();
+}
+async function deleteEvent(ev){
+  const block = evSrcEl();
+  if (!block) return;
+  const paras = Array.from(block.querySelectorAll("p, li"));
+  if (paras[ev.idx]) paras[ev.idx].remove();
+  markDirty();
+  await renderCalBlock();
+}
+function fillEventForm(ev, dateStr){
+  let y, m, d;
+  if (ev) { y = ev.y; m = ev.m; d = ev.d; }
+  else if (dateStr) { const bits = String(dateStr).split("-").map(Number); y = bits[0]; m = bits[1]; d = bits[2]; }
+  else { const now = new Date(); y = now.getFullYear(); m = now.getMonth() + 1; d = now.getDate(); }
+  EVENT_DAY = {y: y, m: m, d: d};
+  EVENT_EDIT = ev || null;
+  let when = "";
+  try { when = new Date(y, m - 1, d).toLocaleDateString("en-US",
+        {weekday:"long", month:"long", day:"numeric", year:"numeric"}); } catch(e) {}
+  $("#evWhen").textContent = when;
+  $("#evYear").value = String(y);
+  $("#evTime").value = ev ? (ev.times || "") : "";
+  $("#evTitle").value = ev ? eventInlineText(ev) : "";
+  $("#evSave").textContent = ev ? "Save changes" : "Add event";
+  $("#evDelete").hidden = !ev;
+  eventDayList(EVENT_DAY);
+  $("#eventsDlg").hidden = true;
+  $("#eventDlg").hidden = false;
+  $("#evTitle").focus();
+}
+function eventDayList(day){
+  const list = $("#evDayList");
+  list.innerHTML = "";
+  if (!day) return;
+  const mine = EVENTS.filter(e => e.y === day.y && e.m === day.m && e.d === day.d);
+  if (!mine.length) return;
+  const head = document.createElement("p");
+  head.className = "dlg-note";
+  head.textContent = "Already on this day:";
+  list.appendChild(head);
+  mine.forEach(ev => {
+    const row = document.createElement("div"); row.className = "evrow";
+    const what = document.createElement("span"); what.className = "evwhat";
+    what.textContent = (ev.times ? ev.times + " · " : "") + (ev.label || "");
+    const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit";
+    edit.onclick = () => fillEventForm(ev, null);
+    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "Remove";
+    del.onclick = async () => { await deleteEvent(ev); fillEventForm(null, day.y + "-" + day.m + "-" + day.d); };
+    row.appendChild(what); row.appendChild(edit); row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+async function openEventsDialog(){
+  await renderCalBlock();
+  const list = $("#eventsList");
+  list.innerHTML = "";
+  if (!EVENTS.length) {
+    const p = document.createElement("p");
+    p.className = "dlg-note";
+    p.textContent = "No events yet. Click a day on the calendar to add one.";
+    list.appendChild(p);
+  }
+  EVENTS.forEach(ev => {
+    const row = document.createElement("div"); row.className = "evrow";
+    const when = document.createElement("span"); when.className = "evwhen";
+    when.textContent = ev.day + (ev.times ? " · " + ev.times : "");
+    const what = document.createElement("span"); what.className = "evwhat";
+    what.textContent = ev.label || "";
+    const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit";
+    edit.onclick = () => { $("#eventsDlg").hidden = true; fillEventForm(ev, null); };
+    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "Delete";
+    del.onclick = async () => { await deleteEvent(ev); openEventsDialog(); };
+    row.appendChild(when); row.appendChild(what); row.appendChild(edit); row.appendChild(del);
+    list.appendChild(row);
+  });
+  $("#eventsDlg").hidden = false;
+}
+function applyCalMarker(){
+  const sym = $("#calSymbol").value, col = $("#calColor").value;
+  const size = parseInt($("#calSize").value, 10);
+  CAL_CFG = {symbol: sym || CAL_CFG.symbol,
+             color: col || CAL_CFG.color,
+             size: (size >= 8 && size <= 48) ? size : (CAL_CFG.size || 17)};
+  const pv = $("#calPreview");
+  if (pv) { pv.textContent = CAL_CFG.symbol; pv.style.color = CAL_CFG.color; pv.style.fontSize = CAL_CFG.size + "px"; }
+  renderCalBlock();
+  markDirty();
+}
+function openCalDialog(){
+  $("#calSymbol").value = CAL_CFG.symbol;
+  $("#calColor").value = CAL_CFG.color;
+  $("#calSize").value = CAL_CFG.size || 17;
+  const pv = $("#calPreview");
+  if (pv) { pv.textContent = CAL_CFG.symbol; pv.style.color = CAL_CFG.color; pv.style.fontSize = (CAL_CFG.size || 17) + "px"; }
+  $("#calDlg").hidden = false;
+}
+$("#evMarkerBtn").onclick = () => { openCalDialog(); };
+$("#calSmaller").onclick = () => { $("#calSize").value = Math.max(8, (parseInt($("#calSize").value, 10) || 17) - 2); applyCalMarker(); };
+$("#calBigger").onclick = () => { $("#calSize").value = Math.min(48, (parseInt($("#calSize").value, 10) || 17) + 2); applyCalMarker(); };
+$("#calSize").addEventListener("change", applyCalMarker);
+$("#calApply").onclick = () => { $("#calDlg").hidden = true; };
+$("#calCancel").onclick = () => { $("#calDlg").hidden = true; };
+/* ---- the contact form's wording ---- */
+function formToFields(cfg){
+  FORM_FIELDS.forEach(([key, sel]) => { const el = $(sel); if (el) el.value = cfg[key] == null ? "" : cfg[key]; });
+  const c = $("#formShowContact"), f = $("#formShowFiles");
+  if (c) c.checked = cfg.show_contact !== false;
+  if (f) f.checked = cfg.show_files !== false;
+}
+function fieldsToForm(cfg){
+  const out = Object.assign({}, cfg);
+  FORM_FIELDS.forEach(([key, sel]) => { const el = $(sel); if (el) out[key] = el.value; });
+  const c = $("#formShowContact"), f = $("#formShowFiles");
+  if (c) out.show_contact = c.checked;
+  if (f) out.show_files = f.checked;
+  return out;
+}
+function openFormDialog(){
+  formToFields(FORM || {});
+  $("#formDlg").hidden = false;
+}
+$("#formApply").onclick = async () => {
+  FORM = fieldsToForm(FORM || {});
+  $("#formDlg").hidden = true;
+  await renderFormBlock();
+  markDirty();
+  status.textContent = "Form wording changed — press Save to stage it";
+};
+$("#formReset").onclick = () => {
+  FORM = Object.assign({}, FORM_BASE);
+  formToFields(FORM);
+};
+$("#formCancel").onclick = () => { $("#formDlg").hidden = true; };
+["●","•","■","▲","▼","★","◆","✦","✚","♦"].forEach(sym => {
+  const o = document.createElement("option");
+  o.value = sym; o.textContent = sym;
+  $("#calSymbol").appendChild(o);
+});
+$("#calSymbol").addEventListener("change", applyCalMarker);
+$("#calColor").addEventListener("change", applyCalMarker);
+$("#eventAdd").onclick = () => { fillEventForm(null, null); };
+$("#eventsClose").onclick = () => { $("#eventsDlg").hidden = true; };
+$("#evCancel").onclick = () => { $("#eventDlg").hidden = true; };
+$("#evSave").onclick = async () => {
+  const day = EVENT_DAY;
+  if (!day) return;
+  const y = parseInt($("#evYear").value, 10) || day.y;
+  const title = $("#evTitle").value.trim();
+  if (!title) { $("#evTitle").focus(); status.textContent = "Give the event a name"; return; }
+  const ev = {month: day.m, day: day.d, year: y, time: $("#evTime").value.trim(),
+              title: title};
+  const editIdx = EVENT_EDIT ? EVENT_EDIT.idx : null;
+  $("#eventDlg").hidden = true;
+  writeEvent(ev, editIdx);
+};
+$("#evDelete").onclick = async () => {
+  const ev = EVENT_EDIT;
+  $("#eventDlg").hidden = true;
+  if (ev) await deleteEvent(ev);
+};
+/* clicking a day in the builder's calendar adds an event on that day */
+canvas.addEventListener("click", e => {
+  const prev = e.target.closest("[data-cal-prev]");
+  const next = e.target.closest("[data-cal-next]");
+  if (prev || next) {
+    e.preventDefault();
+    if (!CAL_Y || !CAL_M) return;
+    let y = CAL_Y, m = CAL_M + (next ? 1 : -1);
+    while (m < 1) { m = 12; y--; }
+    while (m > 12) { m = 1; y++; }
+    CAL_Y = y; CAL_M = m;
+    renderCalBlock();
+    return;
+  }
+  const day = e.target.closest("[data-cal-day]");
+  if (day) {
+    e.preventDefault();
+    fillEventForm(null, day.getAttribute("data-cal-day"));
+  }
+});
 function decorateFormMarker(){
   const current = SITE.pages.find(p => p.slug === SLUG);
   if (!current || !current.form) return;
-  const existing = canvas.querySelector('[data-form-marker="contact"]');
-  if (existing) {
-    existing.classList.add("form-placeholder"); existing.contentEditable = "false";
-    existing.textContent = "Contact form goes here — preview below"; return;
-  }
-  const p = Array.from(canvas.querySelectorAll("p")).find(el => el.textContent.trim() === "[contact form]");
-  if (!p) return;
-  p.dataset.formMarker = "contact"; p.classList.add("form-placeholder");
-  p.contentEditable = "false"; p.textContent = "Contact form goes here — preview below";
+  renderFormBlock();
 }
 function syncFormMarker(){
   const current = SITE.pages.find(p => p.slug === SLUG);
@@ -953,12 +1394,25 @@ function bodyForSave(){
   const copy = canvas.cloneNode(true);
   const page = SITE.pages.find(p => p.slug === SLUG);
   let kept = false;
-  Array.from(copy.querySelectorAll('[data-form-marker="contact"],p')).forEach(node => {
+  // the generated blocks go back to the marker paragraphs the site reads
+  Array.from(copy.querySelectorAll("[data-cal-wrap]")).forEach(node => {
+    node.replaceWith(markerPara("[event calendar]"));
+  });
+  Array.from(copy.querySelectorAll("[data-form-block]")).forEach(node => {
+    if (page && page.form) node.replaceWith(markerPara("[contact form]"));
+    else node.remove();
+  });
+  // any marker paragraph that is still lying around
+  Array.from(copy.querySelectorAll("p")).forEach(node => {
     const isMarker = node.dataset.formMarker === "contact"
-      || (node.tagName === "P" && node.textContent.trim() === "[contact form]");
+      || node.textContent.trim() === "[contact form]";
     if (!isMarker) return;
     if (page && page.form && !kept) {
-      const p = document.createElement("p"); p.textContent = "[contact form]"; node.replaceWith(p); kept = true;
+      node.textContent = "[contact form]";
+      node.removeAttribute("data-form-marker");
+      node.removeAttribute("class");
+      node.removeAttribute("contenteditable");
+      kept = true;
     } else node.remove();
   });
   return copy.innerHTML;
@@ -972,6 +1426,8 @@ async function openPage(slug){
     j = await api("/api/page?slug=" + encodeURIComponent(slug));
   } catch (err) { status.textContent = "could not open page: " + err.message; return; }
   SLUG = slug; canvas.innerHTML = j.body; selImg = null; syncFormMarker();
+  CAL_Y = 0; CAL_M = 0;
+  renderCalBlock();
   try { localStorage.setItem(LAST_PAGE_KEY, SLUG); } catch (e) {}
   ensureExitBlock();
   histReset();
@@ -1045,6 +1501,8 @@ document.addEventListener("input", e => {
     $("#" + ED_TO_INPUT[ed.dataset.ed]).value = ed.innerText.trim();
     readInputsToSite();
   }
+  // typing in the event list redraws the calendar
+  if (e.target.closest && e.target.closest(".evsrc")) scheduleEventsRefresh();
   markDirty(); hint();
 });
 btnEdit.onclick = () => setEditing(!editing);
@@ -1132,6 +1590,7 @@ async function openPageSettings(slug){
   $("#pageNav").focus();
 }
 $("#btn-page-settings").onclick = () => openPageSettings(SLUG);
+$("#btn-calendar-top").onclick = () => openCalDialog();
 $("#pageCancel").onclick = () => { $("#pageDlg").hidden = true; pageSettingsSlug = null; };
 $("#pageBadge").addEventListener("change", () => {
   if ($("#pageBadge").value) $("#pageHidden").checked = true;
@@ -1829,7 +2288,13 @@ function showBlockbar(el){
   blockbar.hidden = false;
   const r = el.getBoundingClientRect();
   blockbar.style.left = Math.max(8, Math.min(window.innerWidth - blockbar.offsetWidth - 8, r.left)) + "px";
-  blockbar.style.top = Math.max(44, r.top - blockbar.offsetHeight - 5) + "px";
+  // never sit on top of the toolbar: the bar belongs to the block, and the
+  // toolbar's own buttons must stay clickable
+  const tb = $("#toolbar");
+  const floor = (tb ? tb.getBoundingClientRect().bottom : 44) + 8;
+  let top = r.top - blockbar.offsetHeight - 5;
+  if (top < floor) top = r.top + 5;
+  blockbar.style.top = Math.max(floor, top) + "px";
 }
 function hideBlockbar(){ clearTimeout(blockHideTimer); blockbar.hidden = true; blockTarget = null; }
 canvas.addEventListener("mousemove", e => {
@@ -2415,16 +2880,20 @@ $("#toolbar").addEventListener("click", e => {
   else if (c === "table") document.execCommand("insertHTML", false,
     '<table><tbody><tr><th>Header</th><th>Header</th></tr><tr><td><br></td><td><br></td></tr></tbody></table><p><br></p>');
   else if (c === "form") {
-    const existing = canvas.querySelector('[data-form-marker="contact"]');
+    const existing = formBlockEl();
     if (existing) {
       existing.scrollIntoView({block: "center"});
-      status.textContent = "The contact form is already placed on this page";
+      status.textContent = "The contact form is already on this page";
       return;
     }
     const marker = document.createElement("p"); marker.dataset.formMarker = "contact";
     marker.className = "form-placeholder"; marker.contentEditable = "false";
-    marker.textContent = "Contact form goes here — preview below"; appendNode(marker);
+    marker.textContent = "[contact form]"; appendNode(marker);
+    renderFormBlock();
   }
+  else if (c === "formedit") { openFormDialog(); return; }
+  else if (c === "events") { openEventsDialog(); return; }
+  else if (c === "calendar") { openCalDialog(); return; }
   else if (c === "image") { galleryMode = false; replaceTarget = null; filepick.multiple = false; filepick.click(); }
   else if (c === "gallery") { replaceTarget = null; galleryMode = true; filepick.multiple = true; filepick.click(); }
   else if ((c === "small" || c === "medium" || c === "full") && selImg) {
@@ -2674,7 +3143,7 @@ async function save(){
   status.textContent = "saving…";
   saving = true; updateSaveBtn();
   try {
-    const result = await api("/api/save", Object.assign({}, settings, {slug:saveSlug, body:sentBody, siteBase:serverSiteSnapshot}));
+    const result = await api("/api/save", Object.assign({}, settings, {slug:saveSlug, body:sentBody, siteBase:serverSiteSnapshot, form:FORM, calendar:CAL_CFG}));
     serverSiteSnapshot = JSON.stringify(globalSettings(result.site));
     if (SLUG !== saveSlug) return false;
     if (editRevision !== saveRevision) {
@@ -2686,6 +3155,7 @@ async function save(){
     const cleanChanged = result.body !== sentBody;
     if (cleanChanged) {
       canvas.innerHTML = result.body; syncFormMarker(); ensureExitBlock(); histReset(); selImg = null; replaceTarget = null;
+      renderCalBlock();
     }
     dirty = false; clearDraft(SLUG);
     renderAll(); updateSaveBtn();
@@ -2746,6 +3216,8 @@ renderAll();
 setEditing(false);
 ensureExitBlock();
 histReset();
+renderCalBlock();
+renderFormBlock();
 async function initEditor(){
   let last = null;
   try { last = localStorage.getItem(LAST_PAGE_KEY); } catch (e) {}
@@ -2772,7 +3244,9 @@ initEditor();
     page = page.replace("__THEME__", site["theme"])
     page = page.replace("__STAR_ANIMATION__", site.get("star_animation", "portal"))
     page = page.replace("__BODY__", canvas_body)
-    page = page.replace("__FORMPREVIEW__", form_leftover)
+    page = page.replace("__FORMPREVIEW__", "")
+    page = page.replace("__FORM_JSON__", json.dumps(form_cfg, ensure_ascii=False).replace("<", "\\u003c"))
+    page = page.replace("__FORM_DEFAULTS__", json.dumps(site_build.FORM_DEFAULTS, ensure_ascii=False).replace("<", "\\u003c"))
     page = page.replace("__SITE_JSON__", json.dumps(site, ensure_ascii=False).replace("<", "\\u003c"))
     page = page.replace("__SLUG__", slug)
     st = Path(__file__).stat()
@@ -2969,10 +3443,26 @@ class Handler(BaseHTTPRequestHandler):
         page_path = PAGES / f"{slug}.html"
         old_data = DATA.read_bytes() if DATA.is_file() else None
         old_page = page_path.read_bytes() if page_path.is_file() else None
+        # The contact form's wording travels with the page save.
+        form_cfg = None
+        if isinstance(doc.get("form"), dict):
+            form_cfg = site_build.sanitize_form_config(doc.get("form"))
+        old_form = FORM_PATH.read_bytes() if FORM_PATH.is_file() else None
+        # The calendar's marker (symbol + colour) travels with it too.
+        cal_cfg = None
+        if isinstance(doc.get("calendar"), dict):
+            cal_cfg = site_build.sanitize_calendar_config(doc.get("calendar"))
+        old_cal = CAL_PATH.read_bytes() if CAL_PATH.is_file() else None
         PAGES.mkdir(parents=True, exist_ok=True)
         try:
             write_text_atomic(DATA, json.dumps(site, ensure_ascii=False, indent=2) + "\n")
             write_text_atomic(page_path, clean)
+            if form_cfg is not None:
+                write_text_atomic(FORM_PATH,
+                                  json.dumps(form_cfg, ensure_ascii=False, indent=2) + "\n")
+            if cal_cfg is not None:
+                write_text_atomic(CAL_PATH,
+                                  json.dumps(cal_cfg, ensure_ascii=False, indent=2) + "\n")
             rebuild()
         except Exception:
             if old_data is None:
@@ -2983,10 +3473,20 @@ class Handler(BaseHTTPRequestHandler):
                 page_path.unlink(missing_ok=True)
             else:
                 write_text_atomic(page_path, old_page.decode("utf-8"))
+            if form_cfg is not None:
+                if old_form is None:
+                    FORM_PATH.unlink(missing_ok=True)
+                else:
+                    write_text_atomic(FORM_PATH, old_form.decode("utf-8"))
+            if cal_cfg is not None:
+                if old_cal is None:
+                    CAL_PATH.unlink(missing_ok=True)
+                else:
+                    write_text_atomic(CAL_PATH, old_cal.decode("utf-8"))
             raise
         saved_site = read_site()
         paths = [DATA] + [PAGES / f"{p['slug']}.html" for p in saved_site["pages"]] \
-            + [SITE, LOGO, UPLOADS]
+            + [SITE, LOGO, UPLOADS, FORM_PATH, CAL_PATH]
         note = git_add([p for p in paths if p.exists()])
         return self._json(200, {"ok": True, "site": saved_site, "body": clean, "note": note})
 
@@ -3009,6 +3509,35 @@ class Handler(BaseHTTPRequestHandler):
                 doc = self._read_json()
                 with _MUTEX:
                     return self._handle_save(doc)
+            if url.path == "/api/form":
+                # The contact form as the editor shows it, with the owner's
+                # wording applied. Nothing here can send anything.
+                doc = self._read_json()
+                cfg = site_build.sanitize_form_config(doc.get("form") or {})
+                return self._json(200, {"form": cfg, "html": inert_form_html(cfg)})
+            if url.path == "/api/events":
+                # The event list -> the events it holds and the month grid
+                # drawn from them. The same parser the site build uses.
+                doc = self._read_json()
+                block = str(doc.get("block", ""))[:40000]
+                try:
+                    year = int(doc.get("y") or 0)
+                    month = int(doc.get("m") or 0)
+                except (TypeError, ValueError):
+                    year = month = 0
+                events = site_build.page_events(block)
+                if not year or not month:
+                    today = datetime.date.today()
+                    year, month = today.year, today.month
+                    if events:
+                        near = min(events, key=lambda e: (e["y"], e["m"], e["d"]))
+                        year, month = near["y"], near["m"]
+                cfg = site_build.sanitize_calendar_config(
+                    {"symbol": doc.get("symbol"), "color": doc.get("color"),
+                     "size": doc.get("size")})
+                grid = site_build.calendar_static_html(events, year, month, nav=True, cfg=cfg)
+                return self._json(200, {"events": events, "html": grid,
+                                        "y": year, "m": month, "cfg": cfg})
             if url.path == "/api/settings":
                 doc = self._read_json()
                 site = read_site()

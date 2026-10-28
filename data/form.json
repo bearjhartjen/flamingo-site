@@ -1,0 +1,16 @@
+{
+  "subject": "New message from the Flamingo and Cactus contact form",
+  "name_label": "Your name",
+  "name_sub": "You can put \"Random\" if you would rather not say who you are.",
+  "name_placeholder": "e.g. Random",
+  "contact_label": "Email or phone",
+  "contact_sub": "Optional — only if you want a reply.",
+  "contact_placeholder": "Optional",
+  "note_label": "Note",
+  "note_placeholder": "Anything you want us to know…",
+  "files_label": "Files",
+  "files_sub": "Optional — multiple files on supported browsers, 10 MB total.",
+  "button": "Send it our way",
+  "show_contact": true,
+  "show_files": true
+}
