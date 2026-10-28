@@ -24,12 +24,6 @@
       "nav": "People"
     },
     {
-      "slug": "stress",
-      "nav": "Stress City",
-      "hidden": true,
-      "badge": "none"
-    },
-    {
       "slug": "latest",
       "nav": "Latest",
       "hidden": true,

@@ -5,6 +5,9 @@ https://flamingoandcactus.com. Everything on it is generated from the files
 here — there is no database, no server code running the site, and no online
 editor. If you can read this repo, you can understand the whole site.
 
+New here? Read `HISTORY.md` next. It is the plain-English log of every
+decision: what we changed and why.
+
 ## How a change goes live
 
 1. **Edit** — change words with the local builder (`edit.py`), or edit the

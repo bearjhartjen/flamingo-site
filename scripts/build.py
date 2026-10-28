@@ -805,6 +805,18 @@ CSS = r'''  :root{
     color:var(--ink);text-decoration:none;
     font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;
   }
+  /* ---------- PCBWay order button (Products): sunset block. Selector keys
+     on the share-project href so no inline gradient is needed (the
+     sanitizer only keeps solid background-color). Flows centered inside
+     p.ac on desktop and phone; no absolute positioning. ---------- */
+  .canvas a.btn[href*="pcbway.com/project/shareproject/"]{
+    border:none;border-radius:99px;background:linear-gradient(135deg,#ff5e78,#ff9a3c 60%,#c9a227);
+    color:#1a0005;padding:14px 36px;
+    font:800 14px "Helvetica Neue",Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;
+    box-shadow:0 8px 24px rgba(255,94,120,.35);
+    transition:transform .15s ease,box-shadow .15s ease;
+  }
+  .canvas a.btn[href*="pcbway.com/project/shareproject/"]:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 12px 32px rgba(255,94,120,.45)}
   /* the big draggable button box: a huge rounded clickable block.
      Colors, size and (when dragged) position come from a validated inline
      style; without one it flows centered like a normal block. */
@@ -1053,88 +1065,10 @@ CSS = r'''  :root{
     .canvas a.btn[href^="flank/"]:hover::after{transform:scaleX(-1) rotate(200deg)}
   }
 
-  /* ---------- Stress City: the Stress Express station. The scene is
-     generated from data/stress.json by build.py — the page keeps only a
-     marker paragraph. All states are styled up front; data-stress-state
-     on the card picks the pose, the accent color and the smoke. ---------- */
-  .stresscard{
-    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
-    padding:16px 18px 14px;margin:18px 0 16px;
-    --stress-good:#1a7f37;--stress-warn:#b7791f;--stress-bad:#b3372e;
-    --stress-acc:var(--ink);
-  }
-  body[data-theme="ink"] .stresscard{
-    background:#332e28;border-color:#6b6152;
-    --stress-good:#7ee2a8;--stress-warn:#e3b83b;--stress-bad:#ff8a80;
-  }
-  body[data-theme="midnight"] .stresscard{
-    background:#2b2336;border-color:#4d3c6b;
-    --stress-good:#8fe6ae;--stress-warn:#e3b83b;--stress-bad:#ff9d9d;
-  }
-  .stresscard[data-stress-state="parked"],
-  .stresscard[data-stress-state="boarding"]{--stress-acc:var(--stress-good)}
-  .stresscard[data-stress-state="entering"],
-  .stresscard[data-stress-state="departing"]{--stress-acc:var(--stress-warn)}
-  .stresscard[data-stress-state="fullspeed"],
-  .stresscard[data-stress-state="overloaded"]{--stress-acc:var(--stress-bad)}
-  .stress-kicker{margin:0;font:600 10.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
-  .stress-state{margin:4px 0 2px;font:700 24px Georgia,Times,serif;color:var(--stress-acc)}
-  .stress-sub{margin:0 0 10px;font:italic 13.5px Georgia,Times,serif;color:var(--muted)}
-  .stress-scene{position:relative;height:128px;border:1px solid var(--rule);border-radius:4px;background:var(--paper);overflow:hidden}
-  .stress-skyline{position:absolute;left:0;right:0;bottom:30px;display:flex;align-items:flex-end;gap:6px;padding:0 12px;opacity:.55;pointer-events:none}
-  .stress-bld{flex:none;width:26px;background:var(--rule2);border-radius:2px 2px 0 0}
-  .stress-bld.b1{height:44px}.stress-bld.b2{height:66px}.stress-bld.b3{height:36px}
-  .stress-bld.b4{height:56px}.stress-bld.b5{height:30px}.stress-bld.b6{height:48px}
-  .stress-track{position:absolute;left:0;right:0;bottom:20px;height:6px;border-top:2px solid var(--ink)}
-  .stress-track::after{content:"";position:absolute;left:0;right:0;top:8px;height:5px;
-    background:repeating-linear-gradient(90deg,var(--rule) 0 3px,transparent 3px 10px)}
-  .stress-platform{position:absolute;left:0;bottom:0;width:36%;height:20px;background:var(--rule2);border-top:3px solid var(--gold);z-index:3}
-  .stress-platform::before{content:"Station";position:absolute;left:9px;top:2px;
-    font:600 9px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
-  .stress-crowd{position:absolute;left:9px;bottom:23px;display:none;gap:4px;z-index:3}
-  .stresscard[data-stress-state="overloaded"] .stress-crowd{display:flex}
-  .stress-crowd span{width:8px;height:13px;background:var(--stress-bad);border-radius:3px 3px 0 0}
-  .stress-speed{position:absolute;bottom:30px;left:6%;width:74px;height:14px;display:none;z-index:1}
-  .stresscard[data-stress-state="fullspeed"] .stress-speed{display:block}
-  .stress-speed::before,.stress-speed::after{content:"";position:absolute;height:2px;border-radius:2px;background:var(--muted)}
-  .stress-speed::before{left:0;top:2px;width:62px}
-  .stress-speed::after{left:14px;top:9px;width:48px}
-  .stress-train{position:absolute;bottom:22px;left:36%;z-index:2;display:flex;align-items:flex-end;gap:5px;transition:left 1.1s ease}
-  .stresscard[data-stress-state="entering"] .stress-train{left:8%}
-  .stresscard[data-stress-state="departing"] .stress-train{left:62%}
-  .stresscard[data-stress-state="fullspeed"] .stress-train{left:104%}
-  .stress-car{position:relative;width:38px;height:20px;background:var(--ink);border-radius:3px 3px 1px 1px}
-  .stress-car::after{content:"";position:absolute;bottom:-4px;left:7px;width:7px;height:7px;border-radius:50%;
-    background:var(--gold);box-shadow:17px 0 0 var(--gold)}
-  .stress-car:nth-child(n+2)::before{content:"";position:absolute;left:7px;top:4px;width:8px;height:7px;
-    background:var(--gold);border-radius:1px;box-shadow:15px 0 0 var(--gold)}
-  .stress-eng{width:56px;height:26px;border-radius:9px 4px 1px 1px}
-  .stress-eng .stress-chim{position:absolute;left:5px;top:-8px;width:7px;height:8px;background:var(--ink);border-radius:2px 2px 0 0}
-  .stress-eng .stress-cab{position:absolute;left:6px;top:5px;width:13px;height:9px;background:var(--gold);border-radius:2px}
-  .stress-puff{position:absolute;left:1px;top:-13px;width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:0}
-  .stresscard[data-stress-state="parked"] .stress-puff,
-  .stresscard[data-stress-state="boarding"] .stress-puff{display:none}
-  @media (prefers-reduced-motion:no-preference){
-    .stresscard .stress-puff{animation:stresspuff 1.8s linear infinite}
-    .stresscard .stress-puff.p2{animation-delay:.6s}
-    .stresscard .stress-puff.p3{animation-delay:1.2s}
-  }
-  @keyframes stresspuff{
-    0%{opacity:0;transform:translate(0,0) scale(.6)}
-    25%{opacity:.55}
-    100%{opacity:0;transform:translate(11px,-17px) scale(1.25)}
-  }
-  .stress-board{margin-top:12px}
-  .stress-bar-label{margin:0 0 6px;font:600 10.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
-  .stress-bar{height:16px;border:1px solid var(--ink);border-radius:2px;background:var(--paper);overflow:hidden}
-  .stress-fill{height:100%;background:var(--stress-acc)}
-  .stress-pct{margin:6px 0 0;font:italic 13px Georgia,Times,serif;color:var(--muted)}
-  .stress-updated{margin:10px 0 0;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--faint)}
-
   /* ---------- Settings page: visitor-side site dynamics (theme only for
      now). Choices ride the same fc-theme localStorage key the star script
-     and the ledger already read, so a pick here follows the visitor
-     across every page and onto the ledger. ---------- */
+     already reads, so a pick here follows the visitor across every page.
+     The Flank ledger keeps its own look and never follows it. ---------- */
   .setpanel{
     border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
     padding:18px 20px;margin:18px 0 16px;
@@ -1232,9 +1166,6 @@ CSS = r'''  :root{
     .canvas a.btn[href^="flank/"]{padding:9px 30px}
     .canvas a.btn[href^="flank/"]::before{left:9px}
     .canvas a.btn[href^="flank/"]::after{right:9px}
-    .stress-scene{height:108px}
-    .stress-bld{width:20px}
-    .stress-state{font-size:19px}
     .settheme{width:104px}
   }
   @media (hover:none){.contactform .dropzone{padding:18px 14px}}
@@ -2012,7 +1943,6 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
                 pages, slug: str, body_html: str, logo_uri: str,
                 description: str = "", custom_css: str = "",
                 star_animation: str = "comic",
-                stress: int | None = None,
                 form_html: str = "",
                 cal_cfg: dict | None = None) -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
@@ -2033,10 +1963,6 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         # the literal implementation token leak onto a page without a form.
         placed = re.sub(r"<p[^>]*>\s*\[contact form\]\s*</p>", "", body_html)
     placed, cal_script = place_calendar(placed, cal_cfg)
-    if stress is not None and slug == "stress":
-        # The Stress Express station: generated from data/stress.json,
-        # woven into the stress page at its marker paragraph.
-        placed = place_stress(placed, stress)
     placed, set_script = place_settings(placed, theme)
     if placed:
         canvas = f'  <div class="canvas">\n{placed}{cal_script}{set_script}\n  </div>\n'
@@ -2234,114 +2160,11 @@ __CSS__
 
 
 # ---------------------------------------------------------------------------
-# Stress City: `[stress express]` marker paragraph swapped for the station
-# scene. The level lives in data/stress.json so it can move without a
-# content edit; the scene itself is generated here so the sanitizer never
-# has to pass it. When developer sign-in arrives (Cloudflare Worker), that
-# layer rewrites stress.json — nothing else needs to change.
-
-
-def load_stress(data_dir: Path) -> int:
-    """Stress level 0-100 from data/stress.json; 20 when absent or broken."""
-    try:
-        doc = json.loads((Path(data_dir) / "stress.json").read_text(
-            encoding="utf-8"))
-        return max(0, min(100, int(doc.get("level", 20))))
-    except (OSError, ValueError, TypeError, AttributeError):
-        return 20
-
-
-def stress_state(level: int) -> str:
-    """Tier name for a stress level: where the Stress Express is."""
-    if level <= 15:
-        return "parked"
-    if level <= 35:
-        return "boarding"
-    if level <= 55:
-        return "entering"
-    if level <= 75:
-        return "departing"
-    if level <= 90:
-        return "fullspeed"
-    return "overloaded"
-
-
-STRESS_STATES = {
-    "parked": ("Parked at the Platform",
-               "All quiet on the rails. Nothing is running late."),
-    "boarding": ("Boarding",
-                 "Passengers are gathering. Things are picking up."),
-    "entering": ("Entering the Station",
-                 "The Stress Express is rolling in — mind the rush."),
-    "departing": ("Departing",
-                  "The train is pulling out. Busy tracks ahead."),
-    "fullspeed": ("Full Speed",
-                  "The Stress Express is at full steam. Hang on to something."),
-    "overloaded": ("Overloaded",
-                   "More passengers than seats. Every platform is packed."),
-}
-
-
-def stress_scene(level: int) -> str:
-    """The Stress Express station card, generated from the level."""
-    state = stress_state(level)
-    name, sub = STRESS_STATES[state]
-    crowd = "".join("<span></span>" for _ in range(6))
-    buildings = "".join(f'<div class="stress-bld b{i}"></div>'
-                        for i in range(1, 7))
-    stamp = datetime.datetime.now().strftime("%B %-d, %Y")
-    return (
-        f'<div class="stresscard" data-stress-state="{state}" '
-        f'data-stress-level="{level}">\n'
-        '  <p class="stress-kicker">Stress City \u00b7 Central Station</p>\n'
-        f'  <p class="stress-state">{name}</p>\n'
-        f'  <p class="stress-sub">{sub}</p>\n'
-        '  <div class="stress-scene">\n'
-        f'    <div class="stress-skyline">{buildings}</div>\n'
-        '    <div class="stress-track"></div>\n'
-        '    <div class="stress-platform"></div>\n'
-        f'    <div class="stress-crowd">{crowd}</div>\n'
-        '    <div class="stress-speed"></div>\n'
-        '    <div class="stress-train">\n'
-        '      <div class="stress-car stress-eng">'
-        '<span class="stress-chim"></span><span class="stress-cab"></span>'
-        '<span class="stress-puff"></span><span class="stress-puff p2"></span>'
-        '<span class="stress-puff p3"></span></div>\n'
-        '      <div class="stress-car"></div>\n'
-        '      <div class="stress-car"></div>\n'
-        '    </div>\n'
-        '  </div>\n'
-        '  <div class="stress-board">\n'
-        '    <p class="stress-bar-label">How overwhelmed we are</p>\n'
-        '    <div class="stress-bar">'
-        f'<div class="stress-fill" style="width:{level}%"></div></div>\n'
-        f'    <p class="stress-pct">The Stress Express is {level}% full.</p>\n'
-        '  </div>\n'
-        f'  <p class="stress-updated">Timetable updated {stamp}.</p>\n'
-        "</div>\n"
-    )
-
-
-def place_stress(body_html: str, level: int) -> str:
-    """Swap a `[stress express]` marker paragraph for the station scene.
-
-    Without the marker the scene lands at the end of the page body."""
-    scene = stress_scene(level)
-    placed, n = re.subn(r"<p[^>]*>\s*\[stress express\]\s*</p>",
-                        lambda _m: scene, body_html, count=1,
-                        flags=re.IGNORECASE)
-    if n:
-        return placed
-    if not body_html.strip():
-        return scene
-    return body_html + scene
-
-
-# ---------------------------------------------------------------------------
 # Settings page: `[site settings]` marker paragraph swapped for the
 # visitor-side panel. Themes ride the existing fc-theme localStorage key —
-# the same one the star script and the ledger already read — so a pick
-# here follows the visitor across every page. "Site default" removes the
+# the same one the star script already reads — so a pick here follows the
+# visitor across every page (never onto the Flank ledger, which keeps its
+# own look). "Site default" removes the
 # key and falls back to the theme baked into every page.
 
 
@@ -2402,7 +2225,7 @@ def settings_panel_html(default_theme: str) -> str:
         '  <p class="setpanel-title">Site dynamics</p>\n'
         '  <p class="setpanel-sub">How the site looks on this device. '
         'Your choice is saved in this browser and follows you across every '
-        'page \u2014 and onto the Flank ledger.</p>\n'
+        'page.</p>\n'
         f'  <div class="setgrid">\n' + "\n".join(cards) + "\n  </div>\n"
         '  <p class="setsaved" id="set-saved" hidden></p>\n'
         "</div>"
@@ -2475,7 +2298,6 @@ def read_body(pages_dir: Path, slug: str) -> str:
 def build(data_path: Path, pages_dir: Path, logo_path: Path,
           uploads_dir: Path, out_dir: Path):
     site = load_site(data_path)
-    stress = load_stress(data_path.parent)
     form_html = contact_form_html(load_form_config(data_path.parent))
     cal_cfg = load_calendar_config(data_path.parent)
     logo_uri = logo_data_uri(logo_path)
@@ -2491,7 +2313,7 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
         site["theme"], site["pages"], p["slug"], clean, logo_uri,
                         site.get("description", ""), site.get("custom_css", ""),
                         site.get("star_animation", "comic"),
-                        stress=stress, form_html=form_html, cal_cfg=cal_cfg))
+                        form_html=form_html, cal_cfg=cal_cfg))
     nf = (NOTFOUND.replace("__CSS__", CSS + "\n" + safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
@@ -3027,34 +2849,14 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             expect("bearjhartjen.github.io/Flank-ledger" not in flank_html,
                    "ledger has no links to the old standalone site")
             expect("const TX = [" in flank_html, "ledger embeds the transaction data")
-            expect('var k="fc-theme"' in flank_html,
-                   "ledger carries the main site's dark mode over (same localStorage key)")
-            expect('body[data-theme="midnight"]' in flank_html,
-                   "ledger has a midnight palette of its own")
-            expect('document.addEventListener("DOMContentLoaded",set)' in flank_html
-                   or "readyState===\"loading\"" in flank_html,
-                   "the ledger's theme carryover applies after the body exists")
+            expect('var k="fc-theme"' not in flank_html,
+                   "ledger never follows the main site's theme (no shared key)")
+            expect('data-theme' not in flank_html,
+                   "ledger keeps its own look (no theme overrides)")
         if "sitenav" in idx:
             nav_block = idx.split('<nav class="sitenav">')[1].split("</nav>")[0]
             expect("flank" not in nav_block,
                    "ledger stays out of the nav (unlisted page)")
-        stress_json = data_path.parent / "stress.json"
-        expect(stress_json.is_file(),
-               "data/stress.json exists (the Stress Express timetable)")
-        stress_built = tmp / "stress.html"
-        expect(stress_built.is_file(), "site/stress.html built")
-        if stress_built.is_file():
-            stress_html = stress_built.read_text(encoding="utf-8")
-            expect("data-stress-level=" in stress_html,
-                   "stress page embeds the level from stress.json")
-            expect("The Stress Express is" in stress_html,
-                   "stress page carries the express's boarding call")
-            expect("[stress express]" not in stress_html,
-                   "stress marker was swapped for the scene")
-            expect("stress-fill" in stress_html,
-                   "stress page carries the progress bar")
-            expect('class="stresscard"' in stress_html,
-                   "stress page carries the station card")
         settings_built = tmp / "settings.html"
         expect(settings_built.is_file(), "site/settings.html built")
         # the contact form's own wording (data/form.json) reaches the page
@@ -3096,17 +2898,11 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                    "financials carries the Flank button's swirl dressing")
         expect('>Settings</a>' in idx,
                "nav carries the Settings link")
-        stress_meta = next((p for p in site["pages"] if p["slug"] == "stress"), {})
         settings_meta = next((p for p in site["pages"] if p["slug"] == "settings"), {})
-        if not stress_meta.get("hidden"):
-            expect('>Stress City</a>' in idx,
-                   "nav carries the Stress City link")
         if not settings_meta.get("hidden"):
             expect('>Settings</a>' in idx,
                    "nav carries the Settings link")
         sitemap = (tmp / "sitemap.xml").read_text(encoding="utf-8")
-        if not stress_meta.get("hidden"):
-            expect("stress.html" in sitemap, "sitemap lists Stress City")
         if not settings_meta.get("hidden"):
             expect("settings.html" in sitemap, "sitemap lists Settings")
         if not ok:

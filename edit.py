@@ -539,6 +539,7 @@ __CSS__
   <button data-cmd="formedit" id="btn-form-edit" title="Change the wording of the contact form on this page">Form</button>
   <button data-cmd="events" id="btn-events" title="Add or change the events and the calendar">Events</button>
   <button data-cmd="calendar" id="btn-calendar" title="Change the shape, size and colour of the calendar marker">Calendar</button>
+  <button data-cmd="news" id="btn-news" title="Add a dated news article to the top of the Latest page">News</button>
   </div>
   <div class="toolgroup"><span class="groupname">Image</span>
   <button data-cmd="small" disabled>Small</button>
@@ -719,11 +720,25 @@ __CSS__
     </div>
   </div>
 </div>
+<div class="ld-back" id="newsDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="newsDlgTitle">
+    <h3 id="newsDlgTitle">Add a news article</h3>
+    <p class="dlg-note">Goes to the top of the page, above older articles — newest first.</p>
+    <label class="dlg-field">Headline<input id="newsHeadline" maxlength="200" autocomplete="off" placeholder="What happened"></label>
+    <label class="dlg-field">Date<input id="newsDate" type="date"></label>
+    <label class="dlg-field">Article<textarea id="newsBody" maxlength="5000" rows="6" placeholder="Tell it like a news story"></textarea></label>
+    <p class="dlg-note">A blank line starts a new paragraph.</p>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="newsAdd">Add article</button>
+      <button type="button" id="newsCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="ld-back" id="helpDlg" hidden>
   <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <h3 id="helpTitle">Using the site editor</h3>
     <p><b>1. Pick a page.</b> Use the Pages list to switch pages. Use Page settings to rename, hide, add a badge or enable the contact form.</p>
-    <p><b>2. Edit the preview.</b> Press Edit, then click text and type. Use the labeled toolbar groups to format text and add pictures, links, sections and tables.</p>
+    <p><b>2. Edit the preview.</b> Press Edit, then click text and type. Use the labeled toolbar groups to format text and add pictures, links, sections, tables and news articles.</p>
     <p><b>Colors are for text.</b> The "Text" wheel and the color swatches color the letters themselves — a click inside a paragraph colors just the run of text the caret sits in. The "Highlight" wheel is a marker pen: it paints the background behind the word you clicked into or the text you selected, never a whole block.</p>
     <p><b>3. Manage content.</b> Hover a page block for move, duplicate and delete controls. Select an image to change its size, alignment or alt text.</p>
     <p><b>4. Save and publish.</b> Save writes the editable source and stages the built site. Commit and push in GitKraken to publish.</p>
@@ -1338,6 +1353,60 @@ $("#calColor").addEventListener("change", applyCalMarker);
 $("#eventAdd").onclick = () => { fillEventForm(null, null); };
 $("#eventsClose").onclick = () => { $("#eventsDlg").hidden = true; };
 $("#evCancel").onclick = () => { $("#eventDlg").hidden = true; };
+/* ---- dated news articles for the Latest page ---- */
+function openNewsDialog(){
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  $("#newsHeadline").value = "";
+  $("#newsDate").value = now.getFullYear() + "-" + mm + "-" + dd;
+  $("#newsBody").value = "";
+  $("#newsDlg").hidden = false;
+  $("#newsHeadline").focus();
+}
+$("#newsAdd").onclick = () => {
+  const headline = $("#newsHeadline").value.trim();
+  const body = $("#newsBody").value.trim();
+  if (!headline) { status.textContent = "Give the article a headline first"; $("#newsHeadline").focus(); return; }
+  if (!body) { status.textContent = "Write the article first"; $("#newsBody").focus(); return; }
+  const bits = String($("#newsDate").value || "").split("-").map(Number);
+  let datestr = "";
+  try {
+    datestr = new Date(bits[0], bits[1] - 1, bits[2], 12).toLocaleDateString("en-US",
+      {month: "long", day: "numeric", year: "numeric"});
+  } catch(e) { datestr = ""; }
+  if (!datestr || datestr === "Invalid Date") { status.textContent = "Pick a date for the article first"; return; }
+  const card = document.createElement("div");
+  card.className = "card";
+  const h = document.createElement("h2");
+  h.textContent = headline;
+  card.appendChild(h);
+  const dp = document.createElement("p");
+  dp.className = "c-muted";
+  dp.textContent = datestr;
+  card.appendChild(dp);
+  const chunks = body.split(/\\n\\s*\\n/);
+  chunks.forEach(chunk => {
+    const p = document.createElement("p");
+    const lines = chunk.split("\\n");
+    lines.forEach((ln, i) => {
+      if (i) p.appendChild(document.createElement("br"));
+      p.appendChild(document.createTextNode(ln));
+    });
+    card.appendChild(p);
+  });
+  let anchor = null;
+  for (const el of canvas.children) { if (el.tagName === "H2") { anchor = el; break; } }
+  if (anchor && anchor.nextSibling) canvas.insertBefore(card, anchor.nextSibling);
+  else if (anchor) canvas.appendChild(card);
+  else if (canvas.firstChild) canvas.insertBefore(card, canvas.firstChild);
+  else canvas.appendChild(card);
+  $("#newsDlg").hidden = true;
+  card.scrollIntoView({block: "center"});
+  pushHist(); markDirty();
+  status.textContent = "News article added — Save to stage it";
+};
+$("#newsCancel").onclick = () => { $("#newsDlg").hidden = true; };
 $("#evSave").onclick = async () => {
   const day = EVENT_DAY;
   if (!day) return;
@@ -2894,6 +2963,7 @@ $("#toolbar").addEventListener("click", e => {
   else if (c === "formedit") { openFormDialog(); return; }
   else if (c === "events") { openEventsDialog(); return; }
   else if (c === "calendar") { openCalDialog(); return; }
+  else if (c === "news") { openNewsDialog(); return; }
   else if (c === "image") { galleryMode = false; replaceTarget = null; filepick.multiple = false; filepick.click(); }
   else if (c === "gallery") { replaceTarget = null; galleryMode = true; filepick.multiple = true; filepick.click(); }
   else if ((c === "small" || c === "medium" || c === "full") && selImg) {

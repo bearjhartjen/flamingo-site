@@ -387,60 +387,7 @@ CSS = r'''  :root{
     tbody tr{break-inside:avoid}
   }
 
-  /* ---------- midnight dark: carried over from the main site ---------- */
-  body[data-theme="midnight"]{
-    --paper:#221c2c;
-    --paper2:#2b2336;
-    --ink:#f0e9f7;
-    --ink2:#d9cff0;
-    --muted:#b3a8cd;
-    --faint:#8b80a6;
-    --rule:#4d3c6b;
-    --rule2:#3b2d54;
-    --link:#d3b8ff;
-    --up:#7ee2a8;
-    --upfill:#2b2336;
-    --down:#ff9d9d;
-    --gold:#e3b83b;
-  }
-  body[data-theme="ink"]{
-    --paper:#262220;
-    --paper2:#2f2b28;
-    --ink:#f5efe0;
-    --ink2:#ddd2c0;
-    --muted:#b8ac92;
-    --faint:#928872;
-    --rule:#6b6152;
-    --rule2:#544b3e;
-    --link:#9db8ff;
-    --up:#7ee2a8;
-    --upfill:#2f2b28;
-    --down:#ff8a80;
-    --gold:#d29922;
-  }
-  body[data-theme="midnight"] .tooltip,body[data-theme="ink"] .tooltip{background:#383046;border-color:#9a87c0;box-shadow:2px 2px 0 rgba(0,0,0,.5)}
-  body[data-theme="ink"] .tooltip{background:#3f3830;border-color:#857763}
-  body[data-theme="midnight"] input[type=search],body[data-theme="midnight"] select,
-  body[data-theme="ink"] input[type=search],body[data-theme="ink"] select{background:#383046;border-color:#9a87c0;color:var(--ink)}
-  body[data-theme="ink"] input[type=search],body[data-theme="ink"] select{background:#3f3830;border-color:#857763}
-  body[data-theme="midnight"] input[type=search]:focus,body[data-theme="midnight"] select:focus,
-  body[data-theme="ink"] input[type=search]:focus,body[data-theme="ink"] select:focus{outline-color:var(--link)}
-  body[data-theme="midnight"] .btn,body[data-theme="ink"] .btn{background:#383046;color:var(--ink);border-color:var(--ink2)}
-  body[data-theme="ink"] .btn{background:#3f3830;border-color:var(--ink2)}
-  body[data-theme="midnight"] .btn:hover{background:var(--ink2);color:#221c2c}
-  body[data-theme="ink"] .btn:hover{background:var(--ink2);color:#262220}
-  body[data-theme="midnight"] .count,body[data-theme="ink"] .count{color:var(--muted)}
-  body[data-theme="midnight"] .wick,body[data-theme="ink"] .wick{stroke:#a89cc2}
-  body[data-theme="ink"] .wick{stroke:#b8ac92}
-  body[data-theme="midnight"] .avgline,body[data-theme="midnight"] .mavg{stroke:#8fa8ff}
-  body[data-theme="midnight"] .mavgdot,body[data-theme="ink"] .mavgdot,body[data-theme="ink"] .avgline,body[data-theme="ink"] .mavg{fill:#8fa8ff;stroke:#8fa8ff}
-  body[data-theme="midnight"] .avglbl{fill:#8fa8ff;stroke:#221c2c}
-  body[data-theme="ink"] .avglbl{fill:#8fa8ff;stroke:#262220}
-  body[data-theme="midnight"] .spotflag .dot,body[data-theme="ink"] .spotflag .dot{background:#7ee2a8}
-  body[data-theme="midnight"] .spotflag.off .dot{background:#ff9d9d}
-  body[data-theme="ink"] .spotflag.off .dot{background:#ff8a80}
-  body[data-theme="midnight"] .leader{stroke:var(--ink2)}
-  body[data-theme="ink"] .leader{stroke:var(--ink2)}'''
+  /* the ledger keeps its own look: it never follows the main site's theme */'''
 
 INDEX = r'''<!DOCTYPE html>
 <html lang="en">
@@ -451,11 +398,6 @@ INDEX = r'''<!DOCTYPE html>
 <style>
 __CSS__
 </style>
-<script>/* carries the main site's dark mode over: same key, same origin */
-(function(){try{var k="fc-theme";var get=function(){try{return localStorage.getItem(k);}catch(_){return "";}};var set=function(){var t=get();if(t==="midnight"||t==="ink"){document.body.dataset.theme=t;}else delete document.body.dataset.theme;};set();
-if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",set);}else{set();}
-try{window.addEventListener("storage",function(e){if(e&&e.key===k){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",set);}else{set();}}});}catch(_){}
-} catch(_) {} })();</script>
 </head>
 <body>
 <a class="mainsite" href="../index.html">Head to main site</a>
@@ -1058,11 +1000,6 @@ ABOUT = r'''<!DOCTYPE html>
 <style>
 __CSS__
 </style>
-<script>/* carries the main site's dark mode over: same key, same origin */
-(function(){try{var k="fc-theme";var get=function(){try{return localStorage.getItem(k);}catch(_){return "";}};var set=function(){var t=get();if(t==="midnight"||t==="ink"){document.body.dataset.theme=t;}else delete document.body.dataset.theme;};set();
-if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",set);}else{set();}
-try{window.addEventListener("storage",function(e){if(e&&e.key===k){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",set);}else{set();}}});}catch(_){}
-} catch(_) {} })();</script>
 </head>
 <body>
 <a class="mainsite" href="../index.html">Head to main site</a>
