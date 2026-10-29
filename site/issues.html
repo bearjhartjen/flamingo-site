@@ -278,6 +278,20 @@
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* Disclaimer card sitting just above the contact form. Carries who
+     runs the form (third-party services), what happens on downtime
+     (silent failover), and a peer email link so visitors always have
+     a way through. Same border/paper rhythm as the form for unity. */
+  .cf-disclaimer{max-width:560px;box-sizing:border-box;margin:22px auto 0;padding:14px 18px;border:1px solid var(--rule);border-left:3px solid var(--link);border-radius:2px;background:var(--paper2);color:var(--ink2);font:13px/1.55 Georgia,Times,serif}
+  .cf-disclaimer-h{font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
+  .cf-disclaimer-p{margin:0 0 6px}
+  .cf-disclaimer-p:last-child{margin-bottom:0}
+  .cf-svc{display:inline-block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:2px 7px;margin:0 4px 4px 0}
+  .cf-svc-or{font:italic 12px Georgia,Times,serif;color:var(--muted);margin:0 4px 4px 0}
+  .cf-svc-sep+.cf-svc{margin-left:0}
+  body[data-theme="ink"] .cf-disclaimer{background:#332e28;border-color:#857763;border-left-color:#9db8ff}
+  body[data-theme="midnight"] .cf-disclaimer{background:#2b2336;border-color:#4d3c6b;border-left-color:#9db8ff}
+  body[data-theme="ink"] .cf-svc,body[data-theme="midnight"] .cf-svc{background:transparent;border-color:#857763}
   /* the big yes/no panels: on success the form is replaced by the panel, so
      there is no way to miss that the note went through (or did not) */
   .contactform[hidden],.cf-done[hidden],.cf-error[hidden]{display:none}
@@ -478,8 +492,9 @@
     .canvas .gallery{flex-direction:column}
     .canvas .gallery img{width:100%}
     .canvas .card{padding:14px 14px}
-    .contactform{margin:22px 0 0;padding:16px 14px}
-    .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
+    .cf-disclaimer{margin:16px 0 0;padding:12px 14px}
+    .contactform{margin:14px 0 0;padding:16px 14px}
+    .cf-done,.cf-error{margin:14px 0 0;padding:16px 14px}
     .canvas a.btn[href^="flank/"]{padding:9px 30px}
     .canvas a.btn[href^="flank/"]::before{left:9px}
     .canvas a.btn[href^="flank/"]::after{right:9px}

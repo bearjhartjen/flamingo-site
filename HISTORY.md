@@ -82,8 +82,13 @@ October 2026 build dropped the others entirely:
 ## The contact form
 
 The Contact page form is the one thing that is not static. It posts to
-FormSubmit, which emails each message to our inbox. The email address on
-the page is plain text on purpose. We want people to reach us.
+a third-party service that emails each message to our inbox. The email
+address on the page is plain text on purpose. We want people to reach us.
+
+A disclaimer card sits just above the form. It states what services run
+the form (FormSubmit by default, with Web3Forms pre-wired as a silent
+failover) so visitors know who is handling their note before they hit
+Send.
 
 What we decided:
 
@@ -91,8 +96,10 @@ What we decided:
 - The form stamps the sender's local Eastern time.
 - The page shows a clear verdict. "It went through" with a time stamp,
   or an error panel with the service's own message and a plain-email way out.
-- Notes without files go by background send. Notes with files use a normal
-  submit with a 20-second watchdog and a `?sent=1` return.
+- Plain-text notes go by AJAX POST to the primary service.
+  Notes with files go by the classic multipart POST into a hidden
+  iframe, with a 20-second watchdog and a handoff ack from
+  `contact-ack.html` (see below).
 - File sizes read in KB up to 1024 KB, then MB. The cap is 10,000,000 bytes.
   That is the FormSubmit limit, not ours.
 - The button says "Send it our way."
@@ -100,8 +107,103 @@ What we decided:
   the Contact page text can never break the form. There is a Form button in
   the builder to edit that wording.
 
+### Failover and resilient sending (October 2026)
+
+FormSubmit went down on October 29, 2026, while a visitor was typing a
+note. The visitor lost their draft and had nowhere to send. We fixed
+both halves of that story.
+
+- **What survives a failed send.** Every keystroke in any text field
+  saves to `localStorage` under `flamingo-cf-draft`. On reload, the page
+  restores that draft and shows a chip: *"Draft restored from your browser
+  — it will clear when the note goes through."* The draft clears itself on
+  successful send or when the visitor clicks *Send another note*.
+- **What happens if FormSubmit is down.** Plain-text notes post to
+  FormSubmit's AJAX endpoint first. On `success !== "true"`, network
+  error, or timeout, the same payload is retried through Web3Forms
+  (`https://api.web3forms.com/submit`) using the access key in
+  `data/form.json` (`web3forms_access_key`). The visitor sees the same
+  *"It went through"* panel in both cases — the failover is silent. A
+  third backup and the file story are below.
+
+### A third backup, and an invisible frame (October 29, 2026)
+
+Today FormSubmit's origin went down again — a Cloudflare 521, "Web
+server is down" — and its answer page would have landed the visitor on
+an error page the moment they attached a file and pressed Send. We
+re-built the sending around three services and a page that never
+navigates away.
+
+- **Three services, in order.** FormSubmit (primary), then Web3Forms,
+  then FormInit (forminit.com, formerly Getform) as the last resort.
+  FormInit's form ID is public by design, lives in
+  `data/form.json` (`forminit_form_id`), and is baked into the page the
+  way a form `action` is. API keys never go on a public page; the
+  builder dialog says so. Cross-checked against FormInit's docs:
+  browser posting needs no key at all (public form), rate limit one
+  submission per 5 seconds, and it takes up to 20 file blocks / 25 MB
+  combined — more than our own 10 MB cap, so the last backup can always
+  carry what the form allowed. FormInit validates `sender.email`, so
+  the site only sends a sender block when the contact field actually
+  parses as an email.
+- **Files retry through the backups.** Web3Forms takes exactly one file
+  of 5 MB or less, as multipart with the file attached. Anything over
+  that limit is announced in the status line — *"Attachments exceed the
+  Web3Forms limits (one file, 5 MB or less) — sending everything
+  through FormInit (up to 25 MB) instead…"* — and rerouted with the
+  files still attached. Nothing is silently dropped.
+- **The page no longer leaves on submit.** With files attached the
+  classic multipart POST goes into a hidden iframe
+  (`form.target="cf-frame"`), not into the page. FormSubmit's
+  `_url` field (its redirect parameter; the `_next` name we carried was
+  Formspree's and FormSubmit ignores it) turns the frame into
+  `site/contact-ack.html` after a genuine success, and that page — ours,
+  on our domain — tells the parent through `postMessage`. The frame
+  landing on a Cloudflare 521 speeds nothing to the visitor and kills
+  nothing: the visible page stays put, with every field and file row
+  intact. The same treatment covers the AJAX path's classic fallback.
+- **Named hops, no silent drops.** Every retry is announced: *"Web3Forms
+  did not answer — retrying through FormInit…"*, *"Attachments exceed…"*,
+  and a watchdog (20 s for files, 5 s after a dead AJAX fetch) that
+  walks the chain while the page still stands. Known tradeoff: if the
+  first send was merely slow and not dead, the note can arrive twice.
+- **Verified against the real outage.** While FormSubmit was returning
+  Cloudflare 521s we walked every path in a browser: two oversized
+  files, one small file with no Web3Forms key, and a text-only note.
+  All kept their drafts, named their hops, and ended in the honest
+  error panel with both backup names — no exceptions, no navigation.
+- **How to arm the chain.** Web3Forms access key (free at
+  web3forms.com) + FormInit form ID (free form at forminit.com) both go
+  into the Form dialog's *"Third-party services + failover"* section.
+  Missing pieces are skipped, named as much: *"no last backup is
+  configured"* or *"a backup is configured but has no access key"*.
+  The disclaimer card names all three services with the order.
+
+How to turn on the failover fully:
+
+1. Sign up at [web3forms.com](https://web3forms.com) — the access key is
+   free and shows up on the dashboard.
+2. Open the Contact page in the builder, press **Form**, scroll to
+   *"Third-party services + failover"*, paste the access key.
+3. Apply + Save. Next build embeds the key in `site/contact.html`. The
+   page never echoes the key back to the dialog (no accidental disclosure
+   in screenshots).
+
 What we learned: FormSubmit needs a Referer header. Local test pages get a
-"needs activation" reply. Only the live domain is activated. That is normal.
+"needs activation" reply. Only the live domain is activated. That is
+normal. With the failover wired, an unactivated local test still shows
+the *"a backup is configured but has no access key"* panel — paste a key
+to make local testing also genuinely succeed.
+
+### Disclaimer position (October 2026)
+
+The disclaimer card used to sit between the intro paragraph and the
+form, splitting the page. It now rides directly above the form wherever
+the `[contact form]` marker sits — and the marker moved to the bottom of
+`data/pages/contact.html`, below the plain email/phone lines. Page order
+is now intro, plain contact info, disclaimer, form. Nothing about
+editing changed: the email/phone lines edit inline on the canvas, the
+disclaimer title/body/service names edit through the Form button.
 
 ## Events calendar
 

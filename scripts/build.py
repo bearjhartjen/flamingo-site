@@ -965,6 +965,20 @@ CSS = r'''  :root{
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* Disclaimer card sitting just above the contact form. Carries who
+     runs the form (third-party services), what happens on downtime
+     (silent failover), and a peer email link so visitors always have
+     a way through. Same border/paper rhythm as the form for unity. */
+  .cf-disclaimer{max-width:560px;box-sizing:border-box;margin:22px auto 0;padding:14px 18px;border:1px solid var(--rule);border-left:3px solid var(--link);border-radius:2px;background:var(--paper2);color:var(--ink2);font:13px/1.55 Georgia,Times,serif}
+  .cf-disclaimer-h{font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
+  .cf-disclaimer-p{margin:0 0 6px}
+  .cf-disclaimer-p:last-child{margin-bottom:0}
+  .cf-svc{display:inline-block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:2px 7px;margin:0 4px 4px 0}
+  .cf-svc-or{font:italic 12px Georgia,Times,serif;color:var(--muted);margin:0 4px 4px 0}
+  .cf-svc-sep+.cf-svc{margin-left:0}
+  body[data-theme="ink"] .cf-disclaimer{background:#332e28;border-color:#857763;border-left-color:#9db8ff}
+  body[data-theme="midnight"] .cf-disclaimer{background:#2b2336;border-color:#4d3c6b;border-left-color:#9db8ff}
+  body[data-theme="ink"] .cf-svc,body[data-theme="midnight"] .cf-svc{background:transparent;border-color:#857763}
   /* the big yes/no panels: on success the form is replaced by the panel, so
      there is no way to miss that the note went through (or did not) */
   .contactform[hidden],.cf-done[hidden],.cf-error[hidden]{display:none}
@@ -1165,8 +1179,9 @@ CSS = r'''  :root{
     .canvas .gallery{flex-direction:column}
     .canvas .gallery img{width:100%}
     .canvas .card{padding:14px 14px}
-    .contactform{margin:22px 0 0;padding:16px 14px}
-    .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
+    .cf-disclaimer{margin:16px 0 0;padding:12px 14px}
+    .contactform{margin:14px 0 0;padding:16px 14px}
+    .cf-done,.cf-error{margin:14px 0 0;padding:16px 14px}
     .canvas a.btn[href^="flank/"]{padding:9px 30px}
     .canvas a.btn[href^="flank/"]::before{left:9px}
     .canvas a.btn[href^="flank/"]::after{right:9px}
@@ -1214,13 +1229,61 @@ FORM_DEFAULTS = {
     "button": "Send it our way",
     "show_contact": True,
     "show_files": True,
+    # Service attribution + failover chain (October 2026, after FormSubmit
+    # was intermittently unreachable). Chain: FormSubmit -> Web3Forms ->
+    # FormInit (formerly Getform). web3forms_access_key is a string the user
+    # pastes from https://web3forms.com; an empty key means that hop is
+    # skipped. forminit_form_id is the PUBLIC form ID from forminit.com
+    # (dashboard -> new form -> Settings -> Public mode); it is public by
+    # design and baked into the page - never paste an X-API-KEY here, those
+    # are server-side only and must never touch a public page.
+    "primary_service": "FormSubmit (formsubmit.co)",
+    "failover_service": "Web3Forms (web3forms.com)",
+    "web3forms_access_key": "",
+    "second_failover_service": "FormInit (forminit.com)",
+    "forminit_form_id": "",
+    "disclaimer_title": "About this form",
+    "disclaimer_body": "This form posts through a third-party service "
+                       "(FormSubmit) and goes straight to the inbox at "
+                       "flamingoncactusgroup@gmail.com. If FormSubmit is "
+                       "unavailable, notes are retried through Web3Forms, "
+                       "then through FormInit as a last resort - you will "
+                       "see each retry named in the status line. Either "
+                       "way, we read every note. If all three services are "
+                       "unreachable, please email us directly. Your "
+                       "message stays in your browser while you type, so a "
+                       "failed send never loses your draft.",
 }
 
 FORM_TEXT_KEYS = ("subject", "name_label", "name_sub", "name_placeholder",
                   "contact_label", "contact_sub", "contact_placeholder",
                   "note_label", "note_placeholder", "files_label",
-                  "files_sub", "button")
+                  "files_sub", "button",
+                  "primary_service", "failover_service",
+                  "second_failover_service",
+                  "disclaimer_title", "disclaimer_body")
+FORM_SECRET_KEYS = ("web3forms_access_key",)
+# Public endpoint IDs: baked into the page on purpose (the browser must
+# know where to POST). Same charset rule as secrets, own tuple so the
+# two can never be confused.
+FORM_ID_KEYS = ("forminit_form_id",)
 FORM_BOOL_KEYS = ("show_contact", "show_files")
+# Per-key length caps. The disclaimer body is the only one allowed to
+# breathe, because that is the visitor-facing explanation. Everything
+# else stays compact so the dialog cannot be tricked into a 20 KB button.
+FORM_TEXT_LIMITS = {
+    "subject": 200,
+    "name_label": 80, "name_sub": 200, "name_placeholder": 80,
+    "contact_label": 80, "contact_sub": 200, "contact_placeholder": 80,
+    "note_label": 80, "note_placeholder": 200,
+    "files_label": 80, "files_sub": 200,
+    "button": 80,
+    "primary_service": 120, "failover_service": 120,
+    "second_failover_service": 120,
+    "disclaimer_title": 120, "disclaimer_body": 1200,
+    "web3forms_access_key": 256,
+    "forminit_form_id": 128,
+}
 
 
 def load_form_config(data_dir) -> dict:
@@ -1236,13 +1299,27 @@ def load_form_config(data_dir) -> dict:
 
 
 def sanitize_form_config(doc, base: dict | None = None) -> dict:
-    """Keep only the known form keys, with sane types and lengths."""
+    """Keep only the known form keys, with sane types and lengths.
+
+    Text keys are capped at FORM_TEXT_LIMITS[key] (default 400). The
+    web3forms_access_key is a "secret" — capped longer (it is a UUID-like
+    URL-safe token) and never echoed back through the builder dialog; the
+    forminit_form_id is a public endpoint ID (same charset, own tuple).
+    Absent-from-doc keys keep their current value, which lets the dialog
+    open them as blank without overwriting the user's stored value.
+    """
     cfg = dict(FORM_DEFAULTS if base is None else base)
     if not isinstance(doc, dict):
         return cfg
     for key, val in doc.items():
         if key in FORM_TEXT_KEYS and isinstance(val, str):
-            cfg[key] = val[:400]
+            cfg[key] = val[:FORM_TEXT_LIMITS.get(key, 400)]
+        elif key in FORM_SECRET_KEYS and isinstance(val, str):
+            k = re.sub(r"[^A-Za-z0-9_-]", "", val)[:FORM_TEXT_LIMITS.get(key, 256)]
+            cfg[key] = k
+        elif key in FORM_ID_KEYS and isinstance(val, str):
+            k = re.sub(r"[^A-Za-z0-9_-]", "", val)[:FORM_TEXT_LIMITS.get(key, 128)]
+            cfg[key] = k
         elif key in FORM_BOOL_KEYS:
             cfg[key] = bool(val)
     return cfg
@@ -1271,12 +1348,45 @@ def contact_form_html(cfg: dict | None = None) -> str:
     )
     if not cfg["show_files"]:
         files_block = '  <div style="display:none">' + files_block + "</div>\n"
+    # Disclaimer card: tells visitors who runs the form (a third-party
+    # service), what happens if it is down (silent failover), and what to
+    # do if both services are gone (email directly). Lives above the form
+    # so it is seen before a panic-send on a flaky network.
+    services = ""
+    if cfg.get("primary_service"):
+        services += f'<span class="cf-svc">{esc(cfg["primary_service"])}</span>'
+    if cfg.get("failover_service"):
+        services += (
+            f'<span class="cf-svc cf-svc-sep"><span class="cf-svc-or">or, if that&rsquo;s down,</span> '
+            f'{esc(cfg["failover_service"])}</span>'
+        )
+    if cfg.get("second_failover_service"):
+        services += (
+            f'<span class="cf-svc cf-svc-sep"><span class="cf-svc-or">or, as a last resort,</span> '
+            f'{esc(cfg["second_failover_service"])}</span>'
+        )
+    cover = (
+        '  <aside class="cf-disclaimer" role="note">\n'
+        f'    <p class="cf-disclaimer-h">{esc(cfg["disclaimer_title"])}</p>\n'
+        f'    <p class="cf-disclaimer-p">{esc(cfg["disclaimer_body"])}</p>\n'
+    )
+    if services:
+        cover += f'    <p class="cf-disclaimer-p">{services}</p>\n'
+    cover += (
+        '  </aside>\n'
+    )
     markup = (
-        '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
+        cover
+        + '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
         f'  <input type="hidden" name="_subject" value="{esc(cfg["subject"], True)}">\n'
         '  <input type="hidden" name="_template" value="table">\n'
         '  <input type="hidden" name="_captcha" value="false">\n'
-        '  <input type="hidden" name="_next" value="https://' + CUSTOM_DOMAIN + '/contact.html?sent=1">\n'
+        # _url is FormSubmit's own redirect field (_next is Formspree's name
+        # and FormSubmit ignores it): after the native POST the landing page
+        # inside the iframe - or the whole window with JavaScript off -
+        # becomes OUR contact-ack.html, which doubles as the no-JS
+        # thank-you page and signals the parent window through postMessage.
+        f'  <input type="hidden" name="_url" value="https://{CUSTOM_DOMAIN}/contact-ack.html">\n'
         '  <input type="text" name="_honey" style="display:none">\n'
         '  <input type="hidden" id="cf-sentat" name="sent_at" value="">\n'
         f'  <label for="cf-name">{esc(cfg["name_label"])}'
@@ -1291,31 +1401,86 @@ def contact_form_html(cfg: dict | None = None) -> str:
         '  <p class="cf-status" id="cf-status" hidden></p>\n'
         '  <noscript><p class="filehint">With JavaScript off, send one file per message.</p></noscript>\n'
         f'  <button type="submit">{esc(cfg["button"])}</button>\n'
-        "</form>"
+        "</form>\n"
+        # Named render target for the files POST: the classic multipart
+        # submit lands in this hidden iframe instead of navigating away,
+        # so whatever FormSubmit answers (success page or Cloudflare 521),
+        # the visible page survives and the failover chain can always run.
+        '  <iframe id="cf-frame" name="cf-frame" src="about:blank" '
+        'title="Submission frame, invisible" style="display:none" '
+        'aria-hidden="true" tabindex="-1"></iframe>'
     )
     script = (CONTACT_FORM_SCRIPT
               .replace("__BUTTON_JSON__", json.dumps(str(cfg["button"])))
-              .replace("__SUBJECT_JSON__", json.dumps(str(cfg["subject"]))))
+              .replace("__SUBJECT_JSON__", json.dumps(str(cfg["subject"])))
+              .replace("__FORM_EMAIL_JSON__", json.dumps(CONTACT_EMAIL))
+              .replace("__DOMAIN_JSON__", json.dumps(CUSTOM_DOMAIN))
+              .replace("__WEB3FORMS_KEY_JSON__", json.dumps(str(cfg.get("web3forms_access_key", ""))))
+              .replace("__WEB3FORMS_URL_JSON__", json.dumps("https://api.web3forms.com/submit"))
+              .replace("__PRIMARY_SERVICE_JSON__", json.dumps(str(cfg.get("primary_service", ""))))
+              .replace("__FAILOVER_SERVICE_JSON__", json.dumps(str(cfg.get("failover_service", ""))))
+              .replace("__SECOND_FAILOVER_JSON__", json.dumps(str(cfg.get("second_failover_service", ""))))
+              .replace("__FORMINIT_ID_JSON__", json.dumps(str(cfg.get("forminit_form_id", ""))))
+              .replace("__DRAFT_KEY_JSON__", json.dumps("flamingo-cf-draft")))
     return markup + script
 
 
 CONTACT_FORM_SCRIPT = (
   '<script>(function(){try{'
-  # Submission handling: stay on the page and get an explicit answer.
-  # Text-only notes POST as JSON to FormSubmit's AJAX endpoint, and the page
-  # shows a big success or error panel carrying the service own verdict —
-  # no navigation away from the site, no silent "did it send?".
-  # Notes with files still go by the classic multipart POST, because the
-  # AJAX endpoint does not turn base64 payloads into real attachments;
-  # that road keeps the ?sent=1 redirect and the 20 s hang watchdog.
+  # Submission handling with three guarantees:
+  #   1. The visitor stays on the page; success / error are explicit panels.
+  #   2. A failed send never loses what the visitor typed: text fields are
+  #      saved to localStorage on every keystroke and restored on reload.
+  #   3. A three-level chain with a named status line on every hop:
+  #      FormSubmit -> Web3Forms -> FormInit (formerly Getform). Text notes
+  #      retry as JSON; notes with files retry as FormData multipart.
+  #      Backup limits are enforced client-side BEFORE each attempt so an
+  #      oversized upload is announced and rerouted, never silently lost:
+  #      Web3Forms takes one file of 5 MB or less; FormInit takes up to 20
+  #      files / 25 MB combined (our own cap is 10 MB, so FormInit always
+  #      fits what the form accepts).
+  # Plain text-only notes take the AJAX road. Notes with files use the
+  # classic multipart POST because FormSubmit turns real multipart parts
+  # into email attachments; the AJAX endpoint does not.
   "var AJAX_URL='https://formsubmit.co/ajax/" + CONTACT_EMAIL + "';"
+  "var FORM_EMAIL=" + "__FORM_EMAIL_JSON__" + ";"
+  "var WEB3FORMS_KEY=" + "__WEB3FORMS_KEY_JSON__" + ";"
+  "var WEB3FORMS_URL=" + "__WEB3FORMS_URL_JSON__" + ";"
+  "var PRIMARY_SERVICE=" + "__PRIMARY_SERVICE_JSON__" + ";"
+  "var FAILOVER_SERVICE=" + "__FAILOVER_SERVICE_JSON__" + ";"
+  "var SECOND_FAILOVER=" + "__SECOND_FAILOVER_JSON__" + ";"
+  "var FORMINIT_ID=" + "__FORMINIT_ID_JSON__" + ";"
+  "var FORMINIT_URL='https://forminit.com/f/';"
+  "var WEB3_MAX_FILE=5242880;"
+  "var FORMINIT_MAX_FILES=20;"
+  "var FORMINIT_MAX_BYTES=26214400;"
+  "var DRAFT_KEY=" + "__DRAFT_KEY_JSON__" + ";"
   'var inlineStatus=function(t,err){var st=document.getElementById("cf-status");if(!st)return;'
   'st.hidden=false;st.textContent=t;if(err)st.classList.add("is-err");else st.classList.remove("is-err");};'
-  'var inp=document.getElementById("cf-photo"),hint=document.getElementById("cf-filehint"),form=inp&&inp.form;'
-  'if(!inp||!hint||!form)return;'
-  'var all=[],extras=[],MAX_BYTES=10000000,busy=false,watch=null,picker=null,lastStamp="";'
+  'var form=document.querySelector("form.contactform"),hint=document.getElementById("cf-filehint");'
+  'var inp=document.getElementById("cf-photo");'
+  'if(!form||!hint||!inp||!inp.form)return;'
+  'var all=[],extras=[],MAX_BYTES=10000000,busy=false,watch=null,ackPending=false,picker=null,lastStamp="";'
   'function getBtn(){return form.querySelector("button[type=submit]");}'
-  'function restoreBtn(){var b=getBtn();if(b){b.disabled=false;b.textContent=__BUTTON_JSON__;}}'
+  'function restoreBtn(){try{form.target="";}catch(_){}var b=getBtn();if(b){b.disabled=false;b.textContent=__BUTTON_JSON__;}}'
+  # Browser-side draft: text fields saved to localStorage on every
+  # keystroke, restored on load, cleared after a successful send. Files
+  # are not safe to keep in storage, but their per-row state survives
+  # because render() reads from the same `all` array.
+  'function saveDraft(){try{var n=form.querySelector("[name=name]"),c=form.querySelector("[name=contact]"),t=form.querySelector("[name=note]");'
+  'localStorage.setItem(DRAFT_KEY,JSON.stringify({n:n?n.value:"",c:c?c.value:"",t:t?t.value:"",s:new Date().toISOString()}));}'
+  'catch(_){}}'
+  'function clearDraft(){try{localStorage.removeItem(DRAFT_KEY);}catch(_){}'
+  'try{var nf=form.querySelector("[name=name]"),cf=form.querySelector("[name=contact]"),tf=form.querySelector("[name=note]");'
+  'if(nf)nf.value="";if(cf)cf.value="";if(tf)tf.value="";}catch(_){}}'
+  'function restoreDraft(){try{var raw=localStorage.getItem(DRAFT_KEY);if(!raw)return;'
+  'var d=JSON.parse(raw);if(!d||typeof d!=="object")return;'
+  'var nf=form.querySelector("[name=name]"),cf=form.querySelector("[name=contact]"),tf=form.querySelector("[name=note]");'
+  'if(nf&&d.n)nf.value=String(d.n);if(cf&&d.c)cf.value=String(d.c);if(tf&&d.t)tf.value=String(d.t);'
+  'if((d.n||d.c||d.t)){inlineStatus("Draft restored from your browser — it will clear when the note goes through.",false);}'
+  '}catch(_){}}'
+  '["name","contact","note"].forEach(function(n){var el=form.querySelector("[name="+n+"]");if(el)el.addEventListener("input",saveDraft);});'
+  'restoreDraft();'
   # The two big panels are built up front and sit just before the form.
   # showDone() swaps the form out for the success panel; showError() keeps
   # the form (with everything the visitor typed) and explains the way out.
@@ -1330,15 +1495,15 @@ CONTACT_FORM_SCRIPT = (
   'var errHead=document.createElement("p");errHead.className="cf-error-head";errHead.textContent="It did not go through.";'
   'var errBody=document.createElement("p");errBody.className="cf-error-body";'
   'var errMail=document.createElement("p");errMail.className="cf-error-body";errMail.textContent="You can email us directly instead: ";'
-  'var emLink=document.createElement("a");emLink.href="mailto:' + CONTACT_EMAIL + '";emLink.textContent="' + CONTACT_EMAIL + '";'
+  'var emLink=document.createElement("a");emLink.href="mailto:"+FORM_EMAIL;emLink.textContent=FORM_EMAIL;'
   'errMail.appendChild(emLink);'
   'errbox.appendChild(errHead);errbox.appendChild(errBody);errbox.appendChild(errMail);'
   'errbox.hidden=true;form.parentNode.insertBefore(errbox,form);'
   'function scrollUp(el){try{el.scrollIntoView({behavior:"smooth",block:"center"});}catch(_){try{el.scrollIntoView();}catch(_2){}}}'
-  'function showDone(){busy=false;restoreBtn();errbox.hidden=true;form.hidden=true;done.hidden=false;'
-  'doneSub.textContent="Your note is in our inbox. We read everything — thank you!";'
+  'function showDone(u){busy=false;restoreBtn();errbox.hidden=true;form.hidden=true;done.hidden=false;'
+  'doneSub.textContent=u||"Your note is in our inbox. We read everything — thank you!";'
   'doneStamp.textContent=lastStamp?("Stamped "+lastStamp):"";'
-  'scrollUp(done);}'
+  'clearDraft();scrollUp(done);}'
   'function showError(msg){busy=false;restoreBtn();done.hidden=true;errbox.hidden=false;'
   'errBody.textContent=(msg||"The note did not send.")+" Press Send again — or email us directly below.";'
   'scrollUp(errbox);}'
@@ -1348,6 +1513,15 @@ CONTACT_FORM_SCRIPT = (
   'try{if(picker)picker.value="";}catch(_){}try{inp.value="";}catch(_){}inp.multiple=true;'
   'render();stampTime();hideStatus();}catch(_){}});'
   'window.addEventListener("pagehide",function(){if(watch){clearTimeout(watch);watch=null;}});'
+  # The files road POSTs into the hidden iframe (form.target="cf-frame").
+  # When FormSubmit takes the note it redirects the iframe to OUR
+  # contact-ack.html, which announces itself back through postMessage.
+  # That is the only signal readable across origins, and it only comes
+  # from a genuine success - Cloudflare's 521 or any other error page
+  # never reaches our ack code. On ack: stop the 20 s watchdog, show the
+  # success panel. When no ack comes, the watchdog walks the backup chain.
+  'window.addEventListener("message",function(e){if(!e||e.data!=="flamingo-cf-ack"||!ackPending)return;'
+  'ackPending=false;if(watch){clearTimeout(watch);watch=null;}showDone();});'
   'function stampTime(){try{var st=document.getElementById("cf-sentat");if(!st)return;'
   'var d=new Date();var s="";'
   'try{s=d.toLocaleString("en-US",{timeZone:"America/New_York",month:"numeric",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit",timeZoneName:"short"})+" (Eastern)";}'
@@ -1355,7 +1529,7 @@ CONTACT_FORM_SCRIPT = (
   'st.value=s;lastStamp=s;}catch(_){}}'
   'stampTime();'
   # ?sent=1 (the files road redirects back here with it): the note went
-  # through — show the same big panel instead of the form.
+  # through - show the same big panel instead of the form.
   'try{var q=new URLSearchParams(location.search);'
   'if(q.get("sent")==="1"){showDone();'
   'try{history.replaceState(null,"",location.pathname);}catch(_){}}}catch(_){}'
@@ -1400,6 +1574,132 @@ CONTACT_FORM_SCRIPT = (
   'if(!setFiles(inp,[all[0]]))return false;inp.multiple=false;'
   'for(var xi=1;xi<all.length;xi++){var ni=document.createElement("input");ni.type="file";ni.name="attachment_"+(xi+1);ni.className="filepick filepick-extra";ni.tabIndex=-1;ni.setAttribute("aria-hidden","true");'
   'if(!setFiles(ni,[all[xi]]))return false;form.appendChild(ni);extras.push(ni);}return true;}'
+  # Failover chain. Level 1 (Web3Forms, JSON) runs when FormSubmit's AJAX
+  # endpoint refuses / errors / times out. Level 2 (FormInit, formerly
+  # Getform) runs when Web3Forms is unconfigured, over its limits, or
+  # fails. Every hop is announced in the status line with the configured
+  # service names, and oversized uploads are rerouted with an explicit
+  # "exceeds the limits" message instead of a silent drop. All three levels
+  # end on the same "It went through" panel on success.
+  'function noteFooter(payload){return (payload.note||"")+"\\n\\n---\\nSent from https://"+__DOMAIN_JSON__+"/contact.html on "+(payload.sent_at||lastStamp||"");}'
+  'function totalBytes(){var t=0,i;for(i=0;i<all.length;i++)t+=all[i].size;return t;}'
+  'function fitsWeb3(){return all.length===1&&all[0].size<=WEB3_MAX_FILE;}'
+  'function fitsFormInit(){return all.length>0&&all.length<=FORMINIT_MAX_FILES&&totalBytes()<=FORMINIT_MAX_BYTES;}'
+  'function mailOf(payload){var s=String(payload.contact||"").replace(/^\\s+|\\s+$/g,"");'
+  'return /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(s)?s:"";}'
+  'function postFailover(payload){'
+  'if(!WEB3FORMS_KEY)return Promise.resolve({ok:false,reason:"no-key"});'
+  'var body={access_key:WEB3FORMS_KEY,subject:payload._subject||"",from_name:payload.name||"Visitor",'
+  'name:payload.name||"",email:payload.contact||"",message:noteFooter(payload)}'
+  ';'
+  'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
+  'return fetch(WEB3FORMS_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(body),signal:ctrl?ctrl.signal:undefined})'
+  '.then(function(r){return r.json().catch(function(){return{success:false,message:"failover answered with something unreadable"};});})'
+  '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"web3forms"};})'
+  '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"web3forms",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
+  '}'
+  # Web3Forms file hop: one file of 5 MB or less, sent as FormData (never
+  # set Content-Type by hand on multipart - the browser adds the boundary).
+  # Anything bigger is reported as too-big so the caller can reroute to
+  # FormInit instead of wasting the attempt.
+  'function postWeb3Files(payload){'
+  'if(!WEB3FORMS_KEY)return Promise.resolve({ok:false,reason:"no-key"});'
+  'if(!fitsWeb3())return Promise.resolve({ok:false,reason:"too-big"});'
+  'var fd=new FormData();'
+  'fd.append("access_key",WEB3FORMS_KEY);'
+  'fd.append("subject",payload._subject||"");'
+  'fd.append("from_name",payload.name||"Visitor");'
+  'fd.append("name",payload.name||"");'
+  'fd.append("email",payload.contact||"");'
+  'fd.append("message",noteFooter(payload));'
+  'fd.append("attachment",all[0],all[0].name);'
+  'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
+  'return fetch(WEB3FORMS_URL,{method:"POST",body:fd,signal:ctrl?ctrl.signal:undefined})'
+  '.then(function(r){return r.json().catch(function(){return{success:false,message:"file backup answered with something unreadable"};});})'
+  '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"web3forms"};})'
+  '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"web3forms",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
+  '}'
+  # FormInit hops (public mode, no API key on the page - the form ID in the
+  # URL is the whole credential). Text goes as JSON blocks; files go as
+  # FormData with fi- prefixed block names. The sender email is only
+  # included when it parses as an email, because FormInit validates it.
+  'function formInitSender(payload){var m=mailOf(payload);'
+  'if(!m)return null;'
+  'return {type:"sender",properties:{email:m,fullName:payload.name||"Visitor"}};}'
+  # Fresh payload for the files road: the watchdog fires long after
+  # submit, so it re-reads the fields instead of keeping one around.
+  # Lives at this scope on purpose - the watchdog (and the classic
+  # fallback, and any chain hop) all call it.
+  'function filePayload(){var g=function(n){var el=form.querySelector("[name="+n+"]");return el?el.value:"";};'
+  'return {_subject:g("_subject")||__SUBJECT_JSON__,_template:"table",_captcha:"false",'
+  'sent_at:(document.getElementById("cf-sentat")||{}).value||lastStamp,'
+  'name:g("name"),contact:g("contact"),note:g("note")};}'
+  'function postFormInit(payload){'
+  'if(!FORMINIT_ID)return Promise.resolve({ok:false,reason:"no-id"});'
+  'var blocks=[];var snd=formInitSender(payload);if(snd)blocks.push(snd);'
+  'blocks.push({type:"text",name:"name",value:payload.name||"Visitor"});'
+  'blocks.push({type:"text",name:"contact",value:payload.contact||""});'
+  'blocks.push({type:"text",name:"note",value:noteFooter(payload)});'
+  'blocks.push({type:"text",name:"sent_at",value:payload.sent_at||lastStamp||""});'
+  'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
+  'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify({blocks:blocks}),signal:ctrl?ctrl.signal:undefined})'
+  '.then(function(r){return r.json().catch(function(){return{success:false,message:"last backup answered with something unreadable"};});})'
+  '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"forminit"};})'
+  '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"forminit",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
+  '}'
+  'function postFormInitFiles(payload){'
+  'if(!FORMINIT_ID)return Promise.resolve({ok:false,reason:"no-id"});'
+  'if(!fitsFormInit())return Promise.resolve({ok:false,reason:"too-big"});'
+  'var fd=new FormData();var m=mailOf(payload);'
+  'if(m)fd.append("fi-sender-email",m);'
+  'fd.append("fi-sender-fullName",payload.name||"Visitor");'
+  'fd.append("fi-text-contact",payload.contact||"");'
+  'fd.append("fi-text-note",noteFooter(payload));'
+  'fd.append("fi-text-sent_at",payload.sent_at||lastStamp||"");'
+  'for(var i=0;i<all.length;i++)fd.append("fi-file-attachment"+(i+1),all[i],all[i].name);'
+  'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
+  'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",body:fd,signal:ctrl?ctrl.signal:undefined})'
+  '.then(function(r){return r.json().catch(function(){return{success:false,message:"last backup answered with something unreadable"};});})'
+  '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"forminit"};})'
+  '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"forminit",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
+  '}'
+  'function tryFormInit(payload){'
+  'inlineStatus((FAILOVER_SERVICE||"The backup")+" did not answer — retrying through "+(SECOND_FAILOVER||"the last backup")+"\u2026",false);'
+  'return postFormInit(payload).then(function(r){'
+  'if(r.ok){showDone("Your note went through with our last backup service. We read everything — thank you!");return true;}'
+  'var reason=r.reason==="no-id"?"no last backup is configured":(r.reason==="timeout"?"the last backup timed out":((r.raw&&r.raw.message)?String(r.raw.message):"the last backup refused the note"));'
+  'showError(reason+". Please email "+FORM_EMAIL+" directly, or press Send again once your network is back.");'
+  'return false;});}'
+  'function tryFailover(payload){'
+  'inlineStatus((PRIMARY_SERVICE||"The mail service")+" did not answer — retrying through "+(FAILOVER_SERVICE||"the backup")+"\u2026",false);'
+  'return postFailover(payload).then(function(r){'
+  'if(r.ok){showDone("Your note went through with a backup service. We read everything — thank you!");return true;}'
+  'return tryFormInit(payload);});}'
+  # File chain: this runs from the watchdog when the hidden-iframe POST
+  # produced no ack within 20 s (FormSubmit down / hanging / slow).
+  # Web3Forms takes a single small file; anything over its limits
+  # is announced and rerouted to FormInit, which takes the whole 10 MB
+  # the form allows. Known tradeoff, documented in HISTORY.md: if the
+  # iframe POST was merely slow (not dead), the note can arrive twice.
+  'function tryFormInitFiles(payload){'
+  'return postFormInitFiles(payload).then(function(r){'
+  'if(r.ok){showDone("Your note and files went through with our last backup service. We read everything — thank you!");return true;}'
+  'var reason=r.reason==="no-id"?"no last backup is configured":(r.reason==="too-big"?"the files exceed even the last backup (20 files / 25 MB total)":(r.reason==="timeout"?"the last backup timed out":((r.raw&&r.raw.message)?String(r.raw.message):"the last backup refused the files")));'
+  'showError(reason+". Please email "+FORM_EMAIL+" directly (attach the files to that email), or press Send again once your network is back.");'
+  'return false;});}'
+  'function tryFileFailover(payload){'
+  'if(fitsWeb3()){'
+  'inlineStatus("The upload did not come back — retrying the file through "+(FAILOVER_SERVICE||"the backup")+" (your file stays attached)\u2026",false);'
+  'return postWeb3Files(payload).then(function(r){'
+  'if(r.ok){showDone("Your note and file went through with a backup service. We read everything — thank you!");return true;}'
+  'inlineStatus((FAILOVER_SERVICE||"The backup")+" did not take the file — trying "+(SECOND_FAILOVER||"the last backup")+" (up to 25 MB)\u2026",false);'
+  'return tryFormInitFiles(payload);});}'
+  'inlineStatus("Attachments exceed the "+(FAILOVER_SERVICE||"first backup")+" limits (one file, 5 MB or less) — sending everything through "+(SECOND_FAILOVER||"the last backup")+" (up to 25 MB) instead\u2026",false);'
+  'return tryFormInitFiles(payload);}'
   'form.addEventListener("submit",function(e){var pd=false;'
   'try{e.preventDefault();pd=true;'
   'if(busy)return;'
@@ -1407,16 +1707,22 @@ CONTACT_FORM_SCRIPT = (
   'if(!render()){hint.textContent="Those files are over 10 MB in total — remove one and try again.";return;}'
   'var honey=form.querySelector("[name=_honey]");'
   'if(honey&&honey.value){showDone();return;}'
-  'var b=getBtn();if(b){b.disabled=true;b.textContent="Sending…";}'
+  'var b=getBtn();if(b){b.disabled=true;b.textContent="Sending\u2026";}'
   # Files ride the classic multipart POST (FormSubmit turns real multipart
-  # parts into email attachments; it does not do that for JSON base64).
+  # parts into email attachments; it does not do that for JSON base64) -
+  # but into the hidden iframe, so the page survives any answer. On
+  # success the _url redirect turns the iframe into contact-ack.html and
+  # the message listener shows the success panel within seconds; if
+  # nothing comes back in 20 s (FormSubmit down, hanging, or slow), the
+  # watchdog walks the backup chain with the files attached (Web3Forms,
+  # then FormInit). Either way the visitor never leaves the page.
   'if(all.length){'
   'if(!prepNative()){restoreBtn();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}'
   'busy=true;'
-  'inlineStatus("Sending "+(all.length===1?"1 file":all.length+" files")+" — a big upload can take a moment…",false);'
-  # 20 s watchdog: a real submit unloads the page (pagehide clears this).
-  # If the load is stuck, explain the way out instead of a gray button.
-  'watch=setTimeout(function(){showError("The upload did not come back within 20 seconds. The files may still be going — only send again if nothing arrives.");},20000);'
+  'inlineStatus("Sending "+(all.length===1?"1 file":all.length+" files")+" — a big upload can take a moment\u2026",false);'
+  'watch=setTimeout(function(){ackPending=false;'
+  'inlineStatus("The upload did not come back within 20 seconds — trying the backup services (your files stay attached; do not press Send again yet).",false);tryFileFailover(filePayload());},20000);'
+  'try{form.target="cf-frame";ackPending=true;}catch(_e){}'
   'form.submit();return;}'
   'busy=true;'
   'var f=function(n){var el=form.querySelector("[name="+n+"]");return el?el.value:"";};'
@@ -1425,22 +1731,21 @@ CONTACT_FORM_SCRIPT = (
   'name:f("name"),contact:f("contact"),note:f("note")};'
   'var c=payload.contact.replace(/^\\s+|\\s+$/g,"");'
   'if(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(c))payload._replyto=c;'
-  'inlineStatus("Sending your note…",false);'
+  'inlineStatus("Sending your note\u2026",false);'
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
   'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
   'fetch(AJAX_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(payload),signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return r.json().catch(function(){return{success:"false",message:"the mail service answered with something unreadable"};});})'
   '.then(function(j){if(to)clearTimeout(to);'
   'if(j&&j.success==="true"){showDone();return;}'
-  'var m=(j&&j.message)?String(j.message):"the mail service refused the note";'
-  'if(/web server|HTML files/i.test(m))m="your browser or an extension hid the page address from the mail service, and it refused the note";'
-  'showError("The mail service said: "+m+".");})'
+  'return tryFailover(payload);})'
   '.catch(function(er){if(to)clearTimeout(to);'
-  'if(er&&er.name==="AbortError"){showError("The send took too long and was stopped. If nothing arrives, press Send again — only once.");return;}'
-  'if(form.submit){inlineStatus("The direct send did not answer — trying the classic way…",false);'
-  'watch=setTimeout(function(){showError("The classic send did not return either. Your connection may be offline — email us directly instead.");},20000);'
-  'form.submit();return;}'
-  'showError("The note could not be sent from here (network or mail service unreachable).");});'
+  'if(er&&er.name==="AbortError"){return tryFailover(payload);}'
+  'if(form.submit){inlineStatus("The direct send did not answer — trying the classic way\u2026",false);'
+  'watch=setTimeout(function(){ackPending=false;return tryFailover(payload);},5000);'
+  'try{form.target="cf-frame";ackPending=true;}catch(_e){}'
+  'form.submit();return undefined;}'
+  'return tryFailover(payload);});'
   '}catch(er){if(pd){try{busy=false;restoreBtn();}catch(_2){}}}});'
   'window.addEventListener("pageshow",function(){busy=false;restoreBtn();});'
   'render();}catch(_){}})();</script>'
@@ -2125,6 +2430,50 @@ __CSS__
 """
 
 
+# FormSubmit redirect target (the _url field on the contact form): the
+# hidden iframe lands here after a genuine successful POST. It has two
+# jobs at once: a real thank-you page for visitors with JavaScript off
+# (whose classic submission navigates straight here), and a cross-origin
+# signal for the iframe road - postMessage reaches the contact page's
+# listener, which stops the 20 s watchdog and shows the success panel.
+# Error pages (Cloudflare 521 and friends) never resolve to a redirect,
+# so this code can only run on the happy path.
+CONTACT_ACK = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Message sent &mdash; Flamingo &amp; Cactus</title>
+<meta name="robots" content="noindex">
+<style>
+__CSS__
+</style>
+</head>
+<body data-theme="classic">
+<div class="page">
+  <div class="masthead">
+    <img src="__LOGO__" alt="Flamingo and Cactus">
+    <h1>Flamingo &amp; Cactus</h1>
+  </div>
+  <div class="hr"></div>
+  <main>
+    <h2>It went through.</h2>
+    <p>Your message is in our inbox. We read everything &mdash; thank you!</p>
+    <p>You can close this page, or <a href="/contact.html">go back to the contact page</a>.</p>
+  </main>
+  <div class="hr"></div>
+  <footer>
+  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>
+  </footer>
+</div>
+<script>
+try{if(window.parent&&window.parent!==window){window.parent.postMessage("flamingo-cf-ack","*");}}catch(_){}
+</script>
+</body>
+</html>
+"""
+
+
 # ---------------------------------------------------------------------------
 # Settings page: `[site settings]` marker paragraph swapped for the
 # visitor-side panel. Themes ride the existing fc-theme localStorage key —
@@ -2284,6 +2633,10 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
           .replace("__LOGO__", logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "404.html", nf)
+    ck = (CONTACT_ACK.replace("__CSS__", CSS + "\n" + safe_custom_css(site.get("custom_css", "")))
+          .replace("__LOGO__", logo_uri)
+          .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
+    write_text_atomic(out_dir / "contact-ack.html", ck)
     shutil.copyfile(logo_path, out_dir / "favicon.png")
     write_text_atomic(out_dir / ".nojekyll", "")
     write_text_atomic(out_dir / "CNAME", CUSTOM_DOMAIN + "\n")
@@ -2405,6 +2758,24 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         contact_built = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
         if any(p.get("form") for p in site["pages"]):
             expect('action="https://formsubmit.co/' in contact_built, "contact page posts to the form inbox")
+            expect('name="_url" value="https://flamingoandcactus.com/contact-ack.html"' in contact_built,
+                   "FormSubmit redirects its answer to our own contact-ack.html")
+            expect('name="_next"' not in contact_built,
+                   "the Formspree-era _next field is gone (FormSubmit ignores it)")
+            expect('id="cf-frame" name="cf-frame"' in contact_built and
+                   'form.target="cf-frame"' in contact_built and
+                   'ackPending=true' in contact_built and
+                   'addEventListener("message"' in contact_built and
+                   '"flamingo-cf-ack"' in contact_built and
+                   'ackPending=false' in contact_built,
+                   "the files POST rides a hidden iframe signalled by a postMessage ack")
+            ack_page = (tmp / "contact-ack.html").read_text(encoding="utf-8") \
+                if (tmp / "contact-ack.html").is_file() else ""
+            expect("flamingo-cf-ack" in ack_page and
+                   'window.parent.postMessage("flamingo-cf-ack","*")' in ack_page and
+                   "noindex" in ack_page and
+                   "go back to the contact page" in ack_page,
+                   "contact-ack.html is built: noindex page + cross-origin ack signal")
             expect('name="name"' in contact_built and 'name="note"' in contact_built, "contact form asks for name + note")
             expect("&quot;Random&quot;" in contact_built, "contact form notes Random is fine")
             expect('name="contact"' in contact_built, "contact form has one optional email-or-phone field")
@@ -2416,6 +2787,68 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                    and "MAX_BYTES=10000000" in contact_built,
                    "contact form uses one uniquely named field per file, capped at 10 MB")
             expect("formsubmit.co" not in idx, "form appears only on the flagged page, not home")
+            # Disclaimer card + service attribution land on the live page.
+            expect('class="cf-disclaimer"' in contact_built and
+                   "About this form" in contact_built and
+                   "FormSubmit" in contact_built and "Web3Forms" in contact_built and
+                   "FormInit" in contact_built and "as a last resort" in contact_built,
+                   "contact page carries the third-party disclaimer + full chain attribution")
+            expect('class="cf-disclaimer"' not in idx,
+                   "the disclaimer lives only on the contact page, not the home page")
+            # Browser-side draft (localStorage) is wired in the runtime:
+            # key set on input, restored on load, cleared when the note
+            # goes through. Saves a failed send from losing the message.
+            expect('"flamingo-cf-draft"' in contact_built and
+                   "saveDraft" in contact_built and "restoreDraft" in contact_built and
+                   "clearDraft" in contact_built and
+                   'localStorage.setItem(DRAFT_KEY' in contact_built and
+                   'localStorage.getItem(DRAFT_KEY)' in contact_built and
+                   'localStorage.removeItem(DRAFT_KEY)' in contact_built,
+                   "contact form saves its text fields to localStorage so a failed send never loses the message")
+            # Web3Forms failover wiring lives on the live page even when no
+            # access key is set (the variable is just empty). The fetch
+            # to api.web3forms.com/submit and the function postFailover +
+            # tryFailover are present, so adding an access_key later is a
+            # config-only change with no code edit.
+            expect('"https://api.web3forms.com/submit"' in contact_built and
+                   "WEB3FORMS_KEY" in contact_built and "WEB3FORMS_URL" in contact_built and
+                   "postFailover" in contact_built and "tryFailover" in contact_built,
+                   "contact form's runtime is wired for Web3Forms failover")
+            # FormInit last-resort hop: endpoint constant, public form ID
+            # variable, JSON + multipart posters, limit guards, and both
+            # chain walkers. Present even with no form ID so enabling it
+            # later is config-only. No X-API-KEY anywhere: server keys
+            # must never be baked into a public page.
+            expect("'https://forminit.com/f/'" in contact_built and
+                   "FORMINIT_ID" in contact_built and "SECOND_FAILOVER" in contact_built and
+                   "postFormInit" in contact_built and "tryFormInit" in contact_built and
+                   "postFormInitFiles" in contact_built and "tryFormInitFiles" in contact_built,
+                   "contact form's runtime is wired for the FormInit last resort")
+            expect("X-API-KEY" not in contact_built,
+                   "no server API key is ever embedded in the public page")
+            # File failover: Web3Forms takes one small file as FormData,
+            # oversized uploads are announced and rerouted, the files-road
+            # watchdog walks the chain instead of stranding the visitor.
+            expect("postWeb3Files" in contact_built and "tryFileFailover" in contact_built and
+                   "fitsWeb3" in contact_built and "fitsFormInit" in contact_built and
+                   "filePayload" in contact_built and
+                   "WEB3_MAX_FILE=5242880" in contact_built and
+                   "FORMINIT_MAX_FILES=20" in contact_built and
+                   "FORMINIT_MAX_BYTES=26214400" in contact_built and
+                   "fi-file-attachment" in contact_built and
+                   "fi-sender-email" in contact_built and
+                   "tryFileFailover(filePayload())" in contact_built,
+                   "contact form retries failed uploads through the backup chain with named limits")
+            expect("exceed" in contact_built and "5 MB or less" in contact_built and
+                   "up to 25 MB" in contact_built,
+                   "oversized uploads get an explicit reroute message, never a silent drop")
+            # No access key in the live page (the build never echoes the
+            # user's secret back into the rendered HTML).
+            form_cfg = load_form_config(data_path.parent)
+            expect(form_cfg.get("web3forms_access_key", "") or
+                   "web3forms_access_key" not in contact_built.lower() or
+                   "web3forms_access_key=" not in contact_built,
+                   "web3forms_access_key is server-side only, never echoed into the build")
             marked = render_page(site["title"], site["tagline"], site["footer"], site["theme"],
                                  site["pages"], "contact", "<p>hi</p><p>[contact form]</p><p>bye</p>", "x",
                                  site.get("description", ""))
@@ -2751,8 +3184,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                and "mode==='" not in joined and 'mode||"portal"' not in joined,
                "no leftover mode-switching code in the runtime scripts")
         cf = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
-        expect('name="_captcha" value="false"' in cf and 'contact.html?sent=1' in cf,
-               "contact posts captcha-free and returns to a flagged success URL")
+        expect('name="_captcha" value="false"' in cf and
+               'name="_url" value="https://flamingoandcactus.com/contact-ack.html"' in cf,
+               "contact posts captcha-free and lands on our noindex ack page")
         expect('id="cf-status" hidden' in cf and "watch=setTimeout" in cf,
                "stuck submits get a status line and a hang watchdog")
         expect("formsubmit.co/ajax/" in cf,
@@ -2808,6 +3242,42 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             bad = sanitize(f'<a href="{bad_href}">Hi</a>')
             expect("href=" not in bad and "Hi" in bad,
                    f"sanitizer drops hostile href {bad_href}")
+        # Form config sanitization: web3forms_access_key accepts URL-safe
+        # alphanumerics, dashes and underscores; everything else is dropped;
+        # length is capped. Visitor-facing keys (titles, labels, body) are
+        # also length-capped so a pasted 20 KB string cannot break layout.
+        bad_key = sanitize_form_config({"web3forms_access_key": "abc!@# def-_-_ghi\n<script>"})
+        # Both halves of the input survive; the ' ', '!', '@', '#', '\n',
+        # '<' and '>' are stripped, leaving the URL-safe alphanumerics,
+        # dashes and underscores intact.
+        expect(bad_key["web3forms_access_key"] == "abcdef-_-_ghiscript",
+               "web3forms_access_key is stripped to URL-safe characters only")
+        long_key = sanitize_form_config({"web3forms_access_key": "x" * 600})
+        expect(len(long_key["web3forms_access_key"]) == 256,
+               "web3forms_access_key is capped at 256 characters")
+        empty_key = sanitize_form_config({})
+        expect(empty_key["web3forms_access_key"] == "",
+               "omit-from-doc leaves web3forms_access_key empty (failover disabled)")
+        # FormInit form ID: public endpoint ID, same URL-safe charset, own
+        # cap. Hostile characters are stripped, never rejected with an
+        # error (the dialog must not blow up on a paste).
+        bad_id = sanitize_form_config({"forminit_form_id": "abc 123!@#\n<script>/f/x"})
+        expect(bad_id["forminit_form_id"] == "abc123scriptfx",
+               "forminit_form_id is stripped to URL-safe characters only")
+        long_id = sanitize_form_config({"forminit_form_id": "y" * 600})
+        expect(len(long_id["forminit_form_id"]) == 128,
+               "forminit_form_id is capped at 128 characters")
+        expect(empty_key["forminit_form_id"] == "",
+               "omit-from-doc leaves forminit_form_id empty (last resort disabled)")
+        long_svc = sanitize_form_config({"second_failover_service": "S" * 600})
+        expect(len(long_svc["second_failover_service"]) == 120,
+               "second failover service name capped at 120 characters")
+        long_body = sanitize_form_config({"disclaimer_body": "A" * 5000})
+        expect(len(long_body["disclaimer_body"]) == 1200,
+               "disclaimer_body capped at 1200 characters")
+        long_btn = sanitize_form_config({"button": "B" * 600})
+        expect(len(long_btn["button"]) == 80,
+               "form button text capped at 80 characters")
         expect((tmp / "CNAME").read_text(encoding="utf-8").strip() == CUSTOM_DOMAIN,
                "CNAME carries the custom domain")
         flank_idx = tmp / "flank" / "index.html"

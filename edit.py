@@ -655,6 +655,23 @@ __CSS__
     <label class="dlg-field">Files field label<input id="formFilesLabel" maxlength="120" autocomplete="off"></label>
     <label class="dlg-field">Files field hint<textarea class="short" id="formFilesSub" maxlength="300"></textarea></label>
     <label class="dlg-field">Send button text<input id="formButton" maxlength="60" autocomplete="off"></label>
+    <details class="dlg-section" id="formFailoverSection">
+      <summary>Third-party services + failover</summary>
+      <p class="dlg-note">Notes go through a primary service, then two backups in order — Web3Forms, then FormInit. Each retry is named in the status line. Get a free Web3Forms access key at <a href="https://web3forms.com" target="_blank" rel="noopener">web3forms.com</a>. For FormInit, create a free form at <a href="https://forminit.com" target="_blank" rel="noopener">forminit.com</a>, set it to Public, and paste its form ID — never an API key.</p>
+      <label class="dlg-field">Primary service name<input id="formPrimaryService" maxlength="120" autocomplete="off"></label>
+      <label class="dlg-field">Failover service name<input id="formFailoverService" maxlength="120" autocomplete="off"></label>
+      <label class="dlg-field">Web3Forms access key
+        <input id="formWeb3Key" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Paste your web3forms.com access key here">
+        <span class="dlg-hint">Stored in <code>data/form.json</code> only. Built into the page once, never echoed back to this dialog.</span>
+      </label>
+      <label class="dlg-field">Second failover service name<input id="formSecondFailover" maxlength="120" autocomplete="off"></label>
+      <label class="dlg-field">FormInit form ID
+        <input id="formInitId" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Paste your forminit.com public form ID here">
+        <span class="dlg-hint">Public form ID only (dashboard, form Settings, Public mode). It ships in the page by design — API keys must never go here.</span>
+      </label>
+      <label class="dlg-field">Disclaimer title<input id="formDisclaimerTitle" maxlength="120" autocomplete="off"></label>
+      <label class="dlg-field">Disclaimer body<textarea id="formDisclaimerBody" maxlength="1200"></textarea></label>
+    </details>
     <div class="dlg-row">
       <label><input type="checkbox" id="formShowContact"> Show the email-or-phone field</label>
       <label><input type="checkbox" id="formShowFiles"> Show the file picker</label>
@@ -1091,7 +1108,14 @@ const FORM_FIELDS = [
   ["contact_label", "#formContactLabel"], ["contact_sub", "#formContactSub"],
   ["contact_placeholder", "#formContactPh"], ["note_label", "#formNoteLabel"],
   ["note_placeholder", "#formNotePh"], ["files_label", "#formFilesLabel"],
-  ["files_sub", "#formFilesSub"], ["button", "#formButton"]
+  ["files_sub", "#formFilesSub"], ["button", "#formButton"],
+  ["primary_service", "#formPrimaryService"],
+  ["failover_service", "#formFailoverService"],
+  ["web3forms_access_key", "#formWeb3Key"],
+  ["second_failover_service", "#formSecondFailover"],
+  ["forminit_form_id", "#formInitId"],
+  ["disclaimer_title", "#formDisclaimerTitle"],
+  ["disclaimer_body", "#formDisclaimerBody"]
 ];
 function formBlockEl(){ return canvas.querySelector("[data-form-block]"); }
 function calWrapEl(){ return canvas.querySelector("[data-cal-wrap]"); }
