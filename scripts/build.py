@@ -44,7 +44,12 @@ DEFAULT_OUT = ROOT / "site"
 CUSTOM_DOMAIN = "flamingoandcactus.com"
 
 THEMES = ("classic", "parchment", "ink", "midnight")
-STAR_ANIMATIONS = ("portal", "comic", "fade", "none")
+# Star burst: the comic look is the only one this site ships. Earlier
+# variants (Golden burst portal, Soft fade, No animation) were removed in
+# October 2026 — the comic ink-and-paper starburst is the house style.
+# site.json may carry the key but the build always renders comic.
+STAR_ANIMATIONS = ("comic",)
+STAR_ANIMATION_DEFAULT = "comic"
 SLUG_RE = re.compile(r"^[a-z0-9-]{1,40}$")
 
 
@@ -127,7 +132,6 @@ def load_site(path: Path) -> dict:
     if "index" not in seen:
         clean_pages.insert(0, {"slug": "index", "nav": "Home"})
     theme = str(doc.get("theme", "classic"))
-    star_animation = str(doc.get("star_animation", "comic"))
     raw_custom_css = str(doc.get("custom_css", ""))
     css_error = custom_css_error(raw_custom_css)
     if css_error:
@@ -138,7 +142,10 @@ def load_site(path: Path) -> dict:
         "tagline": str(doc.get("tagline", ""))[:300],
         "footer": str(doc.get("footer", ""))[:500],
         "theme": theme if theme in THEMES else "classic",
-        "star_animation": star_animation if star_animation in STAR_ANIMATIONS else "comic",
+        # star_animation is locked to comic. Read site.json's value for
+        # diagnostic logging only -- the builder, the renderer, and the
+        # live HTML all hard-code comic. A hand-edit can no longer reach.
+        "star_animation": STAR_ANIMATION_DEFAULT,
         "description": str(doc.get("description", ""))[:300],
         "custom_css": custom_css,
         "pages": clean_pages,
@@ -905,21 +912,18 @@ CSS = r'''  :root{
   .page{transition:opacity .3s ease,transform .3s ease}
   body.warping .page{opacity:0;transform:scale(.985)}
   #fx{position:fixed;inset:0;z-index:1000;pointer-events:none;overflow:hidden}
-  #fx .flash{position:absolute;inset:0;background:radial-gradient(circle at var(--fx-x,50%) var(--fy,30%),#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:fxflash .5s ease-out}
-  /* comic burst: black-and-ink impact frame instead of golden sparkles */
+  /* Black-and-ink impact frame on the burst - the only star animation
+     this site ships. The canvas script draws jagged rays and shards. */
   #fx .comicflash{position:absolute;inset:0;background:#111;opacity:0;animation:comicko .45s ease-out}
   @keyframes comicko{0%{opacity:0}18%{opacity:.92}38%{opacity:.15}55%{opacity:.6}100%{opacity:0}}
-  @keyframes fxflash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}
   #fx canvas{position:absolute;inset:0;width:100%;height:100%}
   body.arrive .page{animation:arrivefade .55s cubic-bezier(.2,.9,.3,1) both}
   @keyframes arrivefade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:radial-gradient(circle at 50% 30%,#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:flashfade .5s ease-out}
-  @keyframes flashfade{0%{opacity:0}25%{opacity:.7}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{background:#111}
-  body[data-theme="midnight"][data-star-animation="comic"] #arriveflash,
-  body[data-theme="ink"][data-star-animation="comic"] #arriveflash{background:#fffdf7}
+  /* Arrival flash: dark on the default themes, paper-bright on ink and
+     midnight so the same flash keyframes always read. */
+  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:#111;opacity:0;animation:flashfadeink .5s ease-out}
   @keyframes flashfadeink{0%{opacity:0}28%{opacity:.85}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{animation-name:flashfadeink}
+  body[data-theme="midnight"] #arriveflash,body[data-theme="ink"] #arriveflash{background:#fffdf7}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
   .canvas::after{content:"";display:table;clear:both}
   .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
@@ -1942,7 +1946,7 @@ def nav_html(pages, current: str) -> str:
 def render_page(title: str, tagline: str, footer: str, theme: str,
                 pages, slug: str, body_html: str, logo_uri: str,
                 description: str = "", custom_css: str = "",
-                star_animation: str = "comic",
+                star_animation: str = STAR_ANIMATION_DEFAULT,
                 form_html: str = "",
                 cal_cfg: dict | None = None) -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
@@ -1986,7 +1990,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         + LD_ORG + "\n"
         "<style>\n" + CSS + "\n" + safe_custom_css(custom_css) + "\n</style>\n"
         "</head>\n"
-        f'<body data-theme="{theme}" data-star-animation="{star_animation if star_animation in STAR_ANIMATIONS else "comic"}">\n'
+        f'<body data-theme="{theme}" data-star-animation="{STAR_ANIMATION_DEFAULT}">\n'
         '<div class="page">\n'
         f"{star_html(pages)}"
         f"{gem_html(pages)}"
@@ -2003,10 +2007,14 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         f"{form_block}"
         f"{footer_block}"
         "</div>\n"
-        "<script>/* starburst: golden portal. Badge pops, a canvas starburst fires, the page fades — then go. Arrival is a soft flash and rise. All transform, opacity and canvas only. */"
-        "(function(){"
+        # Starburst: the comic ink-and-paper burst is the only effect on this
+        # site. Click the star, badge pops, a black-and-white impact frame
+        # flashes, ink shards fly out, then the page reroutes. Returning to
+        # a visited page plays the soft arrival flash + rise -- no portal,
+        # no soft fade, no "no animation" mode. All transform, opacity, and
+        # canvas only -- respects prefers-reduced-motion (skips the canvas).
+        "<script>(function(){"
         "try{"
-        "var flag='fcWarp';"
         "try{var themeDef=document.body.dataset.theme||'classic';"
         "var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}"
         "if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}"
@@ -2018,10 +2026,10 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "document.body.dataset.theme=next;"
         "try{localStorage.setItem('fc-theme',next);}catch(_){}"
         "themeLabel();});}catch(_){}"
-        "if(sessionStorage.getItem(flag)){sessionStorage.removeItem(flag);"
-        "var afl=null;if((document.body.dataset.starAnimation||'portal')==='portal'||(document.body.dataset.starAnimation||'portal')==='comic'){afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);}"
-        "if((document.body.dataset.starAnimation||'portal')!=='none'){document.body.classList.add('arrive');"
-        "setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}}"
+        "if(sessionStorage.getItem('fcWarp')){sessionStorage.removeItem('fcWarp');"
+        "var afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);"
+        "document.body.classList.add('arrive');"
+        "setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}"
         "}catch(_){}"
         "try{"
         "var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;"
@@ -2029,19 +2037,13 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "if(!star||!star.getAttribute('href'))return;"
         "star.addEventListener('click',function(e){"
         "var href=star.getAttribute('href');"
-        "var mode=document.body.dataset.starAnimation||'portal';"
         "if(!href||href.charAt(0)==='#')return;"
         "e.preventDefault();"
-        "if(instant||mode==='none'){window.location.href=href;return;}"
+        "if(instant){window.location.href=href;return;}"
         "if(star.classList.contains('warp'))return;"
-        "if(mode==='fade'){try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');"
-        "setTimeout(function(){window.location.href=href;},320);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');try{sessionStorage.removeItem(flag)}catch(_){}},3000);return;}"
-        # Comic mode: an ink-and-paper starburst — jagged white blob, radial
-        # speed-line rays, black and white shards — instead of golden sparkles.
-        "if(mode==='comic'){"
         "var r=star.getBoundingClientRect();"
         "var x=r.left+r.width/2,y=r.top+r.height/2;"
-        "try{sessionStorage.setItem(flag,'1')}catch(_){}"
+        "try{sessionStorage.setItem('fcWarp','1')}catch(_){}"
         "star.classList.add('warp');document.body.classList.add('warping');"
         "var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}"
         "setTimeout(nav2,560);setTimeout(nav2,1100);"
@@ -2087,43 +2089,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);"
         "else if(fx.parentNode)fx.parentNode.removeChild(fx);})();"
         "}catch(_){}"
-        "return;}"
-        "var r=star.getBoundingClientRect();"
-        "var x=r.left+r.width/2,y=r.top+r.height/2;"
-        "try{sessionStorage.setItem(flag,'1')}catch(_){}"
-        "star.classList.add('warp');document.body.classList.add('warping');"
-        "var fx=document.createElement('div');fx.id='fx';"
-        "fx.style.setProperty('--fx-x',x+'px');fx.style.setProperty('--fx-y',y+'px');"
-        "var fl=document.createElement('div');fl.className='flash';fx.appendChild(fl);"
-        "var cv=document.createElement('canvas');fx.appendChild(cv);"
-        "document.body.appendChild(fx);"
-        "var dpr=Math.min(window.devicePixelRatio||1,2);"
-        "var W=window.innerWidth,H=window.innerHeight;"
-        "cv.width=W*dpr;cv.height=H*dpr;"
-        "var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);"
-        "var cols=['#fffbe8','#f7e08b','#c9a227','#e8c84a','#8a6a0f'];"
-        "var N=W<700?26:60,P=[],i,a,sp;"
-        "for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=2+Math.random()*6;"
-        "P.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,r:3+Math.random()*6,rot:Math.random()*Math.PI*2,vr:(Math.random()-.5)*.3,age:0,life:35+Math.random()*30,c:cols[(Math.random()*cols.length)|0]});}"
-        "var ring={age:0,life:30};"
-        "function drawStar(s){cx2.beginPath();for(var k=0;k<10;k++){var rr=k%2?s.r*.45:s.r,aa=s.rot+k*Math.PI/5;cx2[k?'lineTo':'moveTo'](s.x+Math.cos(aa)*rr,s.y+Math.sin(aa)*rr);}cx2.closePath();}"
-        "var t0=performance.now();"
-        "(function frame(){"
-        "var alive=false,j,s;"
-        "cx2.clearRect(0,0,W,H);"
-        "for(j=0;j<P.length;j++){s=P[j];s.age++;if(s.age>s.life)continue;alive=true;"
-        "s.x+=s.vx;s.y+=s.vy;s.vx*=.985;s.vy=s.vy*.985+.06;s.rot+=s.vr;"
-        "cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.fillStyle=s.c;drawStar(s);cx2.fill();}"
-        "if(ring.age<ring.life){ring.age++;alive=true;"
-        "var rp=ring.age/ring.life;cx2.globalAlpha=(1-rp)*.8;cx2.strokeStyle='#f3d97b';cx2.lineWidth=4*(1-rp)+1;"
-        "cx2.beginPath();cx2.arc(x,y,8+rp*Math.max(W,H)*.35,0,Math.PI*2);cx2.stroke();}"
-        "cx2.globalAlpha=1;"
-        "if(alive&&performance.now()-t0<1500)requestAnimationFrame(frame);"
-        "else if(fx.parentNode)fx.parentNode.removeChild(fx);"
-        "})();"
-        "var go=false;function nav(){if(go)return;go=true;window.location.href=href;}"
-        "setTimeout(nav,550);setTimeout(nav,1200);"
-        "setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2500);});"
+        "});"
         "}catch(_){}"
         "})();</script>"
         "</body>\n"
@@ -2377,8 +2343,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         idx = (tmp / "index.html").read_text(encoding="utf-8")
         expect(len(idx) > 0, "index.html non-empty")
         expect(html.escape(site["title"]) in idx, "title present")
-        expect(('data-star-animation="' + site.get("star_animation", "comic") + '"') in idx,
-               "site selects its star transition mode in generated pages")
+        expect('data-star-animation="comic"' in idx,
+               "every generated page carries the comic star burst marker")
         page_meta = render_page(site["title"], site["tagline"], site["footer"], site["theme"],
                                 [{"slug":"index", "nav":"Home", "title":"Page-specific title",
                                   "description":"Page-specific search text"}], "index", "", "x",
@@ -2387,9 +2353,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "page-level browser title and search description override site defaults")
         style_test = render_page(site["title"], site["tagline"], site["footer"], site["theme"],
                                  site["pages"], "index", "", "x", site.get("description", ""),
-                                 ".mobile-test{font-size:20px}", "fade")
-        expect('.mobile-test{font-size:20px}' in style_test and 'data-star-animation="fade"' in style_test,
-               "advanced CSS and star transition settings reach the generated page")
+                                 ".mobile-test{font-size:20px}")
+        expect('.mobile-test{font-size:20px}' in style_test and 'data-star-animation="comic"' in style_test,
+               "advanced CSS reaches the generated page; comic star burst is hard-coded")
         expect("</style" not in safe_custom_css(".x{} </STYLE><script>bad()</script>"),
                "advanced CSS cannot close the site's style element")
         expect(custom_css_error("@import url(https://example.invalid/a.css);") is not None
@@ -2419,11 +2385,11 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "phone header: star top-left, nav wraps without touching")
         expect("overflow-wrap:anywhere" in idx,
                "unbreakable titles wrap on phones (no sideways cutoff)")
-        expect("starburst" in idx and "badgepop" in idx and "arrivefade" in idx,
-               "portal: badge pop, canvas starburst and soft arrival present")
+        expect("badgepop" in idx and "arrivefade" in idx and "comicko" in idx,
+               "comic only: badge pop, ink burst, and soft arrival flash all present")
         warp_scripts = idx.lower().count("<script")
-        expect(warp_scripts == 2 and "starburst" in idx.lower() and "ld+json" in idx.lower(),
-               "built pages carry only the star-warp + structured-data scripts")
+        expect(warp_scripts == 2 and "ld+json" in idx.lower(),
+               "built pages carry only the burst + structured-data scripts")
         expect('name="description"' in idx and html.escape(site["description"])[:40] in idx,
                "every page carries the search snippet")
         expect('rel="canonical" href="https://flamingoandcactus.com/"' in idx,
@@ -2776,8 +2742,14 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         anim = site.get("star_animation", "comic")
         expect(anim in STAR_ANIMATIONS and ('data-star-animation="' + anim + '"') in idx,
                "star animation is a known mode and the pages carry it")
-        expect("comicko" in idx and "comicflash" in idx and "mode==='comic'" in idx,
-               "comic burst draws an ink starburst, not golden sparkles")
+        expect("comicko" in idx and "comicflash" in idx,
+               "comic burst draws an ink starburst; no portal/fade branches left behind")
+        # No mode-switching left in the JS. SVG attribute fill='none' is fine.
+        script_blocks = re.findall(r"<script[^>]*>(.*?)</script>", idx, flags=re.S)
+        joined = "\n".join(script_blocks)
+        expect("'portal'" not in joined and "'fade'" not in joined
+               and "mode==='" not in joined and 'mode||"portal"' not in joined,
+               "no leftover mode-switching code in the runtime scripts")
         cf = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
         expect('name="_captcha" value="false"' in cf and 'contact.html?sent=1' in cf,
                "contact posts captcha-free and returns to a flagged success URL")

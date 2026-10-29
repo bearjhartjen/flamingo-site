@@ -420,7 +420,7 @@ __CSS__
 </style>
 <style id="site-custom-css">__CUSTOM_CSS__</style>
 </head>
-<body data-theme="__THEME__" data-star-animation="__STAR_ANIMATION__">
+<body data-theme="__THEME__" data-star-animation="comic">
 <div id="app">
 <aside id="side">
   <div class="side-h"><span>Pages</span><button id="btn-help" title="Show editor help">Help</button></div>
@@ -437,11 +437,7 @@ __CSS__
     <option value="ink">Ink</option>
     <option value="midnight">Midnight</option>
   </select></label>
-  <label>Star transition<select id="in-star-animation">
-    <option value="portal">Golden burst</option>
-    <option value="fade">Soft fade</option>
-    <option value="none">No animation</option>
-  </select></label>
+  <p class="side-help">Star burst: the comic ink-and-paper look is hardcoded. There is no toggle, by design — it is the house style.</p>
   <div class="row"><button id="btn-logo">Logo…</button></div>
   <details class="advanced-site">
     <summary>Advanced design</summary>
@@ -869,8 +865,7 @@ const draftKey = slug => "fc-site-draft:" + slug;
 const LAST_PAGE_KEY = "fc-site-last-page";
 function globalSettings(site){
   return {title:site.title || "", tagline:site.tagline || "", description:site.description || "",
-          footer:site.footer || "", theme:site.theme || "classic", custom_css:site.custom_css || "",
-          star_animation:site.star_animation || "portal"};
+          footer:site.footer || "", theme:site.theme || "classic", custom_css:site.custom_css || ""};
 }
 let serverSiteSnapshot = JSON.stringify(globalSettings(SITE));
 
@@ -1007,14 +1002,13 @@ function hint(){
 }
 function renderAll(){
   document.body.dataset.theme = SITE.theme;
-  document.body.dataset.starAnimation = SITE.star_animation || "portal";
+  document.body.dataset.starAnimation = "comic";
   applyCustomCssPreview();
   document.querySelector('[data-ed="title"]').innerText = SITE.title;
   document.querySelector('[data-ed="tagline"]').innerText = SITE.tagline;
   $("#in-title").value = SITE.title; $("#in-tagline").value = SITE.tagline;
   $("#in-description").value = SITE.description || "";
   $("#in-footer").value = SITE.footer || ""; $("#in-theme").value = SITE.theme;
-  $("#in-star-animation").value = SITE.star_animation || "portal";
   $("#in-css").value = SITE.custom_css || "";
   const nav = $("#nav"); nav.innerHTML = "";
   const visPages = SITE.pages.filter(p => !p.hidden);
@@ -1513,7 +1507,7 @@ function placeCaretStart(){
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
   } catch (e) {}
 }
-["in-title","in-tagline","in-description","in-footer","in-theme","in-star-animation","in-css"].forEach(id => {
+["in-title","in-tagline","in-description","in-footer","in-theme","in-css"].forEach(id => {
   $("#" + id).addEventListener("input", () => {
     readInputsToSite();
     // focus is in the sidebar, so rewriting the canvas copy is safe
@@ -1532,10 +1526,9 @@ function readInputsToSite(){
   SITE.description = $("#in-description").value;
   SITE.footer = $("#in-footer").value;
   SITE.theme = $("#in-theme").value;
-  SITE.star_animation = $("#in-star-animation").value;
   SITE.custom_css = $("#in-css").value;
   document.body.dataset.theme = SITE.theme;
-  document.body.dataset.starAnimation = SITE.star_animation || "portal";
+  document.body.dataset.starAnimation = "comic";
   applyCustomCssPreview();
   $("#foot").textContent = SITE.footer;
   $("#foot").style.display = SITE.footer ? "" : "none";
@@ -3206,7 +3199,6 @@ async function save(){
     tagline: SITE.tagline.slice(0, 300),
     description: (SITE.description || "").slice(0, 300),
     custom_css: (SITE.custom_css || "").slice(0, 20000),
-    star_animation: SITE.star_animation || "portal",
     footer: SITE.footer.slice(0, 500),
     theme: SITE.theme
   };
@@ -3312,7 +3304,7 @@ initEditor();
     page = page.replace("__TITLE_ESC__", html.escape(site["title"]))
     page = page.replace("__TAGLINE_ESC__", html.escape(site["tagline"]))
     page = page.replace("__THEME__", site["theme"])
-    page = page.replace("__STAR_ANIMATION__", site.get("star_animation", "portal"))
+    page = page.replace("__STAR_ANIMATION__", site_build.STAR_ANIMATION_DEFAULT)
     page = page.replace("__BODY__", canvas_body)
     page = page.replace("__FORMPREVIEW__", "")
     page = page.replace("__FORM_JSON__", json.dumps(form_cfg, ensure_ascii=False).replace("<", "\\u003c"))
@@ -3489,23 +3481,10 @@ class Handler(BaseHTTPRequestHandler):
         if css_error:
             return self._json(400, {"error": css_error})
         site["custom_css"] = site_build.safe_custom_css(custom_css)
-        # A builder tab opened hours ago still carries the star setting it
-        # loaded then; its next Save silently reverts any external change,
-        # which is what kept flipping star_animation back to "portal".
-        # Send the tab's last-known snapshot as siteBase: keep the disk
-        # value unless the tab actually moved the Star-Animation dropdown.
-        doc_star = str(doc.get("star_animation", "portal"))
-        base_star = None
-        try:
-            base = json.loads(str(doc.get("siteBase", "")))
-            if isinstance(base, dict):
-                base_star = str(base.get("star_animation", "portal"))
-        except ValueError:
-            pass
-        if base_star is None or base_star != doc_star \
-                or site.get("star_animation", "portal") == doc_star \
-                or doc_star not in site_build.STAR_ANIMATIONS:
-            site["star_animation"] = doc_star if doc_star in site_build.STAR_ANIMATIONS else "portal"
+        # The star burst is locked to the comic style - there is no user
+        # toggle by design. Force the key on every save so any stale tab
+        # or external editor cannot drift it back to portal.
+        site["star_animation"] = site_build.STAR_ANIMATION_DEFAULT
         site["footer"] = str(doc.get("footer", ""))[:500]
         if str(doc.get("theme", "")) in site_build.THEMES:
             site["theme"] = str(doc.get("theme"))
@@ -3619,8 +3598,7 @@ class Handler(BaseHTTPRequestHandler):
                 if css_error:
                     return self._json(400, {"error": css_error})
                 site["custom_css"] = site_build.safe_custom_css(custom_css)
-                if str(doc.get("star_animation", "")) in site_build.STAR_ANIMATIONS:
-                    site["star_animation"] = str(doc.get("star_animation"))
+                site["star_animation"] = site_build.STAR_ANIMATION_DEFAULT
                 site["footer"] = str(doc.get("footer", ""))[:500]
                 if str(doc.get("theme", "")) in site_build.THEMES:
                     site["theme"] = str(doc.get("theme"))

@@ -64,16 +64,20 @@ Two badges float on every page in a black-and-white comic style. The star
 links to a hidden Latest page. The white FEEDBACK plate links to a hidden
 Feedback page. Hidden means not in the menu, but still a real built page.
 
-Clicking the star plays a burst. The setting is `star_animation` in
-`data/site.json`. Right now it is `portal`. We also have `comic`, `fade`,
-and `none`. The default in the build script is `comic`, so a missing or
-bad value falls back to comic.
+Clicking the star plays a comic ink-and-paper burst: a black impact
+frame, jagged white rays, black and white shards fly out, then the page
+reroutes. Returning to a visited page plays a dark flash + soft rise.
 
-What we learned: a builder tab holds its settings from when it was opened.
-If you save from an old tab, it can silently flip `star_animation` back.
-We fixed this in `edit.py`. The save now carries what the tab saw at load
-(`siteBase`). If the tab never touched the dropdown, the disk value wins.
-If the tab did touch it, the tab wins.
+The comic burst is the only star effect this site ships. There is no
+dropdown in the builder for it, on purpose. Older states tried
+`portal`/`comic`/`fade`/`none` and the toggle kept flipping back. The
+October 2026 build dropped the others entirely:
+
+- `data/site.json` carries `star_animation` set to `"comic"`.
+- `scripts/build.py STAR_ANIMATIONS = ("comic",)` — anything else fails.
+- The builder sidebar shows a one-line explanation, not a dropdown.
+- Both save handlers force the value to comic on every write, so a
+  stale tab or an external edit cannot drift it back.
 
 ## The contact form
 

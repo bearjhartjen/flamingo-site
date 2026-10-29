@@ -219,21 +219,18 @@
   .page{transition:opacity .3s ease,transform .3s ease}
   body.warping .page{opacity:0;transform:scale(.985)}
   #fx{position:fixed;inset:0;z-index:1000;pointer-events:none;overflow:hidden}
-  #fx .flash{position:absolute;inset:0;background:radial-gradient(circle at var(--fx-x,50%) var(--fy,30%),#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:fxflash .5s ease-out}
-  /* comic burst: black-and-ink impact frame instead of golden sparkles */
+  /* Black-and-ink impact frame on the burst - the only star animation
+     this site ships. The canvas script draws jagged rays and shards. */
   #fx .comicflash{position:absolute;inset:0;background:#111;opacity:0;animation:comicko .45s ease-out}
   @keyframes comicko{0%{opacity:0}18%{opacity:.92}38%{opacity:.15}55%{opacity:.6}100%{opacity:0}}
-  @keyframes fxflash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}
   #fx canvas{position:absolute;inset:0;width:100%;height:100%}
   body.arrive .page{animation:arrivefade .55s cubic-bezier(.2,.9,.3,1) both}
   @keyframes arrivefade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:radial-gradient(circle at 50% 30%,#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:flashfade .5s ease-out}
-  @keyframes flashfade{0%{opacity:0}25%{opacity:.7}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{background:#111}
-  body[data-theme="midnight"][data-star-animation="comic"] #arriveflash,
-  body[data-theme="ink"][data-star-animation="comic"] #arriveflash{background:#fffdf7}
+  /* Arrival flash: dark on the default themes, paper-bright on ink and
+     midnight so the same flash keyframes always read. */
+  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:#111;opacity:0;animation:flashfadeink .5s ease-out}
   @keyframes flashfadeink{0%{opacity:0}28%{opacity:.85}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{animation-name:flashfadeink}
+  body[data-theme="midnight"] #arriveflash,body[data-theme="ink"] #arriveflash{background:#fffdf7}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
   .canvas::after{content:"";display:table;clear:both}
   .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
