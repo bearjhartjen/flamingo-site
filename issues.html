@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flamingo and Cactus &mdash; Flamingo &amp; Cactus</title>
-<meta name="description" content="Flamingo and Cactus Group">
+<meta name="description" content="Flamingoandcactus.com is dedicated to all things within the Flamingo &amp; Cactus group.">
 <link rel="canonical" href="https://flamingoandcactus.com/issues.html">
 <meta property="og:title" content="Flamingo and Cactus &mdash; Flamingo &amp; Cactus">
-<meta property="og:description" content="Flamingo and Cactus Group">
+<meta property="og:description" content="Flamingoandcactus.com is dedicated to all things within the Flamingo &amp; Cactus group.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://flamingoandcactus.com/issues.html">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Flamingo and Cactus","url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/favicon.png"}</script>
@@ -225,21 +225,18 @@
   .page{transition:opacity .3s ease,transform .3s ease}
   body.warping .page{opacity:0;transform:scale(.985)}
   #fx{position:fixed;inset:0;z-index:1000;pointer-events:none;overflow:hidden}
-  #fx .flash{position:absolute;inset:0;background:radial-gradient(circle at var(--fx-x,50%) var(--fy,30%),#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:fxflash .5s ease-out}
-  /* comic burst: black-and-ink impact frame instead of golden sparkles */
+  /* Black-and-ink impact frame on the burst - the only star animation
+     this site ships. The canvas script draws jagged rays and shards. */
   #fx .comicflash{position:absolute;inset:0;background:#111;opacity:0;animation:comicko .45s ease-out}
   @keyframes comicko{0%{opacity:0}18%{opacity:.92}38%{opacity:.15}55%{opacity:.6}100%{opacity:0}}
-  @keyframes fxflash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}
   #fx canvas{position:absolute;inset:0;width:100%;height:100%}
   body.arrive .page{animation:arrivefade .55s cubic-bezier(.2,.9,.3,1) both}
   @keyframes arrivefade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:radial-gradient(circle at 50% 30%,#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:flashfade .5s ease-out}
-  @keyframes flashfade{0%{opacity:0}25%{opacity:.7}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{background:#111}
-  body[data-theme="midnight"][data-star-animation="comic"] #arriveflash,
-  body[data-theme="ink"][data-star-animation="comic"] #arriveflash{background:#fffdf7}
+  /* Arrival flash: dark on the default themes, paper-bright on ink and
+     midnight so the same flash keyframes always read. */
+  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:#111;opacity:0;animation:flashfadeink .5s ease-out}
   @keyframes flashfadeink{0%{opacity:0}28%{opacity:.85}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{animation-name:flashfadeink}
+  body[data-theme="midnight"] #arriveflash,body[data-theme="ink"] #arriveflash{background:#fffdf7}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
   .canvas::after{content:"";display:table;clear:both}
   .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
@@ -281,6 +278,20 @@
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* Disclaimer card sitting just above the contact form. Carries who
+     runs the form (third-party services), what happens on downtime
+     (silent failover), and a peer email link so visitors always have
+     a way through. Same border/paper rhythm as the form for unity. */
+  .cf-disclaimer{max-width:560px;box-sizing:border-box;margin:22px auto 0;padding:14px 18px;border:1px solid var(--rule);border-left:3px solid var(--link);border-radius:2px;background:var(--paper2);color:var(--ink2);font:13px/1.55 Georgia,Times,serif}
+  .cf-disclaimer-h{font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
+  .cf-disclaimer-p{margin:0 0 6px}
+  .cf-disclaimer-p:last-child{margin-bottom:0}
+  .cf-svc{display:inline-block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:2px 7px;margin:0 4px 4px 0}
+  .cf-svc-or{font:italic 12px Georgia,Times,serif;color:var(--muted);margin:0 4px 4px 0}
+  .cf-svc-sep+.cf-svc{margin-left:0}
+  body[data-theme="ink"] .cf-disclaimer{background:#332e28;border-color:#857763;border-left-color:#9db8ff}
+  body[data-theme="midnight"] .cf-disclaimer{background:#2b2336;border-color:#4d3c6b;border-left-color:#9db8ff}
+  body[data-theme="ink"] .cf-svc,body[data-theme="midnight"] .cf-svc{background:transparent;border-color:#857763}
   /* the big yes/no panels: on success the form is replaced by the panel, so
      there is no way to miss that the note went through (or did not) */
   .contactform[hidden],.cf-done[hidden],.cf-error[hidden]{display:none}
@@ -481,8 +492,9 @@
     .canvas .gallery{flex-direction:column}
     .canvas .gallery img{width:100%}
     .canvas .card{padding:14px 14px}
-    .contactform{margin:22px 0 0;padding:16px 14px}
-    .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
+    .cf-disclaimer{margin:16px 0 0;padding:12px 14px}
+    .contactform{margin:14px 0 0;padding:16px 14px}
+    .cf-done,.cf-error{margin:14px 0 0;padding:16px 14px}
     .canvas a.btn[href^="flank/"]{padding:9px 30px}
     .canvas a.btn[href^="flank/"]::before{left:9px}
     .canvas a.btn[href^="flank/"]::after{right:9px}
@@ -493,7 +505,7 @@
 
 </style>
 </head>
-<body data-theme="classic" data-star-animation="portal">
+<body data-theme="classic" data-star-animation="comic">
 <div class="page">
 <a class="star-badge" href="latest.html" title="Latest and greatest"><span class="star-title">Latest and greatest</span><span class="star-sub">Click me</span></a><a class="gem-badge" href="feedback.html" title="Feedback"><span class="gem-title">Feedback</span></a>
   <div class="masthead">
@@ -520,5 +532,5 @@
   <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>
   </footer>
 </div>
-<script>/* starburst: golden portal. Badge pops, a canvas starburst fires, the page fades — then go. Arrival is a soft flash and rise. All transform, opacity and canvas only. */(function(){try{var flag='fcWarp';try{var themeDef=document.body.dataset.theme||'classic';var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}var themeBtn=document.getElementById('theme-toggle');var themeLabel=function(){if(themeBtn)themeBtn.textContent=(document.body.dataset.theme==='midnight')?'Light mode':'Dark mode';};themeLabel();if(themeBtn)themeBtn.addEventListener('click',function(){var next=(document.body.dataset.theme==='midnight')?themeDef:'midnight';document.body.dataset.theme=next;try{localStorage.setItem('fc-theme',next);}catch(_){}themeLabel();});}catch(_){}if(sessionStorage.getItem(flag)){sessionStorage.removeItem(flag);var afl=null;if((document.body.dataset.starAnimation||'portal')==='portal'||(document.body.dataset.starAnimation||'portal')==='comic'){afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);}if((document.body.dataset.starAnimation||'portal')!=='none'){document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}}}catch(_){}try{var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;var star=document.querySelector('a.star-badge, a.gem-badge');if(!star||!star.getAttribute('href'))return;star.addEventListener('click',function(e){var href=star.getAttribute('href');var mode=document.body.dataset.starAnimation||'portal';if(!href||href.charAt(0)==='#')return;e.preventDefault();if(instant||mode==='none'){window.location.href=href;return;}if(star.classList.contains('warp'))return;if(mode==='fade'){try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');setTimeout(function(){window.location.href=href;},320);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');try{sessionStorage.removeItem(flag)}catch(_){}},3000);return;}if(mode==='comic'){var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}setTimeout(nav2,560);setTimeout(nav2,1100);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2200);try{var fx=document.createElement('div');fx.id='fx';var fl=document.createElement('div');fl.className='comicflash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var N=W<700?18:30,S=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=3+Math.random()*6;S.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4+Math.random()*7,rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.4,age:0,life:26+Math.random()*22,ink:Math.random()<.5});}var rays=W<700?12:18,seed=[],j;for(j=0;j<rays;j++)seed.push(.6+Math.random()*.5);var wax={age:0,life:24};var t0=performance.now();(function frame(){var alive=false,i,s;cx2.clearRect(0,0,W,H);if(wax.age<=wax.life){wax.age++;alive=true;var wx=Math.min(1,wax.age/wax.life),R0=Math.min(W,H)*.08+wx*44;cx2.globalAlpha=1-wx*.3;cx2.fillStyle='#fffdf7';cx2.strokeStyle='#111';cx2.lineWidth=5;cx2.beginPath();for(i=0;i<16;i++){var aa=i*Math.PI/8,rr=R0*(1+.22*Math.sin(aa*3+wax.age*.5));var px=x+Math.cos(aa)*rr,py=y+Math.sin(aa)*rr;cx2[i?'lineTo':'moveTo'](px,py);}cx2.closePath();cx2.fill();cx2.stroke();for(i=0;i<rays;i++){var aa=i*Math.PI*2/rays,ln=(0.3+0.16*seed[i])*Math.max(W,H)*wx; cx2.beginPath();cx2.moveTo(x+Math.cos(aa)*R0*.7,y+Math.sin(aa)*R0*.7);cx2.lineTo(x+Math.cos(aa)*ln,y+Math.sin(aa)*ln);cx2.strokeStyle=i%2?'#111':'#fffdf7';cx2.lineWidth=i%2?9:4;cx2.stroke();}cx2.globalAlpha=1;}for(i=0;i<S.length;i++){s=S[i];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.97;s.vy=s.vy*.97;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.save();cx2.translate(s.x,s.y);cx2.rotate(s.rot);cx2.beginPath();cx2.moveTo(0,-s.r);cx2.lineTo(s.r*.7,s.r);cx2.lineTo(-s.r*.7,s.r);cx2.closePath();if(s.ink){cx2.fillStyle='#111';cx2.fill();}else{cx2.fillStyle='#fffdf7';cx2.fill();cx2.lineWidth=2;cx2.strokeStyle='#111';cx2.stroke();}cx2.restore();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();}catch(_){}return;}var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem(flag,'1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var fx=document.createElement('div');fx.id='fx';fx.style.setProperty('--fx-x',x+'px');fx.style.setProperty('--fx-y',y+'px');var fl=document.createElement('div');fl.className='flash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var cols=['#fffbe8','#f7e08b','#c9a227','#e8c84a','#8a6a0f'];var N=W<700?26:60,P=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=2+Math.random()*6;P.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,r:3+Math.random()*6,rot:Math.random()*Math.PI*2,vr:(Math.random()-.5)*.3,age:0,life:35+Math.random()*30,c:cols[(Math.random()*cols.length)|0]});}var ring={age:0,life:30};function drawStar(s){cx2.beginPath();for(var k=0;k<10;k++){var rr=k%2?s.r*.45:s.r,aa=s.rot+k*Math.PI/5;cx2[k?'lineTo':'moveTo'](s.x+Math.cos(aa)*rr,s.y+Math.sin(aa)*rr);}cx2.closePath();}var t0=performance.now();(function frame(){var alive=false,j,s;cx2.clearRect(0,0,W,H);for(j=0;j<P.length;j++){s=P[j];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.985;s.vy=s.vy*.985+.06;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.fillStyle=s.c;drawStar(s);cx2.fill();}if(ring.age<ring.life){ring.age++;alive=true;var rp=ring.age/ring.life;cx2.globalAlpha=(1-rp)*.8;cx2.strokeStyle='#f3d97b';cx2.lineWidth=4*(1-rp)+1;cx2.beginPath();cx2.arc(x,y,8+rp*Math.max(W,H)*.35,0,Math.PI*2);cx2.stroke();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1500)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();var go=false;function nav(){if(go)return;go=true;window.location.href=href;}setTimeout(nav,550);setTimeout(nav,1200);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2500);});}catch(_){}})();</script></body>
+<script>(function(){try{try{var themeDef=document.body.dataset.theme||'classic';var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}var themeBtn=document.getElementById('theme-toggle');var themeLabel=function(){if(themeBtn)themeBtn.textContent=(document.body.dataset.theme==='midnight')?'Light mode':'Dark mode';};themeLabel();if(themeBtn)themeBtn.addEventListener('click',function(){var next=(document.body.dataset.theme==='midnight')?themeDef:'midnight';document.body.dataset.theme=next;try{localStorage.setItem('fc-theme',next);}catch(_){}themeLabel();});}catch(_){}if(sessionStorage.getItem('fcWarp')){sessionStorage.removeItem('fcWarp');var afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}}catch(_){}try{var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;var star=document.querySelector('a.star-badge, a.gem-badge');if(!star||!star.getAttribute('href'))return;star.addEventListener('click',function(e){var href=star.getAttribute('href');if(!href||href.charAt(0)==='#')return;e.preventDefault();if(instant){window.location.href=href;return;}if(star.classList.contains('warp'))return;var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem('fcWarp','1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}setTimeout(nav2,560);setTimeout(nav2,1100);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2200);try{var fx=document.createElement('div');fx.id='fx';var fl=document.createElement('div');fl.className='comicflash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var N=W<700?18:30,S=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=3+Math.random()*6;S.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4+Math.random()*7,rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.4,age:0,life:26+Math.random()*22,ink:Math.random()<.5});}var rays=W<700?12:18,seed=[],j;for(j=0;j<rays;j++)seed.push(.6+Math.random()*.5);var wax={age:0,life:24};var t0=performance.now();(function frame(){var alive=false,i,s;cx2.clearRect(0,0,W,H);if(wax.age<=wax.life){wax.age++;alive=true;var wx=Math.min(1,wax.age/wax.life),R0=Math.min(W,H)*.08+wx*44;cx2.globalAlpha=1-wx*.3;cx2.fillStyle='#fffdf7';cx2.strokeStyle='#111';cx2.lineWidth=5;cx2.beginPath();for(i=0;i<16;i++){var aa=i*Math.PI/8,rr=R0*(1+.22*Math.sin(aa*3+wax.age*.5));var px=x+Math.cos(aa)*rr,py=y+Math.sin(aa)*rr;cx2[i?'lineTo':'moveTo'](px,py);}cx2.closePath();cx2.fill();cx2.stroke();for(i=0;i<rays;i++){var aa=i*Math.PI*2/rays,ln=(0.3+0.16*seed[i])*Math.max(W,H)*wx; cx2.beginPath();cx2.moveTo(x+Math.cos(aa)*R0*.7,y+Math.sin(aa)*R0*.7);cx2.lineTo(x+Math.cos(aa)*ln,y+Math.sin(aa)*ln);cx2.strokeStyle=i%2?'#111':'#fffdf7';cx2.lineWidth=i%2?9:4;cx2.stroke();}cx2.globalAlpha=1;}for(i=0;i<S.length;i++){s=S[i];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.97;s.vy=s.vy*.97;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.save();cx2.translate(s.x,s.y);cx2.rotate(s.rot);cx2.beginPath();cx2.moveTo(0,-s.r);cx2.lineTo(s.r*.7,s.r);cx2.lineTo(-s.r*.7,s.r);cx2.closePath();if(s.ink){cx2.fillStyle='#111';cx2.fill();}else{cx2.fillStyle='#fffdf7';cx2.fill();cx2.lineWidth=2;cx2.strokeStyle='#111';cx2.stroke();}cx2.restore();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();}catch(_){}});}catch(_){}})();</script></body>
 </html>

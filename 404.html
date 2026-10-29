@@ -219,21 +219,18 @@
   .page{transition:opacity .3s ease,transform .3s ease}
   body.warping .page{opacity:0;transform:scale(.985)}
   #fx{position:fixed;inset:0;z-index:1000;pointer-events:none;overflow:hidden}
-  #fx .flash{position:absolute;inset:0;background:radial-gradient(circle at var(--fx-x,50%) var(--fy,30%),#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:fxflash .5s ease-out}
-  /* comic burst: black-and-ink impact frame instead of golden sparkles */
+  /* Black-and-ink impact frame on the burst - the only star animation
+     this site ships. The canvas script draws jagged rays and shards. */
   #fx .comicflash{position:absolute;inset:0;background:#111;opacity:0;animation:comicko .45s ease-out}
   @keyframes comicko{0%{opacity:0}18%{opacity:.92}38%{opacity:.15}55%{opacity:.6}100%{opacity:0}}
-  @keyframes fxflash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}
   #fx canvas{position:absolute;inset:0;width:100%;height:100%}
   body.arrive .page{animation:arrivefade .55s cubic-bezier(.2,.9,.3,1) both}
   @keyframes arrivefade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:radial-gradient(circle at 50% 30%,#fffbe8,#f3d97b 45%,rgba(201,162,39,0));opacity:0;animation:flashfade .5s ease-out}
-  @keyframes flashfade{0%{opacity:0}25%{opacity:.7}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{background:#111}
-  body[data-theme="midnight"][data-star-animation="comic"] #arriveflash,
-  body[data-theme="ink"][data-star-animation="comic"] #arriveflash{background:#fffdf7}
+  /* Arrival flash: dark on the default themes, paper-bright on ink and
+     midnight so the same flash keyframes always read. */
+  #arriveflash{position:fixed;inset:0;z-index:1000;pointer-events:none;background:#111;opacity:0;animation:flashfadeink .5s ease-out}
   @keyframes flashfadeink{0%{opacity:0}28%{opacity:.85}100%{opacity:0}}
-  body[data-star-animation="comic"] #arriveflash{animation-name:flashfadeink}
+  body[data-theme="midnight"] #arriveflash,body[data-theme="ink"] #arriveflash{background:#fffdf7}
   .canvas .gallery img{flex:1;min-width:0;object-fit:cover;margin:0;border:1px solid var(--rule2)}
   .canvas::after{content:"";display:table;clear:both}
   .canvas table{border-collapse:collapse;margin:0 0 12px;max-width:100%}
@@ -275,6 +272,20 @@
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* Disclaimer card sitting just above the contact form. Carries who
+     runs the form (third-party services), what happens on downtime
+     (silent failover), and a peer email link so visitors always have
+     a way through. Same border/paper rhythm as the form for unity. */
+  .cf-disclaimer{max-width:560px;box-sizing:border-box;margin:22px auto 0;padding:14px 18px;border:1px solid var(--rule);border-left:3px solid var(--link);border-radius:2px;background:var(--paper2);color:var(--ink2);font:13px/1.55 Georgia,Times,serif}
+  .cf-disclaimer-h{font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
+  .cf-disclaimer-p{margin:0 0 6px}
+  .cf-disclaimer-p:last-child{margin-bottom:0}
+  .cf-svc{display:inline-block;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;background:var(--paper);border:1px solid var(--rule);border-radius:2px;padding:2px 7px;margin:0 4px 4px 0}
+  .cf-svc-or{font:italic 12px Georgia,Times,serif;color:var(--muted);margin:0 4px 4px 0}
+  .cf-svc-sep+.cf-svc{margin-left:0}
+  body[data-theme="ink"] .cf-disclaimer{background:#332e28;border-color:#857763;border-left-color:#9db8ff}
+  body[data-theme="midnight"] .cf-disclaimer{background:#2b2336;border-color:#4d3c6b;border-left-color:#9db8ff}
+  body[data-theme="ink"] .cf-svc,body[data-theme="midnight"] .cf-svc{background:transparent;border-color:#857763}
   /* the big yes/no panels: on success the form is replaced by the panel, so
      there is no way to miss that the note went through (or did not) */
   .contactform[hidden],.cf-done[hidden],.cf-error[hidden]{display:none}
@@ -475,8 +486,9 @@
     .canvas .gallery{flex-direction:column}
     .canvas .gallery img{width:100%}
     .canvas .card{padding:14px 14px}
-    .contactform{margin:22px 0 0;padding:16px 14px}
-    .cf-done,.cf-error{margin:22px 0 0;padding:16px 14px}
+    .cf-disclaimer{margin:16px 0 0;padding:12px 14px}
+    .contactform{margin:14px 0 0;padding:16px 14px}
+    .cf-done,.cf-error{margin:14px 0 0;padding:16px 14px}
     .canvas a.btn[href^="flank/"]{padding:9px 30px}
     .canvas a.btn[href^="flank/"]::before{left:9px}
     .canvas a.btn[href^="flank/"]::after{right:9px}
