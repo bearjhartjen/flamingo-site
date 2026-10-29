@@ -178,6 +178,14 @@ navigates away.
   Missing pieces are skipped, named as much: *"no last backup is
   configured"* or *"a backup is configured but has no access key"*.
   The disclaimer card names all three services with the order.
+- **Armed October 29, 2026, evening.** The owner signed up for both
+  services and the keys went into `data/form.json` (`web3forms_access_key`,
+  `forminit_form_id` `ju1kw1ai9w4`). Live end-to-end test while
+  FormSubmit was still returning Cloudflare 521s: a text-only note posted
+  from the local build walked FormSubmit AJAX (dead) -> Web3Forms and
+  showed *"Your note went through with a backup service."* The note
+  arrived in the inbox a minute later with the name/message/footer
+  intact. The chain is no longer theoretical.
 
 How to turn on the failover fully:
 
