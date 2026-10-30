@@ -15,9 +15,9 @@
   "show_files": true,
   "primary_service": "FormSubmit (formsubmit.co)",
   "failover_service": "Web3Forms (web3forms.com)",
-  "web3forms_access_key": "25888c60-8fa5-47f7-b886-b1eb118275f1",
+  "web3forms_access_key": "",
   "second_failover_service": "FormInit (forminit.com)",
-  "forminit_form_id": "ju1kw1ai9w4",
+  "forminit_form_id": "",
   "disclaimer_title": "About this form",
   "disclaimer_body": "This form posts through a third-party service (FormSubmit) and goes straight to the inbox at flamingoncactusgroup@gmail.com. If FormSubmit is unavailable, notes are retried through Web3Forms, then through FormInit as a last resort - you will see each retry named in the status line. Either way, we read every note. If all three services are unreachable, please email us directly. Your message stays in your browser while you type, so a failed send never loses your draft."
 }
