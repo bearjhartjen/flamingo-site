@@ -187,6 +187,15 @@ navigates away.
   arrived in the inbox a minute later with the name/message/footer
   intact. The chain is no longer theoretical.
 
+**Correction (October 29, 2026, late).** FormSubmit's redirect field is
+`_next`; the `_url` this site sent is not a FormSubmit field, and the entry
+above claiming the reverse was wrong. With `_url` the ack page never loaded,
+so every note with files waited out the 15-second watchdog and was sent on to
+backups that cannot carry files (Web3Forms attachments are a paid feature).
+The form now sends `_next`. If no service can carry a file, the note's text is
+still delivered with the file names listed, and the visitor is asked to email
+the file. Backup answers that are not JSON now report their HTTP status.
+
 How to turn on the failover fully:
 
 1. Sign up at [web3forms.com](https://web3forms.com) — the access key is

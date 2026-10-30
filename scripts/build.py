@@ -1397,12 +1397,14 @@ def contact_form_html(cfg: dict | None = None) -> str:
         f'  <input type="hidden" name="_subject" value="{esc(cfg["subject"], True)}">\n'
         '  <input type="hidden" name="_template" value="table">\n'
         '  <input type="hidden" name="_captcha" value="false">\n'
-        # _url is FormSubmit's own redirect field (_next is Formspree's name
-        # and FormSubmit ignores it): after the native POST the landing page
+        # _next is FormSubmit's documented redirect field (formsubmit.co/
+        # documentation). The old "_url" is not a FormSubmit field, so the ack
+        # page never loaded and every file send fell into the watchdog.
+        # After the native POST the landing page
         # inside the iframe - or the whole window with JavaScript off -
         # becomes OUR contact-ack.html, which doubles as the no-JS
         # thank-you page and signals the parent window through postMessage.
-        f'  <input type="hidden" name="_url" value="https://{CUSTOM_DOMAIN}/contact-ack.html">\n'
+        f'  <input type="hidden" name="_next" value="https://{CUSTOM_DOMAIN}/contact-ack.html">\n'
         '  <input type="text" name="_honey" style="display:none">\n'
         '  <input type="hidden" id="cf-sentat" name="sent_at" value="">\n'
         f'  <label for="cf-name">{esc(cfg["name_label"])}'
@@ -1600,6 +1602,7 @@ CONTACT_FORM_SCRIPT = (
   # "exceeds the limits" message instead of a silent drop. All three levels
   # end on the same "It went through" panel on success.
   'function noteFooter(payload){return (payload.note||"")+"\\n\\n---\\nSent from https://"+__DOMAIN_JSON__+"/contact.html on "+(payload.sent_at||lastStamp||"");}'
+  'function readJson(r,who){return r.text().then(function(t){try{return JSON.parse(t);}catch(_){return{success:false,message:who+" answered HTTP "+r.status+" with a page, not a result"};}});}'
   'function totalBytes(){var t=0,i;for(i=0;i<all.length;i++)t+=all[i].size;return t;}'
   'function fitsWeb3(){return all.length===1&&all[0].size<=WEB3_MAX_FILE;}'
   'function fitsFormInit(){return all.length>0&&all.length<=FORMINIT_MAX_FILES&&totalBytes()<=FORMINIT_MAX_BYTES;}'
@@ -1613,7 +1616,7 @@ CONTACT_FORM_SCRIPT = (
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
   'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
   'return fetch(WEB3FORMS_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(body),signal:ctrl?ctrl.signal:undefined})'
-  '.then(function(r){return r.json().catch(function(){return{success:false,message:"failover answered with something unreadable"};});})'
+  '.then(function(r){return readJson(r,"failover");})'
   '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"web3forms"};})'
   '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"web3forms",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
   '}'
@@ -1635,7 +1638,7 @@ CONTACT_FORM_SCRIPT = (
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
   'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
   'return fetch(WEB3FORMS_URL,{method:"POST",body:fd,signal:ctrl?ctrl.signal:undefined})'
-  '.then(function(r){return r.json().catch(function(){return{success:false,message:"file backup answered with something unreadable"};});})'
+  '.then(function(r){return readJson(r,"file backup");})'
   '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"web3forms"};})'
   '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"web3forms",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
   '}'
@@ -1664,7 +1667,7 @@ CONTACT_FORM_SCRIPT = (
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
   'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
   'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify({blocks:blocks}),signal:ctrl?ctrl.signal:undefined})'
-  '.then(function(r){return r.json().catch(function(){return{success:false,message:"last backup answered with something unreadable"};});})'
+  '.then(function(r){return readJson(r,"last backup");})'
   '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"forminit"};})'
   '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"forminit",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
   '}'
@@ -1681,7 +1684,7 @@ CONTACT_FORM_SCRIPT = (
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
   'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
   'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",body:fd,signal:ctrl?ctrl.signal:undefined})'
-  '.then(function(r){return r.json().catch(function(){return{success:false,message:"last backup answered with something unreadable"};});})'
+  '.then(function(r){return readJson(r,"last backup");})'
   '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"forminit"};})'
   '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"forminit",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
   '}'
@@ -1703,12 +1706,31 @@ CONTACT_FORM_SCRIPT = (
   # is announced and rerouted to FormInit, which takes the whole 10 MB
   # the form allows. Known tradeoff, documented in HISTORY.md: if the
   # iframe POST was merely slow (not dead), the note can arrive twice.
+  # Last resort for a note with files: no service took the attachment, so
+  # deliver the words on their own (FormSubmit text, then Web3Forms, then
+  # FormInit) with the file names listed, and tell the visitor to email the
+  # file. The note is never lost just because an attachment could not travel.
+  'function fileNames(){var o=[],i;for(i=0;i<all.length;i++)o.push(all[i].name+" ("+fmt(all[i].size)+")");return o.join(", ");}'
+  'function postFormSubmitText(p){var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},10000):null;'
+  'return fetch(AJAX_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(p),signal:ctrl?ctrl.signal:undefined})'
+  '.then(function(r){return readJson(r,"the mail service");})'
+  '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success==="true")};})'
+  '.catch(function(){if(to)clearTimeout(to);return{ok:false};});}'
+  'function rescueText(payload,reason){'
+  'var p={_subject:payload._subject,_template:"table",_captcha:"false",sent_at:payload.sent_at,name:payload.name,contact:payload.contact,'
+  'note:(payload.note||"")+"\\n\\n[The visitor attached "+all.length+(all.length===1?" file":" files")+" that could NOT be delivered: "+fileNames()+". Ask them to email it.]"};'
+  'var c=String(payload.contact||"").replace(/^\\s+|\\s+$/g,"");if(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(c))p._replyto=c;'
+  'inlineStatus("The file could not be attached — sending your note on its own so it is not lost\u2026",false);'
+  'return postFormSubmitText(p).then(function(r){if(r.ok)return true;return postFailover(p).then(function(r2){if(r2.ok)return true;'
+  'return postFormInit(p).then(function(r3){return r3.ok;});});}).then(function(ok){'
+  'if(ok){showDone("Your note arrived, but your file could not be attached ("+reason+"). Please email it to "+FORM_EMAIL+" and mention your name.");return true;}'
+  'showError("None of the mail services took the note ("+reason+"). Please email "+FORM_EMAIL+" directly.");return false;});}'
   'function tryFormInitFiles(payload){'
   'return postFormInitFiles(payload).then(function(r){'
   'if(r.ok){showDone("Your note and files went through with our last backup service. We read everything — thank you!");return true;}'
   'var reason=r.reason==="no-id"?"no last backup is configured":(r.reason==="too-big"?"the files exceed even the last backup (20 files / 25 MB total)":(r.reason==="timeout"?"the last backup timed out":((r.raw&&r.raw.message)?String(r.raw.message):"the last backup refused the files")));'
-  'showError("None of the mail services took the files ("+reason+"). If it keeps failing, attach them to an email instead.");'
-  'return false;});}'
+  'return rescueText(payload,reason);});}'
   'function tryFileFailover(payload){'
   'if(fitsWeb3()){'
   'inlineStatus("The upload did not come back — retrying the file through "+(FAILOVER_SERVICE||"the backup")+" (your file stays attached)\u2026",false);'
@@ -1729,7 +1751,7 @@ CONTACT_FORM_SCRIPT = (
   # Files ride the classic multipart POST (FormSubmit turns real multipart
   # parts into email attachments; it does not do that for JSON base64) -
   # but into the hidden iframe, so the page survives any answer. On
-  # success the _url redirect turns the iframe into contact-ack.html and
+  # success the _next redirect turns the iframe into contact-ack.html and
   # the message listener shows the success panel within seconds; if
   # nothing comes back in 20 s (FormSubmit down, hanging, or slow), the
   # watchdog walks the backup chain with the files attached (Web3Forms,
@@ -2444,7 +2466,7 @@ __CSS__
 """
 
 
-# FormSubmit redirect target (the _url field on the contact form): the
+# FormSubmit redirect target (the _next field on the contact form): the
 # hidden iframe lands here after a genuine successful POST. It has two
 # jobs at once: a real thank-you page for visitors with JavaScript off
 # (whose classic submission navigates straight here), and a cross-origin
@@ -2772,10 +2794,10 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
         contact_built = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
         if any(p.get("form") for p in site["pages"]):
             expect('action="https://formsubmit.co/' in contact_built, "contact page posts to the form inbox")
-            expect('name="_url" value="https://flamingoandcactus.com/contact-ack.html"' in contact_built,
-                   "FormSubmit redirects its answer to our own contact-ack.html")
-            expect('name="_next"' not in contact_built,
-                   "the Formspree-era _next field is gone (FormSubmit ignores it)")
+            expect('name="_next" value="https://flamingoandcactus.com/contact-ack.html"' in contact_built,
+                   "FormSubmit redirects its answer to our own contact-ack.html (via its real _next field)")
+            expect('name="_url"' not in contact_built,
+                   "the bogus _url field is gone (FormSubmit never read it)")
             expect('id="cf-frame" name="cf-frame"' in contact_built and
                    'form.target="cf-frame"' in contact_built and
                    'ackPending=true' in contact_built and
@@ -3206,7 +3228,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                "no leftover mode-switching code in the runtime scripts")
         cf = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
         expect('name="_captcha" value="false"' in cf and
-               'name="_url" value="https://flamingoandcactus.com/contact-ack.html"' in cf,
+               'name="_next" value="https://flamingoandcactus.com/contact-ack.html"' in cf,
                "contact posts captcha-free and lands on our noindex ack page")
         expect('id="cf-status" hidden' in cf and "watch=setTimeout" in cf,
                "stuck submits get a status line and a hang watchdog")
