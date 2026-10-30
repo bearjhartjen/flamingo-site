@@ -1520,11 +1520,11 @@ CONTACT_FORM_SCRIPT = (
   'errbox.appendChild(errHead);errbox.appendChild(errBody);errbox.appendChild(errMail);'
   'errbox.hidden=true;form.parentNode.insertBefore(errbox,form);'
   'function scrollUp(el){try{el.scrollIntoView({behavior:"smooth",block:"center"});}catch(_){try{el.scrollIntoView();}catch(_2){}}}'
-  'function showDone(u){busy=false;restoreBtn();errbox.hidden=true;form.hidden=true;done.hidden=false;'
+  'function showDone(u){busy=false;window.cfInflight=false;restoreBtn();errbox.hidden=true;form.hidden=true;done.hidden=false;'
   'doneSub.textContent=u||"Your note is in our inbox. We read everything — thank you!";'
   'doneStamp.textContent=lastStamp?("Stamped "+lastStamp):"";'
   'clearDraft();scrollUp(done);}'
-  'function showError(msg){busy=false;restoreBtn();done.hidden=true;errbox.hidden=false;'
+  'function showError(msg){busy=false;window.cfInflight=false;restoreBtn();done.hidden=true;errbox.hidden=false;'
   'errBody.textContent=(msg||"The note did not send.")+" Press Send again to retry.";'
   'scrollUp(errbox);}'
   'function hideStatus(){var st=document.getElementById("cf-status");if(st){st.hidden=true;}}'
@@ -1538,7 +1538,7 @@ CONTACT_FORM_SCRIPT = (
   # contact-ack.html, which announces itself back through postMessage.
   # That is the only signal readable across origins, and it only comes
   # from a genuine success - Cloudflare's 521 or any other error page
-  # never reaches our ack code. On ack: stop the 20 s watchdog, show the
+  # never reaches our ack code. On ack: stop the 45 s watchdog, show the
   # success panel. When no ack comes, the watchdog walks the backup chain.
   'window.addEventListener("message",function(e){if(!e||e.data!=="flamingo-cf-ack"||!ackPending)return;'
   'ackPending=false;if(watch){clearTimeout(watch);watch=null;}showDone();});'
@@ -1701,7 +1701,7 @@ CONTACT_FORM_SCRIPT = (
   'if(r.ok){showDone("Your note went through with a backup service. We read everything — thank you!");return true;}'
   'return tryFormInit(payload);});}'
   # File chain: this runs from the watchdog when the hidden-iframe POST
-  # produced no ack within 20 s (FormSubmit down / hanging / slow).
+  # produced no ack within 45 s (FormSubmit down / hanging / slow).
   # Web3Forms takes a single small file; anything over its limits
   # is announced and rerouted to FormInit, which takes the whole 10 MB
   # the form allows. Known tradeoff, documented in HISTORY.md: if the
@@ -1712,7 +1712,7 @@ CONTACT_FORM_SCRIPT = (
   # file. The note is never lost just because an attachment could not travel.
   'function fileNames(){var o=[],i;for(i=0;i<all.length;i++)o.push(all[i].name+" ("+fmt(all[i].size)+")");return o.join(", ");}'
   'function postFormSubmitText(p){var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
-  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},10000):null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
   'return fetch(AJAX_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(p),signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return readJson(r,"the mail service");})'
   '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success==="true")};})'
@@ -1758,13 +1758,13 @@ CONTACT_FORM_SCRIPT = (
   # then FormInit). Either way the visitor never leaves the page.
   'if(all.length){'
   'if(!prepNative()){restoreBtn();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}'
-  'busy=true;'
+  'busy=true;window.cfInflight=true;'
   'inlineStatus("Sending "+(all.length===1?"1 file":all.length+" files")+" — a big upload can take a moment\u2026",false);'
   'watch=setTimeout(function(){ackPending=false;'
-  'inlineStatus("The upload did not come back within 15 seconds — trying the backup services (your files stay attached; do not press Send again yet).",false);tryFileFailover(filePayload());},15000);'
+  'inlineStatus("The upload did not come back within 45 seconds — trying the backup services (your files stay attached; do not press Send again yet).",false);tryFileFailover(filePayload());},45000);'
   'try{form.target="cf-frame";ackPending=true;}catch(_e){}'
   'form.submit();return;}'
-  'busy=true;'
+  'busy=true;window.cfInflight=true;'
   'var f=function(n){var el=form.querySelector("[name="+n+"]");return el?el.value:"";};'
   'var payload={_subject:f("_subject")||__SUBJECT_JSON__,_template:"table",_captcha:"false",'
   'sent_at:(document.getElementById("cf-sentat")||{}).value||lastStamp,'
@@ -1773,7 +1773,7 @@ CONTACT_FORM_SCRIPT = (
   'if(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(c))payload._replyto=c;'
   'inlineStatus("Sending your note\u2026",false);'
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
-  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},10000):null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
   'fetch(AJAX_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(payload),signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return r.json().catch(function(){return{success:"false",message:"the mail service answered with something unreadable"};});})'
   '.then(function(j){if(to)clearTimeout(to);'
@@ -1782,8 +1782,8 @@ CONTACT_FORM_SCRIPT = (
   '.catch(function(er){if(to)clearTimeout(to);'
   'if(er&&er.name==="AbortError"){return tryFailover(payload);}'
   'return tryFailover(payload);});'
-  '}catch(er){if(pd){try{busy=false;restoreBtn();}catch(_2){}}}});'
-  'window.addEventListener("pageshow",function(){busy=false;restoreBtn();});'
+  '}catch(er){if(pd){try{busy=false;window.cfInflight=false;restoreBtn();}catch(_2){}}}});'
+  'window.addEventListener("pageshow",function(){if(window.cfInflight)return;busy=false;window.cfInflight=false;restoreBtn();});'
   'render();}catch(_){}})();</script>'
 )
 
@@ -2471,7 +2471,7 @@ __CSS__
 # jobs at once: a real thank-you page for visitors with JavaScript off
 # (whose classic submission navigates straight here), and a cross-origin
 # signal for the iframe road - postMessage reaches the contact page's
-# listener, which stops the 20 s watchdog and shows the success panel.
+# listener, which stops the 45 s watchdog and shows the success panel.
 # Error pages (Cloudflare 521 and friends) never resolve to a redirect,
 # so this code can only run on the happy path.
 CONTACT_ACK = """<!DOCTYPE html>
