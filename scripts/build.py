@@ -958,6 +958,19 @@ CSS = r'''  :root{
   .contactform input:focus,.contactform textarea:focus{outline:2px solid var(--link);outline-offset:-1px;border-color:var(--link)}
   .contactform button{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
   .contactform button:hover{opacity:.85}
+  .contactform button:active{transform:translateY(1px)}
+  .contactform button:disabled{opacity:.55;cursor:progress}
+  /* ---- polish pass (Oct 2026) ---- */
+  :focus-visible{outline:2px solid var(--link);outline-offset:2px}
+  .contactform input:focus-visible,.contactform textarea:focus-visible{outline-offset:-1px}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+  ::selection{background:var(--gold);color:#141414}
+  .contactform input[type=text],.contactform textarea{transition:border-color .15s}
+  .contactform input[type=text]:hover,.contactform textarea:hover{border-color:var(--faint)}
+  .cf-disclaimer{margin-bottom:6px}
+  .page hr{border:0;border-top:1px solid var(--rule);margin:34px 0 22px}
+  @media (max-width:520px){.contactform button[type=submit]{width:100%;padding:13px 18px}}
   /* status line: success banner + the fallback when a submit hangs */
   .cf-status{display:block;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--paper);font:italic 13px/1.5 Georgia,Times,serif;color:var(--ink2);margin:10px 0 0}
   .cf-status[hidden]{display:none}
@@ -1316,10 +1329,14 @@ def sanitize_form_config(doc, base: dict | None = None) -> dict:
             cfg[key] = val[:FORM_TEXT_LIMITS.get(key, 400)]
         elif key in FORM_SECRET_KEYS and isinstance(val, str):
             k = re.sub(r"[^A-Za-z0-9_-]", "", val)[:FORM_TEXT_LIMITS.get(key, 256)]
-            cfg[key] = k
+            # The dialog never shows stored keys, so it always sends blank.
+            # Blank therefore means "leave it alone", never "erase it".
+            if k or not cfg.get(key):
+                cfg[key] = k
         elif key in FORM_ID_KEYS and isinstance(val, str):
             k = re.sub(r"[^A-Za-z0-9_-]", "", val)[:FORM_TEXT_LIMITS.get(key, 128)]
-            cfg[key] = k
+            if k or not cfg.get(key):
+                cfg[key] = k
         elif key in FORM_BOOL_KEYS:
             cfg[key] = bool(val)
     return cfg
@@ -1376,8 +1393,7 @@ def contact_form_html(cfg: dict | None = None) -> str:
         '  </aside>\n'
     )
     markup = (
-        cover
-        + '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
+        '<form class="contactform" action="https://formsubmit.co/' + CONTACT_EMAIL + '" method="POST" enctype="multipart/form-data">\n'
         f'  <input type="hidden" name="_subject" value="{esc(cfg["subject"], True)}">\n'
         '  <input type="hidden" name="_template" value="table">\n'
         '  <input type="hidden" name="_captcha" value="false">\n'
@@ -1408,7 +1424,9 @@ def contact_form_html(cfg: dict | None = None) -> str:
         # the visible page survives and the failover chain can always run.
         '  <iframe id="cf-frame" name="cf-frame" src="about:blank" '
         'title="Submission frame, invisible" style="display:none" '
-        'aria-hidden="true" tabindex="-1"></iframe>'
+        'aria-hidden="true" tabindex="-1"></iframe>\n'
+        # The "About this form" card rides directly under the form.
+        + cover
     )
     script = (CONTACT_FORM_SCRIPT
               .replace("__BUTTON_JSON__", json.dumps(str(cfg["button"])))
@@ -1505,7 +1523,7 @@ CONTACT_FORM_SCRIPT = (
   'doneStamp.textContent=lastStamp?("Stamped "+lastStamp):"";'
   'clearDraft();scrollUp(done);}'
   'function showError(msg){busy=false;restoreBtn();done.hidden=true;errbox.hidden=false;'
-  'errBody.textContent=(msg||"The note did not send.")+" Press Send again — or email us directly below.";'
+  'errBody.textContent=(msg||"The note did not send.")+" Press Send again to retry.";'
   'scrollUp(errbox);}'
   'function hideStatus(){var st=document.getElementById("cf-status");if(st){st.hidden=true;}}'
   'again.addEventListener("click",function(){try{done.hidden=true;errbox.hidden=true;form.hidden=false;'
@@ -1671,8 +1689,8 @@ CONTACT_FORM_SCRIPT = (
   'inlineStatus((FAILOVER_SERVICE||"The backup")+" did not answer — retrying through "+(SECOND_FAILOVER||"the last backup")+"\u2026",false);'
   'return postFormInit(payload).then(function(r){'
   'if(r.ok){showDone("Your note went through with our last backup service. We read everything — thank you!");return true;}'
-  'var reason=r.reason==="no-id"?"no last backup is configured":(r.reason==="timeout"?"the last backup timed out":((r.raw&&r.raw.message)?String(r.raw.message):"the last backup refused the note"));'
-  'showError(reason+". Please email "+FORM_EMAIL+" directly, or press Send again once your network is back.");'
+  'var reason=r.reason==="no-id"?"no last backup is configured":(r.reason==="timeout"?"the last backup timed out":(r.reason==="network"?"the last backup could not be reached":((r.raw&&r.raw.message)?String(r.raw.message):"the last backup refused the note")));'
+  'showError("None of the three mail services took the note ("+reason+").");'
   'return false;});}'
   'function tryFailover(payload){'
   'inlineStatus((PRIMARY_SERVICE||"The mail service")+" did not answer — retrying through "+(FAILOVER_SERVICE||"the backup")+"\u2026",false);'
@@ -1689,7 +1707,7 @@ CONTACT_FORM_SCRIPT = (
   'return postFormInitFiles(payload).then(function(r){'
   'if(r.ok){showDone("Your note and files went through with our last backup service. We read everything — thank you!");return true;}'
   'var reason=r.reason==="no-id"?"no last backup is configured":(r.reason==="too-big"?"the files exceed even the last backup (20 files / 25 MB total)":(r.reason==="timeout"?"the last backup timed out":((r.raw&&r.raw.message)?String(r.raw.message):"the last backup refused the files")));'
-  'showError(reason+". Please email "+FORM_EMAIL+" directly (attach the files to that email), or press Send again once your network is back.");'
+  'showError("None of the mail services took the files ("+reason+"). If it keeps failing, attach them to an email instead.");'
   'return false;});}'
   'function tryFileFailover(payload){'
   'if(fitsWeb3()){'
@@ -1721,7 +1739,7 @@ CONTACT_FORM_SCRIPT = (
   'busy=true;'
   'inlineStatus("Sending "+(all.length===1?"1 file":all.length+" files")+" — a big upload can take a moment\u2026",false);'
   'watch=setTimeout(function(){ackPending=false;'
-  'inlineStatus("The upload did not come back within 20 seconds — trying the backup services (your files stay attached; do not press Send again yet).",false);tryFileFailover(filePayload());},20000);'
+  'inlineStatus("The upload did not come back within 15 seconds — trying the backup services (your files stay attached; do not press Send again yet).",false);tryFileFailover(filePayload());},15000);'
   'try{form.target="cf-frame";ackPending=true;}catch(_e){}'
   'form.submit();return;}'
   'busy=true;'
@@ -1733,7 +1751,7 @@ CONTACT_FORM_SCRIPT = (
   'if(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(c))payload._replyto=c;'
   'inlineStatus("Sending your note\u2026",false);'
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
-  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},10000):null;'
   'fetch(AJAX_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(payload),signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return r.json().catch(function(){return{success:"false",message:"the mail service answered with something unreadable"};});})'
   '.then(function(j){if(to)clearTimeout(to);'
@@ -1741,10 +1759,6 @@ CONTACT_FORM_SCRIPT = (
   'return tryFailover(payload);})'
   '.catch(function(er){if(to)clearTimeout(to);'
   'if(er&&er.name==="AbortError"){return tryFailover(payload);}'
-  'if(form.submit){inlineStatus("The direct send did not answer — trying the classic way\u2026",false);'
-  'watch=setTimeout(function(){ackPending=false;return tryFailover(payload);},5000);'
-  'try{form.target="cf-frame";ackPending=true;}catch(_e){}'
-  'form.submit();return undefined;}'
   'return tryFailover(payload);});'
   '}catch(er){if(pd){try{busy=false;restoreBtn();}catch(_2){}}}});'
   'window.addEventListener("pageshow",function(){busy=false;restoreBtn();});'
@@ -2795,6 +2809,13 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                    "contact page carries the third-party disclaimer + full chain attribution")
             expect('class="cf-disclaimer"' not in idx,
                    "the disclaimer lives only on the contact page, not the home page")
+            expect(contact_built.find('<form class="contactform"') != -1 and
+                   contact_built.find('<form class="contactform"') <
+                   contact_built.find('class="cf-disclaimer"'),
+                   "contact page order: form first, then the About this form card")
+            _fc = load_form_config(data_path.parent)
+            expect(bool(_fc.get("web3forms_access_key")) and bool(_fc.get("forminit_form_id")),
+                   "both backup services are armed (Web3Forms key + FormInit form ID in data/form.json)")
             # Browser-side draft (localStorage) is wired in the runtime:
             # key set on input, restored on load, cleared when the note
             # goes through. Saves a failed send from losing the message.

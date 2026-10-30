@@ -400,7 +400,7 @@ def editor_page(site: dict, slug: str, body: str, live: str | None,
     # so the editor shows the real thing where it will sit. Both are
     # generated blocks: they are drawn here and swapped back for their
     # marker paragraph when the page is saved.
-    form_cfg = site_build.load_form_config(DATA)
+    form_cfg = site_build.load_form_config(FORM_PATH.parent)
     if form_here:
         block = ('<div data-form-block contenteditable="false">'
                  + inert_form_html(form_cfg) + "</div>")
@@ -3519,7 +3519,8 @@ class Handler(BaseHTTPRequestHandler):
         # The contact form's wording travels with the page save.
         form_cfg = None
         if isinstance(doc.get("form"), dict):
-            form_cfg = site_build.sanitize_form_config(doc.get("form"))
+            form_cfg = site_build.sanitize_form_config(
+                doc.get("form"), site_build.load_form_config(FORM_PATH.parent))
         old_form = FORM_PATH.read_bytes() if FORM_PATH.is_file() else None
         # The calendar's marker (symbol + colour) travels with it too.
         cal_cfg = None
