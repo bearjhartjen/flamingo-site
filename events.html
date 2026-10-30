@@ -271,6 +271,19 @@
   .contactform input:focus,.contactform textarea:focus{outline:2px solid var(--link);outline-offset:-1px;border-color:var(--link)}
   .contactform button{margin-top:16px;padding:10px 26px;font:13px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:2px;cursor:pointer}
   .contactform button:hover{opacity:.85}
+  .contactform button:active{transform:translateY(1px)}
+  .contactform button:disabled{opacity:.55;cursor:progress}
+  /* ---- polish pass (Oct 2026) ---- */
+  :focus-visible{outline:2px solid var(--link);outline-offset:2px}
+  .contactform input:focus-visible,.contactform textarea:focus-visible{outline-offset:-1px}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+  ::selection{background:var(--gold);color:#141414}
+  .contactform input[type=text],.contactform textarea{transition:border-color .15s}
+  .contactform input[type=text]:hover,.contactform textarea:hover{border-color:var(--faint)}
+  .cf-disclaimer{margin-bottom:6px}
+  .page hr{border:0;border-top:1px solid var(--rule);margin:34px 0 22px}
+  @media (max-width:520px){.contactform button[type=submit]{width:100%;padding:13px 18px}}
   /* status line: success banner + the fallback when a submit hangs */
   .cf-status{display:block;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--paper);font:italic 13px/1.5 Georgia,Times,serif;color:var(--ink2);margin:10px 0 0}
   .cf-status[hidden]{display:none}
