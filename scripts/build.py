@@ -36,6 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA = ROOT / "data" / "site.json"
 DEFAULT_PAGES = ROOT / "data" / "pages"
 DEFAULT_LOGO = ROOT / "assets" / "logo.png"
+DEFAULT_FAVICON = ROOT / "assets" / "favicon.png"
 DEFAULT_UPLOADS = ROOT / "assets" / "uploads"
 DEFAULT_OUT = ROOT / "site"
 
@@ -2209,6 +2210,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         f"<title>{html.escape(page_title)} &mdash; Flamingo &amp; Cactus</title>\n"
         f'<meta name="description" content="{html.escape(desc, quote=True)}">\n'
         f'<link rel="canonical" href="{canon}">\n'
+        f'<link rel="icon" type="image/png" href="favicon.png">\n'
         f'<meta property="og:title" content="{html.escape(page_title, quote=True)} &mdash; Flamingo &amp; Cactus">\n'
         f'<meta property="og:description" content="{html.escape(desc, quote=True)}">\n'
         f'<meta property="og:type" content="website">\n'
@@ -2529,7 +2531,9 @@ def read_body(pages_dir: Path, slug: str) -> str:
 
 
 def build(data_path: Path, pages_dir: Path, logo_path: Path,
-          uploads_dir: Path, out_dir: Path):
+          uploads_dir: Path, out_dir: Path, favicon_path: Path = None):
+    if favicon_path is None:
+        favicon_path = logo_path
     site = load_site(data_path)
     form_html = contact_form_html(load_form_config(data_path.parent))
     cal_cfg = load_calendar_config(data_path.parent)
@@ -2555,7 +2559,7 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
           .replace("__LOGO__", logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "contact-ack.html", ck)
-    shutil.copyfile(logo_path, out_dir / "favicon.png")
+    shutil.copyfile(favicon_path, out_dir / "favicon.png")
     write_text_atomic(out_dir / ".nojekyll", "")
     write_text_atomic(out_dir / "CNAME", CUSTOM_DOMAIN + "\n")
     write_text_atomic(out_dir / "robots.txt",
@@ -2600,10 +2604,10 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     return site
 
 
-def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
+def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, favicon_path: Path = None):
     tmp = Path(tempfile.mkdtemp(prefix="flamingo-site-check-"))
     try:
-        site = build(data_path, pages_dir, logo_path, uploads_dir, tmp)
+        site = build(data_path, pages_dir, logo_path, uploads_dir, tmp, favicon_path)
         ok = True
 
         def expect(cond, msg):
@@ -3291,17 +3295,19 @@ def main(argv=None):
     ap.add_argument("--data", type=Path, default=DEFAULT_DATA)
     ap.add_argument("--pages", type=Path, default=DEFAULT_PAGES)
     ap.add_argument("--logo", type=Path, default=DEFAULT_LOGO)
+    ap.add_argument("--favicon", type=Path, default=DEFAULT_FAVICON)
     ap.add_argument("--uploads", type=Path, default=DEFAULT_UPLOADS)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--check", action="store_true")
     args = ap.parse_args(argv)
     if args.check:
         check(args.data.expanduser().resolve(), args.pages.expanduser().resolve(),
-              args.logo.expanduser().resolve(), args.uploads.expanduser().resolve())
+              args.logo.expanduser().resolve(), args.uploads.expanduser().resolve(),
+              args.favicon.expanduser().resolve())
     else:
         build(args.data.expanduser().resolve(), args.pages.expanduser().resolve(),
               args.logo.expanduser().resolve(), args.uploads.expanduser().resolve(),
-              args.out.expanduser().resolve())
+              args.out.expanduser().resolve(), args.favicon.expanduser().resolve())
 
 
 if __name__ == "__main__":
