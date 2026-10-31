@@ -978,6 +978,13 @@ CSS = r'''  :root{
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* while a send is in flight: a moving bar under the status text, and the
+     file controls locked so the list cannot change mid-upload */
+  .cf-status.is-busy{position:relative;overflow:hidden;padding-bottom:15px}
+  .cf-status.is-busy::after{content:"";position:absolute;left:-40%;bottom:0;height:3px;width:40%;background:var(--link);animation:cfbar 1.2s ease-in-out infinite}
+  @keyframes cfbar{0%{left:-40%}100%{left:100%}}
+  @media (prefers-reduced-motion:reduce){.cf-status.is-busy::after{animation:none;left:0;width:100%;opacity:.45}}
+  .contactform.is-sending .dropzone,.contactform.is-sending .filelist button{pointer-events:none;opacity:.55}
   /* Disclaimer card sitting just above the contact form. Carries who
      runs the form (third-party services), what happens on downtime
      (silent failover), and a peer email link so visitors always have
@@ -1261,9 +1268,12 @@ FORM_DEFAULTS = {
                        "flamingoncactusgroup@gmail.com. If FormSubmit is "
                        "unavailable, notes are retried through Web3Forms, "
                        "then through FormInit as a last resort - you will "
-                       "see each retry named in the status line. Either "
-                       "way, we read every note. If all three services are "
-                       "unreachable, please email us directly. Your "
+                       "see each retry named in the status line. Notes "
+                       "with attachments go to FormInit first, because it "
+                       "can confirm the files arrived, then to FormSubmit. "
+                       "Either way, we read every note. If all three "
+                       "services are unreachable, please email us "
+                       "directly. Your "
                        "message stays in your browser while you type, so a "
                        "failed send never loses your draft.",
 }
@@ -1426,6 +1436,7 @@ def contact_form_html(cfg: dict | None = None) -> str:
         # the visible page survives and the failover chain can always run.
         '  <iframe id="cf-frame" name="cf-frame" src="about:blank" '
         'title="Submission frame, invisible" style="display:none" '
+        'sandbox="allow-forms allow-scripts" '
         'aria-hidden="true" tabindex="-1"></iframe>\n'
         # The "About this form" card rides directly under the form.
         + cover
@@ -1471,18 +1482,31 @@ CONTACT_FORM_SCRIPT = (
   "var SECOND_FAILOVER=" + "__SECOND_FAILOVER_JSON__" + ";"
   "var FORMINIT_ID=" + "__FORMINIT_ID_JSON__" + ";"
   "var FORMINIT_URL='https://forminit.com/f/';"
-  "var WEB3_MAX_FILE=5242880;"
   "var FORMINIT_MAX_FILES=20;"
   "var FORMINIT_MAX_BYTES=26214400;"
   "var DRAFT_KEY=" + "__DRAFT_KEY_JSON__" + ";"
+  'var baseMsg="",tick=null,t0=0;'
   'var inlineStatus=function(t,err){var st=document.getElementById("cf-status");if(!st)return;'
-  'st.hidden=false;st.textContent=t;if(err)st.classList.add("is-err");else st.classList.remove("is-err");};'
+  'baseMsg=t;st.hidden=false;st.textContent=t;if(err)st.classList.add("is-err");else st.classList.remove("is-err");'
+  'if(busy&&!err)st.classList.add("is-busy");};'
   'var form=document.querySelector("form.contactform"),hint=document.getElementById("cf-filehint");'
   'var inp=document.getElementById("cf-photo");'
   'if(!form||!hint||!inp||!inp.form)return;'
   'var all=[],extras=[],MAX_BYTES=10000000,busy=false,watch=null,ackPending=false,picker=null,lastStamp="";'
   'function getBtn(){return form.querySelector("button[type=submit]");}'
-  'function restoreBtn(){try{form.target="";}catch(_){}var b=getBtn();if(b){b.disabled=false;b.textContent=__BUTTON_JSON__;}}'
+  'function restoreBtn(){try{form.target="";}catch(_){}var b=getBtn();if(b){b.disabled=false;b.textContent=__BUTTON_JSON__;}setSending(false);}'
+  # While a send is in flight: the form is marked busy, the status line
+  # shows a moving bar plus elapsed seconds, and the browser asks before
+  # the visitor can close or leave the tab (a note and its files are only
+  # safe once the "It went through" panel is up).
+  'function setSending(on){var st=document.getElementById("cf-status");'
+  'try{form.classList.toggle("is-sending",!!on);form.setAttribute("aria-busy",on?"true":"false");}catch(_){}'
+  'if(tick){clearInterval(tick);tick=null;}'
+  'if(on){t0=Date.now();tick=setInterval(function(){if(!busy||!st||st.hidden||st.classList.contains("is-err"))return;'
+  'var n=Math.round((Date.now()-t0)/1000);st.textContent=baseMsg+(n>=5?" ("+n+"s)":"");},1000);}'
+  'else if(st){st.classList.remove("is-busy");}}'
+  'window.addEventListener("beforeunload",function(e){if(!busy)return;'
+  'try{e.preventDefault();e.returnValue="";}catch(_){}return"";});'
   # Browser-side draft: text fields saved to localStorage on every
   # keystroke, restored on load, cleared after a successful send. Files
   # are not safe to keep in storage, but their per-row state survives
@@ -1579,11 +1603,11 @@ CONTACT_FORM_SCRIPT = (
   'var li=document.createElement("li"),nm=document.createElement("span"),b=document.createElement("button");'
   'nm.textContent=f.name+" ("+fmt(f.size)+")";li.appendChild(nm);'
   'b.type="button";b.textContent="Remove";b.setAttribute("aria-label","Remove "+f.name);'
-  'b.onclick=function(){all.splice(ix,1);sync();render();};li.appendChild(b);lst.appendChild(li);})(all[i],i);'
+  'b.onclick=function(){if(busy)return;all.splice(ix,1);sync();render();};li.appendChild(b);lst.appendChild(li);})(all[i],i);'
   'var over=t>MAX_BYTES;'
   'hint.textContent=!all.length?"No files yet.":all.length+(all.length===1?" file, ":" files, ")+fmt(t)+" of 10 MB.";'
   'hint.classList.toggle("over",over);return !over;}'
-  'function add(fs){for(var i=0;i<fs.length;i++)all.push(fs[i]);if(!sync()){failToNative("This browser could not safely combine files. Use the file picker and send one file per message.");return false;}render();return true;}'
+  'function add(fs){if(busy)return false;for(var i=0;i<fs.length;i++)all.push(fs[i]);if(!sync()){failToNative("This browser could not safely combine files. Use the file picker and send one file per message.");return false;}render();return true;}'
   'zone.addEventListener("click",function(){picker.click();});'
   'zone.addEventListener("dragover",function(e){if(e.dataTransfer&&e.dataTransfer.types&&e.dataTransfer.types.indexOf("Files")>=0){e.preventDefault();zone.classList.add("over");}});'
   'zone.addEventListener("dragleave",function(){zone.classList.remove("over");});'
@@ -1604,7 +1628,8 @@ CONTACT_FORM_SCRIPT = (
   'function noteFooter(payload){return (payload.note||"")+"\\n\\n---\\nSent from https://"+__DOMAIN_JSON__+"/contact.html on "+(payload.sent_at||lastStamp||"");}'
   'function readJson(r,who){return r.text().then(function(t){try{return JSON.parse(t);}catch(_){return{success:false,message:who+" answered HTTP "+r.status+" with a page, not a result"};}});}'
   'function totalBytes(){var t=0,i;for(i=0;i<all.length;i++)t+=all[i].size;return t;}'
-  'function fitsWeb3(){return all.length===1&&all[0].size<=WEB3_MAX_FILE;}'
+  'function fileTimeout(){return Math.min(120000,30000+Math.ceil(totalBytes()/1048576)*8000);}'
+  'function frameTimeout(){return Math.min(90000,30000+Math.ceil(totalBytes()/1048576)*5000);}'
   'function fitsFormInit(){return all.length>0&&all.length<=FORMINIT_MAX_FILES&&totalBytes()<=FORMINIT_MAX_BYTES;}'
   'function mailOf(payload){var s=String(payload.contact||"").replace(/^\\s+|\\s+$/g,"");'
   'return /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(s)?s:"";}'
@@ -1617,28 +1642,6 @@ CONTACT_FORM_SCRIPT = (
   'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
   'return fetch(WEB3FORMS_URL,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(body),signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return readJson(r,"failover");})'
-  '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"web3forms"};})'
-  '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"web3forms",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
-  '}'
-  # Web3Forms file hop: one file of 5 MB or less, sent as FormData (never
-  # set Content-Type by hand on multipart - the browser adds the boundary).
-  # Anything bigger is reported as too-big so the caller can reroute to
-  # FormInit instead of wasting the attempt.
-  'function postWeb3Files(payload){'
-  'if(!WEB3FORMS_KEY)return Promise.resolve({ok:false,reason:"no-key"});'
-  'if(!fitsWeb3())return Promise.resolve({ok:false,reason:"too-big"});'
-  'var fd=new FormData();'
-  'fd.append("access_key",WEB3FORMS_KEY);'
-  'fd.append("subject",payload._subject||"");'
-  'fd.append("from_name",payload.name||"Visitor");'
-  'fd.append("name",payload.name||"");'
-  'fd.append("email",payload.contact||"");'
-  'fd.append("message",noteFooter(payload));'
-  'fd.append("attachment",all[0],all[0].name);'
-  'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
-  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},20000):null;'
-  'return fetch(WEB3FORMS_URL,{method:"POST",body:fd,signal:ctrl?ctrl.signal:undefined})'
-  '.then(function(r){return readJson(r,"file backup");})'
   '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"web3forms"};})'
   '.catch(function(er){if(to)clearTimeout(to);return{ok:false,used:"web3forms",reason:(er&&er.name==="AbortError")?"timeout":"network"};});'
   '}'
@@ -1682,7 +1685,7 @@ CONTACT_FORM_SCRIPT = (
   'fd.append("fi-text-sent_at",payload.sent_at||lastStamp||"");'
   'for(var i=0;i<all.length;i++)fd.append("fi-file-attachment"+(i+1),all[i],all[i].name);'
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
-  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},30000):null;'
+  'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},fileTimeout()):null;'
   'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",body:fd,signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return readJson(r,"last backup");})'
   '.then(function(j){if(to)clearTimeout(to);return{ok:!!(j&&j.success===true),raw:j,used:"forminit"};})'
@@ -1719,27 +1722,39 @@ CONTACT_FORM_SCRIPT = (
   '.catch(function(){if(to)clearTimeout(to);return{ok:false};});}'
   'function rescueText(payload,reason){'
   'var p={_subject:payload._subject,_template:"table",_captcha:"false",sent_at:payload.sent_at,name:payload.name,contact:payload.contact,'
-  'note:(payload.note||"")+"\\n\\n[The visitor attached "+all.length+(all.length===1?" file":" files")+" that could NOT be delivered: "+fileNames()+". Ask them to email it.]"};'
+  'note:(payload.note||"")+"\\n\\n[The visitor attached "+all.length+(all.length===1?" file":" files")+" that could NOT be confirmed as delivered: "+fileNames()+". If no email with the file(s) arrived, ask them to send it.]"};'
   'var c=String(payload.contact||"").replace(/^\\s+|\\s+$/g,"");if(/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(c))p._replyto=c;'
   'inlineStatus("The file could not be attached — sending your note on its own so it is not lost\u2026",false);'
   'return postFormSubmitText(p).then(function(r){if(r.ok)return true;return postFailover(p).then(function(r2){if(r2.ok)return true;'
   'return postFormInit(p).then(function(r3){return r3.ok;});});}).then(function(ok){'
-  'if(ok){showDone("Your note arrived, but your file could not be attached ("+reason+"). Please email it to "+FORM_EMAIL+" and mention your name.");return true;}'
+  'if(ok){showDone("Your note arrived, but we could not confirm your file made it ("+reason+"). If it matters, please email it to "+FORM_EMAIL+" and mention your name.");return true;}'
   'showError("None of the mail services took the note ("+reason+"). Please email "+FORM_EMAIL+" directly.");return false;});}'
-  'function tryFormInitFiles(payload){'
+  # File chain. FormInit goes first because it answers over fetch with a
+  # verifiable JSON verdict (and takes 20 files / 25 MB, more than the
+  # form's own 10 MB cap). Web3Forms is NOT used for files: its free plan
+  # cannot attach them and instead emails "no file came through". If
+  # FormInit refuses or is unreachable, the classic multipart POST goes to
+  # FormSubmit inside the hidden, sandboxed iframe; a genuine success comes
+  # back as the contact-ack postMessage. If that is never confirmed, the
+  # note's words are delivered on their own (rescueText) so nothing is lost.
+  # Known tradeoff: a slow-but-successful first try can make a note arrive
+  # twice; that is better than losing it.
+  'function viaFrame(payload,why){'
+  'if(!prepNative()){return rescueText(payload,"this browser could not prepare the files");}'
+  'inlineStatus("Sending "+(all.length===1?"1 file":all.length+" files")+" through "+(PRIMARY_SERVICE||"the mail service")+" — a big upload can take a moment\\u2026",false);'
+  'watch=setTimeout(function(){ackPending=false;watch=null;'
+  'rescueText(filePayload(),(PRIMARY_SERVICE||"the mail service")+" did not confirm the upload");},frameTimeout());'
+  'try{form.target="cf-frame";ackPending=true;}catch(_e){}'
+  'form.submit();return Promise.resolve(true);}'
+  'function sendFiles(payload){'
+  'var svc=SECOND_FAILOVER||"the file service";'
+  'if(FORMINIT_ID&&fitsFormInit()){'
+  'inlineStatus("Uploading "+(all.length===1?"1 file":all.length+" files")+" through "+svc+" — a big upload can take a moment\\u2026",false);'
   'return postFormInitFiles(payload).then(function(r){'
-  'if(r.ok){showDone("Your note and files went through with our last backup service. We read everything — thank you!");return true;}'
-  'var reason=r.reason==="no-id"?"no last backup is configured":(r.reason==="too-big"?"the files exceed even the last backup (20 files / 25 MB total)":(r.reason==="timeout"?"the last backup timed out":((r.raw&&r.raw.message)?String(r.raw.message):"the last backup refused the files")));'
-  'return rescueText(payload,reason);});}'
-  'function tryFileFailover(payload){'
-  'if(fitsWeb3()){'
-  'inlineStatus("The upload did not come back — retrying the file through "+(FAILOVER_SERVICE||"the backup")+" (your file stays attached)\u2026",false);'
-  'return postWeb3Files(payload).then(function(r){'
-  'if(r.ok){showDone("Your note and file went through with a backup service. We read everything — thank you!");return true;}'
-  'inlineStatus((FAILOVER_SERVICE||"The backup")+" did not take the file — trying "+(SECOND_FAILOVER||"the last backup")+" (up to 25 MB)\u2026",false);'
-  'return tryFormInitFiles(payload);});}'
-  'inlineStatus("Attachments exceed the "+(FAILOVER_SERVICE||"first backup")+" limits (one file, 5 MB or less) — sending everything through "+(SECOND_FAILOVER||"the last backup")+" (up to 25 MB) instead\u2026",false);'
-  'return tryFormInitFiles(payload);}'
+  'if(r.ok){showDone("Your note and files went through. We read everything — thank you!");return true;}'
+  'inlineStatus(svc+" did not take the files — trying "+(PRIMARY_SERVICE||"the mail service")+" (your files stay attached; do not press Send again)\\u2026",false);'
+  'return viaFrame(payload);});}'
+  'return viaFrame(payload);}'
   'form.addEventListener("submit",function(e){var pd=false;'
   'try{e.preventDefault();pd=true;'
   'if(busy)return;'
@@ -1757,14 +1772,9 @@ CONTACT_FORM_SCRIPT = (
   # watchdog walks the backup chain with the files attached (Web3Forms,
   # then FormInit). Either way the visitor never leaves the page.
   'if(all.length){'
-  'if(!prepNative()){restoreBtn();failToNative("This browser could not prepare the files. Use the file picker and send one file per message.");return;}'
-  'busy=true;window.cfInflight=true;'
-  'inlineStatus("Sending "+(all.length===1?"1 file":all.length+" files")+" — a big upload can take a moment\u2026",false);'
-  'watch=setTimeout(function(){ackPending=false;'
-  'inlineStatus("The upload did not come back within 45 seconds — trying the backup services (your files stay attached; do not press Send again yet).",false);tryFileFailover(filePayload());},45000);'
-  'try{form.target="cf-frame";ackPending=true;}catch(_e){}'
-  'form.submit();return;}'
-  'busy=true;window.cfInflight=true;'
+  'busy=true;window.cfInflight=true;setSending(true);'
+  'sendFiles(filePayload());return;}'
+  'busy=true;window.cfInflight=true;setSending(true);'
   'var f=function(n){var el=form.querySelector("[name="+n+"]");return el?el.value:"";};'
   'var payload={_subject:f("_subject")||__SUBJECT_JSON__,_template:"table",_captcha:"false",'
   'sent_at:(document.getElementById("cf-sentat")||{}).value||lastStamp,'
@@ -2865,26 +2875,34 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             expect("'https://forminit.com/f/'" in contact_built and
                    "FORMINIT_ID" in contact_built and "SECOND_FAILOVER" in contact_built and
                    "postFormInit" in contact_built and "tryFormInit" in contact_built and
-                   "postFormInitFiles" in contact_built and "tryFormInitFiles" in contact_built,
+                   "postFormInitFiles" in contact_built and "sendFiles" in contact_built,
                    "contact form's runtime is wired for the FormInit last resort")
             expect("X-API-KEY" not in contact_built,
                    "no server API key is ever embedded in the public page")
-            # File failover: Web3Forms takes one small file as FormData,
-            # oversized uploads are announced and rerouted, the files-road
-            # watchdog walks the chain instead of stranding the visitor.
-            expect("postWeb3Files" in contact_built and "tryFileFailover" in contact_built and
-                   "fitsWeb3" in contact_built and "fitsFormInit" in contact_built and
-                   "filePayload" in contact_built and
-                   "WEB3_MAX_FILE=5242880" in contact_built and
+            # File chain: FormInit first (verifiable JSON verdict), then the
+            # FormSubmit multipart POST into a sandboxed hidden iframe, then a
+            # text-only rescue. Web3Forms never carries files (its free plan
+            # cannot attach them and emails "no file came through" instead).
+            expect("sendFiles" in contact_built and "viaFrame" in contact_built and
+                   "fitsFormInit" in contact_built and "filePayload" in contact_built and
+                   "rescueText" in contact_built and
                    "FORMINIT_MAX_FILES=20" in contact_built and
                    "FORMINIT_MAX_BYTES=26214400" in contact_built and
                    "fi-file-attachment" in contact_built and
                    "fi-sender-email" in contact_built and
-                   "tryFileFailover(filePayload())" in contact_built,
-                   "contact form retries failed uploads through the backup chain with named limits")
-            expect("exceed" in contact_built and "5 MB or less" in contact_built and
-                   "up to 25 MB" in contact_built,
-                   "oversized uploads get an explicit reroute message, never a silent drop")
+                   "sendFiles(filePayload())" in contact_built,
+                   "contact form sends files FormInit-first, then FormSubmit's frame, then a text rescue")
+            expect("postWeb3Files" not in contact_built and "fitsWeb3" not in contact_built and
+                   "tryFileFailover" not in contact_built,
+                   "Web3Forms is never asked to carry files (free plan cannot attach them)")
+            expect("exceed" in contact_built or "did not take the files" in contact_built,
+                   "a refused upload is announced in the status line, never silently dropped")
+            # Stay-on-page guarantees while a send is in flight.
+            expect('addEventListener("beforeunload"' in contact_built and
+                   "setSending(true)" in contact_built and
+                   'sandbox="allow-forms allow-scripts"' in contact_built and
+                   ".cf-status.is-busy" in contact_built,
+                   "sending keeps the visitor on the page: unload guard, sandboxed frame, progress bar")
             # No access key in the live page (the build never echoes the
             # user's secret back into the rendered HTML).
             form_cfg = load_form_config(data_path.parent)

@@ -212,6 +212,38 @@ normal. With the failover wired, an unactivated local test still shows
 the *"a backup is configured but has no access key"* panel — paste a key
 to make local testing also genuinely succeed.
 
+### Files take their own road; the visitor stays put (October 30, 2026)
+
+A visitor attached a file while FormSubmit was down. Web3Forms emailed
+"no file came through" (its free plan cannot attach files), and only then
+did FormInit deliver the note with the file, after the old 45-second
+wait. Two emails, a long silence, and a visitor likely to give up and
+close the tab. Fixed:
+
+- **Files go to FormInit first.** It answers over `fetch` with a real
+  yes/no, takes up to 20 files / 25 MB, and its timeout now grows with the
+  upload size. If it refuses or is unreachable, the classic multipart POST
+  goes to FormSubmit in the hidden iframe (30 s watchdog, scaled by size).
+  If that is never confirmed, the note's words are delivered on their own
+  with the file names listed. Web3Forms is no longer asked to carry files.
+  Text-only notes keep the old order: FormSubmit, Web3Forms, FormInit.
+- **The visitor cannot leave by accident while a send is in flight.** The
+  browser asks before the tab is closed or navigated away; the status line
+  shows a moving bar and elapsed seconds; the file list is locked so it
+  cannot change mid-upload; and the hidden iframe is sandboxed
+  (`allow-forms allow-scripts`) so no answer page, hostile or broken, can
+  navigate the real page. All of it switches off the moment the send
+  ends, success or failure.
+- **The disclaimer card says so**: notes with attachments go to FormInit
+  first, then FormSubmit.
+- **Tested** in a real browser against mocked FormSubmit / Web3Forms /
+  FormInit: text note, file note, FormInit down, FormSubmit down, every
+  file road dead (note still delivered as text), a frame-busting answer
+  page, leaving mid-send, and leaving while idle.
+
+Known tradeoff, unchanged: if a try was merely slow and not dead, a note
+can arrive twice. That is better than losing it.
+
 ### Disclaimer position (October 2026)
 
 The disclaimer card used to sit between the intro paragraph and the
