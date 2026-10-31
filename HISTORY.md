@@ -252,6 +252,25 @@ another path. A pure FormSubmit AJAX timeout also no longer auto-fires
 Web3Forms. Each send carries a short `ref` token. Explicit refusals still walk
 the remaining chain once.
 
+One send, one service (October 31, 2026): a submit still produced a
+FormInit email AND a FormSubmit email. The October 30 fix only covered
+timeouts. The chain (FormSubmit -> Web3Forms -> FormInit, and for files
+FormInit -> FormSubmit iframe -> text rescue) still re-sent through the next
+service after any ambiguous answer: a reply that was not JSON, a slow ack
+from the hidden frame, the 45 s watchdog. A browser cannot tell "never
+arrived" from "arrived, answer lost", so any chain that re-sends can deliver
+twice. Fix: the page makes exactly one request per send, to FormInit, which
+answers over fetch with a JSON verdict for text and files alike. Delivered
+shows the success panel. A JSON refusal shows the error panel (nothing was
+stored, Send again is safe). A timeout, network error or non-JSON reply is
+announced as unconfirmed and is never re-sent automatically; the visitor is
+pointed at the email address. The Web3Forms hop, the FormSubmit AJAX and
+iframe roads, the watchdog and the text rescue were removed. With
+JavaScript off the plain form still posts once to FormSubmit. The cost, on
+purpose: if FormInit itself is down, the page says so and shows the email
+address instead of quietly trying another service. To bring failover back
+safely it needs a server that can deduplicate by `ref`, not browser retries.
+
 ### Disclaimer position (October 2026)
 
 The disclaimer card used to sit between the intro paragraph and the

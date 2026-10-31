@@ -75,10 +75,13 @@ Dark mode is Midnight ("almost-black dark purple" that is kept readable) or
 Ink, and the choice is carried over to the Flank ledger: both read the
 same `fc-theme` browser key, so switching on any page switches both.
 
-The Contact page's form is the one thing that is not static. It posts
-directly to FormSubmit (`https://formsubmit.co`), which emails each
-submission to our inbox - captcha-free, and it returns to the contact page
-with a success flag. The form carries a honeypot, stamps the sender's
+The Contact page's form is the one thing that is not static. With
+JavaScript on, each note makes exactly one request, to FormInit
+(`https://forminit.com`), which emails it to our inbox and answers with a
+JSON verdict. There is no backup chain: a second service firing after an
+unconfirmed send is how one submit became two emails. With JavaScript off,
+the plain form posts once to FormSubmit (`https://formsubmit.co`) and
+returns to the contact page with a success flag. The form carries a honeypot, stamps the sender's
 local Eastern time, and if a submission seems stuck it brings the button
 back and explains the direct-email way out. The form markup itself lives
 in `build.py`, not in the page files, so editing the Contact page text
@@ -191,5 +194,5 @@ third-party actions):
   directory
 
 Nothing here phones home. The only network use is the loopback builder
-itself, plus the contact form posting to FormSubmit when a visitor (not
-you) submits it.
+itself, plus the contact form posting to FormInit (FormSubmit with JavaScript
+off) when a visitor (not you) submits it.

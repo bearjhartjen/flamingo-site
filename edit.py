@@ -657,7 +657,7 @@ __CSS__
     <label class="dlg-field">Send button text<input id="formButton" maxlength="60" autocomplete="off"></label>
     <details class="dlg-section" id="formFailoverSection">
       <summary>Third-party services + failover</summary>
-      <p class="dlg-note">Notes go through a primary service, then two backups in order — Web3Forms, then FormInit. Each retry is named in the status line. Get a free Web3Forms access key at <a href="https://web3forms.com" target="_blank" rel="noopener">web3forms.com</a>. For FormInit, create a free form at <a href="https://forminit.com" target="_blank" rel="noopener">forminit.com</a>, set it to Public, and paste its form ID — never an API key.</p>
+      <p class="dlg-note">Every note is sent once, through FormInit only — there is no backup chain, because a backup that fires after an unconfirmed send is how one note became two emails. The failover name and Web3Forms fields below are no longer used by the page. For FormInit, create a free form at <a href="https://forminit.com" target="_blank" rel="noopener">forminit.com</a>, set it to Public, and paste its form ID — never an API key.</p>
       <label class="dlg-field">Primary service name<input id="formPrimaryService" maxlength="120" autocomplete="off"></label>
       <label class="dlg-field">Failover service name<input id="formFailoverService" maxlength="120" autocomplete="off"></label>
       <label class="dlg-field">Web3Forms access key
