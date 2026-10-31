@@ -985,10 +985,11 @@ CSS = r'''  :root{
   @keyframes cfbar{0%{left:-40%}100%{left:100%}}
   @media (prefers-reduced-motion:reduce){.cf-status.is-busy::after{animation:none;left:0;width:100%;opacity:.45}}
   .contactform.is-sending .dropzone,.contactform.is-sending .filelist button{pointer-events:none;opacity:.55}
-  /* Disclaimer card sitting just above the contact form. Carries who
-     runs the form (third-party services), what happens on downtime
-     (silent failover), and a peer email link so visitors always have
-     a way through. Same border/paper rhythm as the form for unity. */
+  /* Disclaimer card sitting just under the contact form. Carries who
+     runs the form (one third-party service), what happens when a send
+     is not confirmed (no automatic retry; email directly), and a peer
+     email link so visitors always have a way through. Same border/paper
+     rhythm as the form for unity. */
   .cf-disclaimer{max-width:560px;box-sizing:border-box;margin:22px auto 0;padding:14px 18px;border:1px solid var(--rule);border-left:3px solid var(--link);border-radius:2px;background:var(--paper2);color:var(--ink2);font:13px/1.55 Georgia,Times,serif}
   .cf-disclaimer-h{font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
   .cf-disclaimer-p{margin:0 0 6px}
@@ -1265,7 +1266,7 @@ FORM_DEFAULTS = {
     "second_failover_service": "",
     "forminit_form_id": "",
     "disclaimer_title": "About this form",
-    "disclaimer_body": "This form posts through a third-party service (FormInit) and goes to the inbox at flamingoncactusgroup@gmail.com. Each note is sent once, through that one service, so you get one confirmation and we get one email. If FormInit does not confirm, the page says so and does not send again on its own - if nothing arrives, please email us directly. With JavaScript turned off, the plain form posts through FormSubmit instead. Your message stays in your browser while you type, so a failed send never loses your draft.",
+    "disclaimer_body": "This form sends each note once, through FormInit (forminit.com), a third-party form service, and FormInit emails it to flamingoncactusgroup@gmail.com. The page never retries a send automatically, so one note cannot become two emails. If FormInit does not confirm, the page says so and points you at the direct email address instead. Files are limited to 10 MB in total. With JavaScript turned off, the plain form posts once through FormSubmit (formsubmit.co) and lands on a thank-you page. Your text stays in your browser while you type, so a failed send does not lose your draft.",
 }
 
 FORM_TEXT_KEYS = ("subject", "name_label", "name_sub", "name_placeholder",
@@ -1366,9 +1367,10 @@ def contact_form_html(cfg: dict | None = None) -> str:
     if not cfg["show_files"]:
         files_block = '  <div style="display:none">' + files_block + "</div>\n"
     # Disclaimer card: tells visitors who runs the form (a third-party
-    # service), what happens if it is down (silent failover), and what to
-    # do if both services are gone (email directly). Lives above the form
-    # so it is seen before a panic-send on a flaky network.
+    # service), that a send is one request with no automatic retry, and
+    # what to do if the send is not confirmed (email directly). Lives
+    # under the form, where it is read after a send and before anyone
+    # gives up on a flaky connection.
     services = ""
     if cfg.get("primary_service"):
         services += f'<span class="cf-svc">{esc(cfg["primary_service"])}</span>'
@@ -1398,12 +1400,9 @@ def contact_form_html(cfg: dict | None = None) -> str:
         '  <input type="hidden" name="_template" value="table">\n'
         '  <input type="hidden" name="_captcha" value="false">\n'
         # _next is FormSubmit's documented redirect field (formsubmit.co/
-        # documentation). The old "_url" is not a FormSubmit field, so the ack
-        # page never loaded and every file send fell into the watchdog.
-        # After the native POST the landing page
-        # inside the iframe - or the whole window with JavaScript off -
-        # becomes OUR contact-ack.html, which doubles as the no-JS
-        # thank-you page and signals the parent window through postMessage.
+        # documentation). It is used only by the no-JavaScript road: the
+        # whole window lands on our contact-ack.html after FormSubmit
+        # accepts the post. With JavaScript on, the form never navigates.
         f'  <input type="hidden" name="_next" value="https://{CUSTOM_DOMAIN}/contact-ack.html">\n'
         '  <input type="text" name="_honey" style="display:none">\n'
         '  <input type="hidden" id="cf-sentat" name="sent_at" value="">\n'
@@ -1458,7 +1457,7 @@ CONTACT_FORM_SCRIPT = (
   'var form=document.querySelector("form.contactform"),hint=document.getElementById("cf-filehint");'
   'var inp=document.getElementById("cf-photo");'
   'if(!form||!hint||!inp||!inp.form)return;'
-  'var all=[],extras=[],MAX_BYTES=10000000,busy=false,watch=null,ackPending=false,picker=null,lastStamp="",settled=false,inflight=[],sid="",formInitUsed=false;'
+  'var all=[],MAX_BYTES=10000000,busy=false,picker=null,lastStamp="",settled=false,inflight=[],sid="";'
   'function getBtn(){return form.querySelector("button[type=submit]");}function trackCtrl(c){if(c)inflight.push(c);return c;}function abortInflight(){for(var i=0;i<inflight.length;i++){try{inflight[i].abort();}catch(_){}}inflight=[];}function newSid(){try{if(window.crypto&&crypto.randomUUID)return crypto.randomUUID().slice(0,8);}catch(_){}return String(Date.now()).slice(-8)+Math.floor(Math.random()*1e4);}'
   'function restoreBtn(){try{form.target="";}catch(_){}var b=getBtn();if(b){b.disabled=false;b.textContent=__BUTTON_JSON__;}setSending(false);}'
   # While a send is in flight: the form is marked busy, the status line
@@ -1510,19 +1509,18 @@ CONTACT_FORM_SCRIPT = (
   'errbox.appendChild(errHead);errbox.appendChild(errBody);errbox.appendChild(errMail);'
   'errbox.hidden=true;form.parentNode.insertBefore(errbox,form);'
   'function scrollUp(el){try{el.scrollIntoView({behavior:"smooth",block:"center"});}catch(_){try{el.scrollIntoView();}catch(_2){}}}'
-  'function showDone(u){if(settled)return;settled=true;ackPending=false;if(watch){clearTimeout(watch);watch=null;}abortInflight();busy=false;window.cfInflight=false;restoreBtn();errbox.hidden=true;form.hidden=true;done.hidden=false;'
+  'function showDone(u,ref){if(settled)return;settled=true;abortInflight();busy=false;window.cfInflight=false;restoreBtn();errbox.hidden=true;form.hidden=true;done.hidden=false;'
   'doneSub.textContent=u||"Your note is in our inbox. We read everything — thank you!";'
-  'doneStamp.textContent=lastStamp?("Stamped "+lastStamp):"";'
+  'var stamp=lastStamp?("Stamped "+lastStamp):"";if(ref)stamp+=stamp?(" · ref "+ref):("Ref "+ref);doneStamp.textContent=stamp;'
   'clearDraft();scrollUp(done);}'
-  'function showError(msg){busy=false;window.cfInflight=false;restoreBtn();done.hidden=true;errbox.hidden=false;'
-  'errBody.textContent=(msg||"The note did not send.")+" Press Send again to retry.";'
+  'function showError(msg,retry){busy=false;window.cfInflight=false;restoreBtn();done.hidden=true;errbox.hidden=false;'
+  'errBody.textContent=(msg||"The note did not send.")+(retry===false?"":" Press Send again to retry.");'
   'scrollUp(errbox);}'
   'function hideStatus(){var st=document.getElementById("cf-status");if(st){st.hidden=true;}}'
-  'again.addEventListener("click",function(){try{settled=false;sid="";formInitUsed=false;done.hidden=true;errbox.hidden=true;form.hidden=false;'
-  'try{form.reset();}catch(_){}all=[];extras=[];'
+  'again.addEventListener("click",function(){try{settled=false;sid="";done.hidden=true;errbox.hidden=true;form.hidden=false;'
+  'try{form.reset();}catch(_){}all=[];'
   'try{if(picker)picker.value="";}catch(_){}try{inp.value="";}catch(_){}inp.multiple=true;'
   'render();stampTime();hideStatus();}catch(_){}});'
-  'window.addEventListener("pagehide",function(){if(watch){clearTimeout(watch);watch=null;}});'
   'function stampTime(){try{var st=document.getElementById("cf-sentat");if(!st)return;'
   'var d=new Date();var s="";'
   'try{s=d.toLocaleString("en-US",{timeZone:"America/New_York",month:"numeric",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit",timeZoneName:"short"})+" (Eastern)";}'
@@ -1552,7 +1550,7 @@ CONTACT_FORM_SCRIPT = (
   'form.appendChild(picker);'
   'function fmt(n){return n>1048576?(n/1048576).toFixed(1)+" MB":Math.round(n/1024).toLocaleString("en-US")+" KB";}'
   'function sync(){return setFiles(inp,all);}'
-  'function failToNative(msg){all=[];for(var i=0;i<extras.length;i++)if(extras[i].parentNode)extras[i].parentNode.removeChild(extras[i]);extras=[];'
+  'function failToNative(msg){all=[];'
   'try{inp.value="";picker.value="";}catch(_){}inp.multiple=false;inp.className="";inp.removeAttribute("tabindex");inp.removeAttribute("aria-hidden");'
   'picker.disabled=true;zone.hidden=true;lst.hidden=true;hint.textContent=msg;hint.classList.add("over");}'
   'function render(){var t=0,i;lst.innerHTML="";'
@@ -1572,7 +1570,10 @@ CONTACT_FORM_SCRIPT = (
   'form.addEventListener("paste",function(e){var d=e.clipboardData;if(d&&d.files&&d.files.length){e.preventDefault();add(d.files);}});'
   'picker.addEventListener("change",function(){if(picker.files&&picker.files.length)add(picker.files);try{picker.value="";}catch(_){}});'
   # One send, one service (October 31, 2026). Outcomes of the single request:
-  #   delivered (JSON success:true)      -> "It went through" panel
+  #   delivered (JSON success:true,   -> "It went through" panel
+  #              or the thank-you
+  #              redirect FormInit
+  #              sends a non-JSON post)
   #   refused   (JSON success:false)     -> error panel; nothing was stored,
   #                                         so pressing Send again is safe
   #   unknown   (timeout, network error, -> the note MAY have arrived. It is
@@ -1580,7 +1581,9 @@ CONTACT_FORM_SCRIPT = (
   #              JSON)                      visitor is pointed at the email
   #                                         address instead.
   'function noteFooter(payload){return (payload.note||"")+"\\n\\n---\\nSent from https://"+__DOMAIN_JSON__+"/contact.html on "+(payload.sent_at||lastStamp||"")+(sid?(" · ref "+sid):"");}'
-  'function readJson(r,who){return r.text().then(function(t){try{return JSON.parse(t);}catch(_){return{success:false,unreadable:true,message:who+" answered HTTP "+r.status+" with a page, not a result"};}});}'
+  'function readJson(r,who){return r.text().then(function(t){var j=null;try{j=JSON.parse(t);}catch(_){}'
+  'return{json:j,status:r.status,url:r.url||"",redirected:!!r.redirected,'
+  'message:j?null:(who+" answered HTTP "+r.status+" with a page, not a result")};});}'
   'function totalBytes(){var t=0,i;for(i=0;i<all.length;i++)t+=all[i].size;return t;}'
   'function fileTimeout(){return Math.min(120000,30000+Math.ceil(totalBytes()/1048576)*8000);}'
   'function fitsFormInit(){return all.length>0&&all.length<=FORMINIT_MAX_FILES&&totalBytes()<=FORMINIT_MAX_BYTES;}'
@@ -1598,7 +1601,15 @@ CONTACT_FORM_SCRIPT = (
   'return {_subject:g("_subject")||__SUBJECT_JSON__,_template:"table",_captcha:"false",'
   'sent_at:(document.getElementById("cf-sentat")||{}).value||lastStamp,'
   'name:g("name"),contact:g("contact"),note:g("note")};}'
-  'function fiResult(j){return{ok:!!(j&&j.success===true),raw:j,used:"forminit",reason:(j&&j.unreadable)?"unreadable":""};}'
+  # FormInit answers a JSON post with {"success":true,...}. A multipart
+  # post that does not ask for JSON gets a 302 to its thank-you page
+  # instead - the upload has still been accepted, so a redirect to that
+  # page is a delivery confirmation, not a failure. Every fetch below
+  # also sends Accept: application/json so the normal path stays JSON.
+  'function fiResult(res){var j=res.json;'
+  'if(j&&j.success===true)return{ok:true,raw:j,used:"forminit",ref:(j.submission&&j.submission.hashId)||""};'
+  'if(!j&&res.redirected&&/^https?:\\/\\/forminit\\.com\\/thank-you/.test(res.url||""))return{ok:true,raw:res,used:"forminit",ref:"",viaRedirect:true};'
+  'return{ok:false,raw:j||res,used:"forminit",reason:(j?"":"unreadable")};}'
   'function fiFail(er){return{ok:false,used:"forminit",reason:(er&&er.name==="AbortError")?"timeout":"network"};}'
   'function postFormInit(payload){'
   'if(settled)return Promise.resolve({ok:false,reason:"settled"});'
@@ -1613,7 +1624,7 @@ CONTACT_FORM_SCRIPT = (
   'if(ctrl)trackCtrl(ctrl);'
   'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify({blocks:blocks}),signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return readJson(r,"FormInit");})'
-  '.then(function(j){if(to)clearTimeout(to);return fiResult(j);})'
+  '.then(function(res){if(to)clearTimeout(to);return fiResult(res);})'
   '.catch(function(er){if(to)clearTimeout(to);return fiFail(er);});'
   '}'
   'function postFormInitFiles(payload){'
@@ -1630,19 +1641,19 @@ CONTACT_FORM_SCRIPT = (
   'var ctrl=(typeof AbortController!=="undefined")?new AbortController():null;'
   'var to=ctrl?setTimeout(function(){try{ctrl.abort();}catch(_){}},fileTimeout()):null;'
   'if(ctrl)trackCtrl(ctrl);'
-  'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",body:fd,signal:ctrl?ctrl.signal:undefined})'
+  'return fetch(FORMINIT_URL+FORMINIT_ID,{method:"POST",headers:{Accept:"application/json"},body:fd,signal:ctrl?ctrl.signal:undefined})'
   '.then(function(r){return readJson(r,"FormInit");})'
-  '.then(function(j){if(to)clearTimeout(to);return fiResult(j);})'
+  '.then(function(res){if(to)clearTimeout(to);return fiResult(res);})'
   '.catch(function(er){if(to)clearTimeout(to);return fiFail(er);});'
   '}'
   'function finish(r,withFiles){'
   'if(settled)return true;'
-  'if(r.ok){showDone(withFiles?"Your note and files went through. We read everything \u2014 thank you!":"");return true;}'
+  'if(r.ok){showDone(withFiles?"Your note and "+(all.length===1?"its file":"its files")+" went through. We read everything \u2014 thank you!":"Your note went through. We read everything \u2014 thank you!",r.ref);return true;}'
   'if(r.reason==="timeout"||r.reason==="network"||r.reason==="unreadable"){'
-  'inlineStatus("FormInit did not confirm \u2014 your note may still arrive. It is not being sent again, so you do not get duplicates. If nothing shows up, email "+FORM_EMAIL+" directly.",true);'
+  'inlineStatus("FormInit did not confirm the send \u2014 the request ended without a readable answer (timeout or network drop). Your note may still have arrived. It was sent once and is not retried automatically, so you will not get duplicates. If nothing shows up, email "+FORM_EMAIL+" directly.",true);'
   'busy=false;window.cfInflight=false;restoreBtn();return false;}'
-  'var why=r.reason==="no-id"?"this form has no sending service configured":((r.raw&&r.raw.message)?String(r.raw.message):"FormInit refused the note");'
-  'showError("The note was not sent ("+why+").");return false;}'
+  'var noId=r.reason==="no-id";var why=noId?"this form has no sending service configured":((r.raw&&r.raw.message)?String(r.raw.message):"FormInit refused the note");'
+  'showError("The note was not sent ("+why+").",!noId);return false;}'
   'form.addEventListener("submit",function(e){var pd=false;'
   'try{e.preventDefault();pd=true;'
   'if(busy)return;'
@@ -2342,13 +2353,12 @@ __CSS__
 
 
 # FormSubmit redirect target (the _next field on the contact form): the
-# hidden iframe lands here after a genuine successful POST. It has two
-# jobs at once: a real thank-you page for visitors with JavaScript off
-# (whose classic submission navigates straight here), and a cross-origin
-# signal for the iframe road - postMessage reaches the contact page's
-# listener, which stops the 45 s watchdog and shows the success panel.
-# Error pages (Cloudflare 521 and friends) never resolve to a redirect,
-# so this code can only run on the happy path.
+# thank-you page for visitors with JavaScript off, whose classic submit
+# navigates straight here after FormSubmit accepts the post. It also keeps
+# emitting the old "flamingo-cf-ack" postMessage so a cached copy of the
+# earlier hidden-iframe version of the contact page still finishes cleanly.
+# Error pages (Cloudflare 521 and friends) never redirect, so this page can
+# only be reached on the happy path.
 CONTACT_ACK = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2698,7 +2708,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
             expect('class="cf-disclaimer"' in contact_built and
                    "About this form" in contact_built and
                    "FormInit" in contact_built and "FormSubmit" in contact_built and
-                   "Each note is sent once" in contact_built and
+                   "sends each note once" in contact_built and
                    "Web3Forms" not in contact_built and "as a last resort" not in contact_built,
                    "contact page carries the third-party disclaimer: one service, sent once")
             expect('class="cf-disclaimer"' not in idx,
@@ -2739,6 +2749,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                    "contact form's runtime sends text and files through FormInit")
             expect("X-API-KEY" not in contact_built,
                    "no server API key is ever embedded in the public page")
+            expect('headers:{Accept:"application/json"},body:fd' in contact_built and
+                   "viaRedirect" in contact_built and "forminit\\.com\\/thank-you" in contact_built,
+                   "file uploads ask FormInit for JSON and accept its thank-you redirect as delivery")
             expect(contact_built.count("fetch(FORMINIT_URL") == 2 and
                    "fetch(AJAX_URL" not in contact_built and
                    "fetch(WEB3FORMS_URL" not in contact_built and
@@ -2749,7 +2762,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path):
                    "postFailover" not in contact_built and "viaFrame" not in contact_built and
                    "rescueText" not in contact_built and "postFormSubmitText" not in contact_built,
                    "no chain walkers or automatic re-send paths remain in the contact form script")
-            expect("did not confirm" in contact_built and "not being sent again" in contact_built and
+            expect("did not confirm the send" in contact_built and
+                   "not retried automatically" in contact_built and
                    "unreadable" in contact_built,
                    "an unconfirmed send is announced and never re-sent automatically")
             # Stay-on-page guarantees while a send is in flight.

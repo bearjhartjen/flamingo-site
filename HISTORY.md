@@ -274,12 +274,30 @@ safely it needs a server that can deduplicate by `ref`, not browser retries.
 ### Disclaimer position (October 2026)
 
 The disclaimer card used to sit between the intro paragraph and the
-form, splitting the page. It now rides directly above the form wherever
-the `[contact form]` marker sits — and the marker moved to the bottom of
-`data/pages/contact.html`, below the plain email/phone lines. Page order
-is now intro, plain contact info, disclaimer, form. Nothing about
-editing changed: the email/phone lines edit inline on the canvas, the
-disclaimer title/body/service names edit through the Form button.
+form, splitting the page. It now rides directly under the form wherever
+the `[contact form]` marker sits — and the marker sits above the plain
+email/phone lines in `data/pages/contact.html`. Page order is now intro,
+form, disclaimer card, then plain contact info. Nothing about editing
+changed: the email/phone lines edit inline on the canvas, the disclaimer
+title/body/service name edit through the Form button.
+
+### Unconfirmed file sends (October 31, 2026)
+
+A file note sent from the live page arrived at the inbox with its
+attachment, but the page still said "FormInit did not confirm". The file
+road posted multipart FormData without an `Accept: application/json`
+header. FormInit answers that as a normal browser form post: a 302 to its
+thank-you page, not a JSON verdict. `fetch` followed the redirect, got
+HTML, and the script called a delivered note unconfirmed. Reproduced with
+curl: the same multipart post returns 302 by default and
+`{"success":true,...}` with the JSON header. Fix: both text and file
+requests now ask for JSON, and a redirect to FormInit's own thank-you page
+is also accepted as delivery. The success panel now shows FormInit's
+submission reference when FormInit returns one. The
+disclaimer was rewritten to describe this exactly: one request, no
+automatic retry, 10 MB of files, and the direct email address if a send
+is not confirmed. The builder's dead Web3Forms/failover fields and their
+wrong hints were removed; the stored values are left untouched.
 
 ## Events calendar
 

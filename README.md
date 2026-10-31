@@ -78,14 +78,16 @@ same `fc-theme` browser key, so switching on any page switches both.
 The Contact page's form is the one thing that is not static. With
 JavaScript on, each note makes exactly one request, to FormInit
 (`https://forminit.com`), which emails it to our inbox and answers with a
-JSON verdict. There is no backup chain: a second service firing after an
-unconfirmed send is how one submit became two emails. With JavaScript off,
-the plain form posts once to FormSubmit (`https://formsubmit.co`) and
-returns to the contact page with a success flag. The form carries a honeypot, stamps the sender's
-local Eastern time, and if a submission seems stuck it brings the button
-back and explains the direct-email way out. The form markup itself lives
-in `build.py`, not in the page files, so editing the Contact page text
-can never break it.
+JSON verdict (the file upload asks for JSON too; if FormInit answers with
+its thank-you redirect instead, that still counts as delivered). There is
+no backup chain: a second service firing after an unconfirmed send is how
+one submit became two emails. With JavaScript off, the plain form posts
+once to FormSubmit (`https://formsubmit.co`) and lands on
+`contact-ack.html`, a plain thank-you page. The form carries a honeypot,
+stamps the sender's local Eastern time, and if a send is not confirmed it
+brings the button back and explains the direct-email way out. The form
+markup itself lives in `build.py`, not in the page files, so editing the
+Contact page text can never break it.
 
 The hidden Flank ledger lives here too, as the unlisted `site/flank/`
 directory. It is built from `data/The Flank.md` by `scripts/build_flank.py`

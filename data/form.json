@@ -19,5 +19,5 @@
   "second_failover_service": "",
   "forminit_form_id": "ju1kw1ai9w4",
   "disclaimer_title": "About this form",
-  "disclaimer_body": "This form posts through a third-party service (FormInit) and goes to the inbox at flamingoncactusgroup@gmail.com. Each note is sent once, through that one service, so you get one confirmation and we get one email. If FormInit does not confirm, the page says so and does not send again on its own - if nothing arrives, please email us directly. With JavaScript turned off, the plain form posts through FormSubmit instead. Your message stays in your browser while you type, so a failed send never loses your draft."
+  "disclaimer_body": "This form sends each note once, through FormInit (forminit.com), a third-party form service, and FormInit emails it to flamingoncactusgroup@gmail.com. The page never retries a send automatically, so one note cannot become two emails. If FormInit does not confirm, the page says so and points you at the direct email address instead. Files are limited to 10 MB in total. With JavaScript turned off, the plain form posts once through FormSubmit (formsubmit.co) and lands on a thank-you page. Your text stays in your browser while you type, so a failed send does not lose your draft."
 }

@@ -373,6 +373,111 @@ EDITOR_CSS = site_build.CSS + r'''
   .cal-size input{padding:4px 6px}
   .cal-preview{margin-left:10px;line-height:1}
   .dlg-field textarea.short{min-height:38px}
+
+  /* ---- Builder refresh: warmer, calmer, more spacious chrome ---- */
+  #app #side {
+    background:#2b241d; color:#f3ecda; font-size:14px; line-height:1.45;
+    border-right:1px solid #4a4130; padding:18px 14px; gap:10px;
+  }
+  #app #side .side-h {
+    color:#c9a227; font-size:11px; letter-spacing:1.8px;
+    margin:12px 2px 4px; border-bottom:1px solid #4a4130; padding-bottom:6px;
+  }
+  #app #side .side-h button {
+    border-color:#4a4130; color:#d8d0c2; border-radius:6px; padding:4px 10px;
+  }
+  #app #side .side-h button:hover { background:#3a332c; color:#fff; border-color:#c9a227; }
+  #app #side ul { gap:4px; }
+  #app #side li {
+    border-radius:8px; min-height:40px; padding:6px 8px; gap:6px;
+    transition:background .12s ease;
+  }
+  #app #side li:hover { background:#342d24; }
+  #app #side li.cur { background:#3a332c; box-shadow:inset 3px 0 0 #c9a227; }
+  #app #side li .nm { color:#f3ecda; }
+  #app #side li button {
+    border-radius:6px; color:#b8ab88; min-width:28px; min-height:28px;
+  }
+  #app #side li button:hover { color:#fff; border-color:#c9a227; background:#3a332c; }
+  #app #side label { color:#d8d0c2; font-size:12.5px; }
+  #app #side input, #app #side select, #app #side textarea {
+    background:#1f1a14; border:1px solid #4a4130; color:#f3ecda;
+    border-radius:6px; padding:7px 9px;
+  }
+  #app #side input:focus, #app #side select:focus, #app #side textarea:focus {
+    border-color:#c9a227; outline:1px solid #c9a227;
+  }
+  #app #side textarea { font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif; }
+  #app #side .side-help { color:#9a8f74; font-size:11.5px; line-height:1.5; }
+  #app #side a { color:#c9a227; }
+  #app #side .row button, #app #side .widebtn {
+    background:#c9a227; color:#1f1a14; border:1px solid #c9a227;
+    border-radius:8px; padding:8px 10px; font-size:11.5px; letter-spacing:.8px;
+  }
+  #app #side .row button:hover, #app #side .widebtn:hover {
+    background:#b8921f; border-color:#b8921f;
+  }
+  #app #side details.advanced-site summary { color:#d8d0c2; }
+  #app #side details.advanced-site[open] summary { color:#fff; }
+  #app .editbar {
+    background:#2b241d; color:#f3ecda; padding:12px 18px; gap:12px;
+    border-bottom:1px solid #4a4130;
+  }
+  #app .editbar .status { color:#b8ab88; font-size:13px; }
+  #app .editbar button {
+    border-radius:8px; padding:7px 14px; font-size:12px; letter-spacing:.8px;
+  }
+  #app .editbar a.barlink {
+    border-color:#4a4130; color:#f3ecda; border-radius:8px; padding:7px 12px;
+  }
+  #app .editbar a.barlink:hover { background:#3a332c; border-color:#c9a227; }
+  #app .toolbar {
+    background:#f7f1e1; border-bottom:1px solid #d8d0c2; padding:10px 16px; gap:8px;
+  }
+  #app .toolbar button {
+    border-radius:6px; border-color:#c9c2b4; padding:5px 11px; font-size:12.5px;
+  }
+  #app .toolbar button:hover {
+    background:#2b241d; color:#f3ecda; border-color:#2b241d;
+  }
+  #app .toolbar .toolgroup { border-right-color:#d8d0c2; padding:0 10px 0 0; margin-right:4px; }
+  #app .toolbar .groupname { color:#7a6f57; }
+  #app .toolbar #sizeNum, #app .toolbar #leadNum, #app .toolbar #trackNum,
+  #app .toolbar #fontSel {
+    border-radius:6px; border-color:#c9c2b4; background:#fff;
+  }
+  #app .ld-back .ld-box {
+    background:#faf3e6; border-radius:12px;
+    box-shadow:0 20px 60px rgba(30,20,10,.28); border:1px solid #e8e2d6;
+  }
+  #app .ld-back .ld-box h3 { color:#2b241d; font-size:15px; }
+  #app .ld-back .ld-box .dlg-note { color:#4a4130; }
+  #app .ld-back .ld-box .dlg-field input,
+  #app .ld-back .ld-box .dlg-field select,
+  #app .ld-back .ld-box .dlg-field textarea {
+    border-radius:6px; border-color:#c9c2b4;
+  }
+  #app .ld-back .ld-box .dlg-field input:focus,
+  #app .ld-back .ld-box .dlg-field select:focus,
+  #app .ld-back .ld-box .dlg-field textarea:focus {
+    border-color:#c9a227; outline:1px solid #c9a227;
+  }
+  #app .ld-btns button, #app .ld-box .dlg-actions button {
+    border-radius:6px;
+  }
+  #app .ld-btns button:first-child, #app .ld-box .dlg-actions button.primary {
+    background:#2b241d; color:#f3ecda; border-color:#2b241d;
+  }
+  #app .media-item { border-radius:8px; border-color:#d8d0c2; }
+  #app .media-item:hover, #app .media-item:focus { border-color:#c9a227; outline-color:#c9a227; }
+  #app #blockbar { background:#2b241d; border-color:#4a4130; border-radius:8px; }
+  #app #blockbar button { border-radius:6px; background:#3a332c; }
+  #app #blockbar button:hover { background:#c9a227; color:#1f1a14; }
+  #app #imgInspector input { border-radius:6px; border-color:#c9c2b4; }
+  #app #builderupdated { background:#2b241d; border-color:#4a4130; }
+  #app #builderupdated button { background:#c9a227; color:#1f1a14; border-radius:6px; }
+  #app .linkbtn { border-color:#c9a227; color:#c9a227; border-radius:6px; }
+  #app .linkbtn:hover { background:#c9a227; color:#1f1a14; }
 '''
 
 
@@ -656,15 +761,9 @@ __CSS__
     <label class="dlg-field">Files field hint<textarea class="short" id="formFilesSub" maxlength="300"></textarea></label>
     <label class="dlg-field">Send button text<input id="formButton" maxlength="60" autocomplete="off"></label>
     <details class="dlg-section" id="formFailoverSection">
-      <summary>Third-party services + failover</summary>
-      <p class="dlg-note">Every note is sent once, through FormInit only — there is no backup chain, because a backup that fires after an unconfirmed send is how one note became two emails. The failover name and Web3Forms fields below are no longer used by the page. For FormInit, create a free form at <a href="https://forminit.com" target="_blank" rel="noopener">forminit.com</a>, set it to Public, and paste its form ID — never an API key.</p>
-      <label class="dlg-field">Primary service name<input id="formPrimaryService" maxlength="120" autocomplete="off"></label>
-      <label class="dlg-field">Failover service name<input id="formFailoverService" maxlength="120" autocomplete="off"></label>
-      <label class="dlg-field">Web3Forms access key
-        <input id="formWeb3Key" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Paste your web3forms.com access key here">
-        <span class="dlg-hint">Stored in <code>data/form.json</code> only. Built into the page once, never echoed back to this dialog.</span>
-      </label>
-      <label class="dlg-field">Second failover service name<input id="formSecondFailover" maxlength="120" autocomplete="off"></label>
+      <summary>Third-party service (FormInit)</summary>
+      <p class="dlg-note">Every note is sent once, through FormInit only — there is no backup chain, because a backup that fires after an unconfirmed send is how one note became two emails. Create a free form at <a href="https://forminit.com" target="_blank" rel="noopener">forminit.com</a>, set it to Public, and paste its form ID below — never an API key.</p>
+      <label class="dlg-field">Service name shown to visitors<input id="formPrimaryService" maxlength="120" autocomplete="off"></label>
       <label class="dlg-field">FormInit form ID
         <input id="formInitId" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Paste your forminit.com public form ID here">
         <span class="dlg-hint">Public form ID only (dashboard, form Settings, Public mode). It ships in the page by design — API keys must never go here.</span>
@@ -1110,9 +1209,6 @@ const FORM_FIELDS = [
   ["note_placeholder", "#formNotePh"], ["files_label", "#formFilesLabel"],
   ["files_sub", "#formFilesSub"], ["button", "#formButton"],
   ["primary_service", "#formPrimaryService"],
-  ["failover_service", "#formFailoverService"],
-  ["web3forms_access_key", "#formWeb3Key"],
-  ["second_failover_service", "#formSecondFailover"],
   ["forminit_form_id", "#formInitId"],
   ["disclaimer_title", "#formDisclaimerTitle"],
   ["disclaimer_body", "#formDisclaimerBody"]
@@ -3776,6 +3872,12 @@ class Handler(BaseHTTPRequestHandler):
                 raw = base64.b64decode(m.group(2))
                 if len(raw) > 5_000_000:
                     return self._json(400, {"error": "image too big (5 MB max)"})
+                kind = m.group(1).lower()
+                magic = {"png": b"\x89PNG\r\n\x1a\n",
+                         "jpeg": b"\xff\xd8\xff",
+                         "gif": b"GIF8"}
+                if kind in magic and not raw.startswith(magic[kind]):
+                    return self._json(400, {"error": "file is not a valid " + kind.upper() + " image"})
                 UPLOADS.mkdir(parents=True, exist_ok=True)
                 dest = UPLOADS / name
                 i = 1
