@@ -298,10 +298,11 @@
   @keyframes cfbar{0%{left:-40%}100%{left:100%}}
   @media (prefers-reduced-motion:reduce){.cf-status.is-busy::after{animation:none;left:0;width:100%;opacity:.45}}
   .contactform.is-sending .dropzone,.contactform.is-sending .filelist button{pointer-events:none;opacity:.55}
-  /* Disclaimer card sitting just above the contact form. Carries who
-     runs the form (third-party services), what happens on downtime
-     (silent failover), and a peer email link so visitors always have
-     a way through. Same border/paper rhythm as the form for unity. */
+  /* Disclaimer card sitting just under the contact form. Carries who
+     runs the form (one third-party service), what happens when a send
+     is not confirmed (no automatic retry; email directly), and a peer
+     email link so visitors always have a way through. Same border/paper
+     rhythm as the form for unity. */
   .cf-disclaimer{max-width:560px;box-sizing:border-box;margin:22px auto 0;padding:14px 18px;border:1px solid var(--rule);border-left:3px solid var(--link);border-radius:2px;background:var(--paper2);color:var(--ink2);font:13px/1.55 Georgia,Times,serif}
   .cf-disclaimer-h{font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
   .cf-disclaimer-p{margin:0 0 6px}
