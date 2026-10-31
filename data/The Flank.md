@@ -778,7 +778,7 @@
 - **New balance:** $5,954.62
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** no
-- **Notes:** This withdrawal was by PCBWay for the Lamoka1/2. Approved by Bear J. Hartjen.
+- **Notes:** This withdrawal was by PCBWay for the Lamoka1/2 bare boards being presented at the Craft fair. Approved by Bear J. Hartjen.
 - **Transaction was made on:** 10-23-2026
 
 ---
@@ -790,7 +790,7 @@
 - **New balance:** $5,954.06
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** no
-- **Notes:** This withdrawal was an international routing fee with  PCBWay for the Lamoka1/2 (additional fee). Approved by Bear J. Hartjen.
+- **Notes:** This withdrawal was an international routing fee with  PCBWay for the Lamoka1/2 board order (additional fee). Approved by Bear J. Hartjen.
 - **Transaction was made on:** 10-23-2026
 
 ---
@@ -828,3 +828,30 @@
 - **Private:** no
 - **Notes:** This withdrawal was to GoDaddy for the purchase of the domain flamingoandcactus.com. Approved by Bear J. Hartjen.
 - **Transaction was made on:** 10-24-2026
+
+---
+
+## Transaction 71
+
+- **Withdraw of:** $10.77
+- **Deposit of:** $0.00
+- **New balance:** $5,872.46
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This withdrawal was to Opencode to top of the usage credits (all credits were spent within two days for website work). We paid for this by connecting our banking account directly through Stripe, they sent $0.01. 
+- **Transaction was made on:** 10-28-2026
+
+---
+
+## Transaction 72
+
+- **Withdraw of:** $101.12
+- **Deposit of:** $0.00
+- **New balance:** $5,771.34
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This withdrawal was to Mouser electronis for the order of external components for the Lamoka1/2 being ordered (arriving post craft fair).
+- **Transaction was made on:** 10-31-2026
+
+
+
