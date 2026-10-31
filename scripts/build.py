@@ -2950,8 +2950,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect(not missing, f"CSS midnight-theme color overrides present ({', '.join(missing) or 'all'})")
         expect('body[data-theme="midnight"]' in CSS,
                "midnight dark-purple palette present in CSS")
-        expect('id="theme-toggle"' in idx,
-               "every built page carries the dark-mode toggle")
+        # Theme toggle buttons were removed from the masthead (see commit
+        # "remove theme toggle buttons"); theme is now chosen on the
+        # Settings page. No toggle element is expected on built pages.
         expect("-webkit-text-size-adjust:100%" in idx and "text-size-adjust:100%" in idx,
                "mobile text autosizing is locked off (no font boosting) on every page")
         expect(all(r in idx for r in base_rules),
