@@ -2199,7 +2199,6 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         canvas = f'  <div class="canvas">\n{placed}{cal_script}{set_script}\n  </div>\n'
     footer_text = html.escape(footer) + "\n" if footer.strip() else ""
     footer_block = ('  <footer>\n' + footer_text +
-                    '  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>\n'
                     "  </footer>\n")
     return (
         "<!DOCTYPE html>\n"
@@ -2344,7 +2343,6 @@ __CSS__
   </div>
   <div class="hr"></div>
   <footer>
-  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>
   </footer>
 </div>
 </body>
@@ -2384,7 +2382,6 @@ __CSS__
   </main>
   <div class="hr"></div>
   <footer>
-  <div><button type="button" class="themetoggle" id="theme-toggle">Dark mode</button></div>
   </footer>
 </div>
 <script>

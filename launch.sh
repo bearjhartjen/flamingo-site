@@ -15,7 +15,7 @@ if ! PORT_UP; then
   mkdir -p "$(dirname "$LOG")"
   # Run detached so the server survives after the launcher exits.
   # stderr (startup errors, request log) goes to the log file.
-  nohup python3 "$HOME/Flamingo&Cactus/flamingo-site/edit.py" "$@" >>"$LOG" 2>&1 &
+  nohup python3 "$HOME/Flamingo&Cactus/flamingo-site/edit.py" --no-open "$@" >>"$LOG" 2>&1 &
   # Wait up to ~15s for the server to come up before opening the browser.
   i=0
   while [ "$i" -lt 30 ] && ! PORT_UP; do i=$((i+1)); sleep 0.5; done
