@@ -285,6 +285,13 @@
   .cf-status.is-err{border-color:#b3261e;color:#b3261e}
   body[data-theme="ink"] .cf-status.is-err{border-color:#ff8a80;color:#ff8a80}
   body[data-theme="midnight"] .cf-status.is-err{border-color:#ff9d9d;color:#ff9d9d}
+  /* while a send is in flight: a moving bar under the status text, and the
+     file controls locked so the list cannot change mid-upload */
+  .cf-status.is-busy{position:relative;overflow:hidden;padding-bottom:15px}
+  .cf-status.is-busy::after{content:"";position:absolute;left:-40%;bottom:0;height:3px;width:40%;background:var(--link);animation:cfbar 1.2s ease-in-out infinite}
+  @keyframes cfbar{0%{left:-40%}100%{left:100%}}
+  @media (prefers-reduced-motion:reduce){.cf-status.is-busy::after{animation:none;left:0;width:100%;opacity:.45}}
+  .contactform.is-sending .dropzone,.contactform.is-sending .filelist button{pointer-events:none;opacity:.55}
   /* Disclaimer card sitting just above the contact form. Carries who
      runs the form (third-party services), what happens on downtime
      (silent failover), and a peer email link so visitors always have
