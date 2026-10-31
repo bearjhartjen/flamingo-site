@@ -241,8 +241,16 @@ close the tab. Fixed:
   file road dead (note still delivered as text), a frame-busting answer
   page, leaving mid-send, and leaving while idle.
 
-Known tradeoff, unchanged: if a try was merely slow and not dead, a note
-can arrive twice. That is better than losing it.
+Anti-duplicate (October 30, 2026): FormInit was the service showing up twice
+in the inbox. Files already POST to FormInit first; when the browser timed out
+or lost the response, the chain treated that as failure and sent again
+(FormSubmit iframe and/or FormInit as last resort) while FormInit had often
+already accepted the first upload. Fix: one FormInit attempt per send
+(`formInitUsed`), single-flight `settled` gate, abort in-flight backups on
+success, and on FormInit timeout/network do not re-send the same note through
+another path. A pure FormSubmit AJAX timeout also no longer auto-fires
+Web3Forms. Each send carries a short `ref` token. Explicit refusals still walk
+the remaining chain once.
 
 ### Disclaimer position (October 2026)
 
