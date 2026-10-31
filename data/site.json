@@ -51,6 +51,12 @@
     {
       "slug": "settings",
       "nav": "Settings"
+    },
+    {
+      "slug": "invoices",
+      "nav": "Invoices",
+      "hidden": true,
+      "badge": "none"
     }
   ]
 }
