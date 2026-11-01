@@ -853,5 +853,16 @@
 - **Notes:** This withdrawal was to Mouser electronis for the order of external components for the Lamoka1/2 being ordered (arriving post craft fair).
 - **Transaction was made on:** 10-31-2026
 
+---
+
+## Transaction 73
+
+- **Withdraw of:** $0
+- **Deposit of:** $15.46
+- **New balance:** $5,786.82
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This was a monthly interest payment on the Visions FCU share certificate. The certificate is of 3.65% APY. There was another $0.02 in soft savings from interest. 
+- **Transaction was made on:** 11-1-2026
 
 
