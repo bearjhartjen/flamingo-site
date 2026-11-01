@@ -30,10 +30,11 @@ decision: what we changed and why.
   footer, theme) plus the page list: each page's file name, menu name,
   and flags (`hidden`, `badge`, `form`).
 - `data/pages/<name>.html` — one file per page, containing plain HTML.
-- `assets/logo.png` — the masthead picture, embedded into every page.
+- `assets/logo.png` — the masthead picture, published once as `site/logo.png`.
 - `assets/uploads/` — pictures used by pages, copied to `site/uploads/`.
 - `site/` — the finished website: one `.html` file per page, `404.html`,
-  `favicon.png`, `CNAME`, `robots.txt`, and `sitemap.xml`.
+  `favicon.png`, `logo.png`, `assets/site.css`, `assets/site.js`
+  (shared by every page), `CNAME`, `robots.txt`, and `sitemap.xml`.
 
 Every build runs the page bodies through an HTML sanitizer. Only a fixed
 allowlist of tags survives (paragraphs, headings, lists, links, images,

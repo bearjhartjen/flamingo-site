@@ -407,3 +407,15 @@ for whether to deploy lives outside that gate now.
 Every change to this site gets a line here. What changed, and why. Short
 and plain, so a stranger can follow it. The commit message can stay short.
 This file carries the meaning.
+
+
+## Speed pass (FC-OPTIMIZE v1)
+
+Pages were about 60 KB each because every page carried its own copy of
+the whole stylesheet, the star-burst script and a base64 logo. Those now
+ship once as `site/assets/site.css`, `site/assets/site.js` and
+`site/logo.png`, cached by the browser and stamped with `?v=` so a push
+always shows fresh copies. A tiny inline snippet still applies the saved
+dark/light choice before the first paint. Page pictures lazy-load, the
+big product renders became right-sized WebP files (originals kept in
+`assets/originals/`, unpublished), and link previews now show the logo.

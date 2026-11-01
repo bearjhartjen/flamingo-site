@@ -3498,7 +3498,7 @@ class Handler(BaseHTTPRequestHandler):
                 media = []
                 if UPLOADS.is_dir():
                     for p in sorted(UPLOADS.iterdir(), key=lambda x: x.name.lower()):
-                        if p.is_file() and p.suffix.lower() in (".png", ".jpg", ".jpeg", ".gif"):
+                        if p.is_file() and p.suffix.lower() in (".png", ".jpg", ".jpeg", ".gif", ".webp"):
                             media.append({"name": p.name, "path": "uploads/" + p.name,
                                           "bytes": p.stat().st_size})
                 self._json(200, {"images": media})
@@ -3542,6 +3542,20 @@ class Handler(BaseHTTPRequestHandler):
                         if p.is_file():
                             return self._send(200, p.read_bytes())
                 return self._json(404, {"error": "not found"})
+            elif url.path.startswith("/assets/") or url.path in ("/logo.png", "/favicon.png"):
+                # FC-OPTIMIZE v1: shared stylesheet/script/logo for Preview.
+                rel = url.path.lstrip("/")
+                if not re.fullmatch(r"(assets/[A-Za-z0-9._-]+|logo\.png|favicon\.png)", rel):
+                    return self._json(404, {"error": "not found"})
+                p = SITE / rel
+                if not p.is_file():
+                    rebuild()
+                if not p.is_file():
+                    return self._json(404, {"error": "not found"})
+                ctype = {".css": "text/css; charset=utf-8",
+                         ".js": "text/javascript; charset=utf-8",
+                         ".png": "image/png"}.get(p.suffix.lower(), "application/octet-stream")
+                return self._send(200, p.read_bytes(), ctype)
             elif url.path.startswith("/uploads/"):
                 name = safe_upload_name(url.path[len("/uploads/"):])
                 for base in (SITE / "uploads", UPLOADS):
@@ -3552,6 +3566,8 @@ class Handler(BaseHTTPRequestHandler):
                             ctype = "image/jpeg"
                         elif p.suffix.lower() == ".gif":
                             ctype = "image/gif"
+                        elif p.suffix.lower() == ".webp":
+                            ctype = "image/webp"
                         self._send(200, p.read_bytes(), ctype)
                         return
                 self._json(404, {"error": "no such image"})

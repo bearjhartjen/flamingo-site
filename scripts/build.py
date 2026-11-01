@@ -2171,6 +2171,68 @@ def nav_html(pages, current: str) -> str:
     return '  <nav class="sitenav">\n    ' + "\n    ".join(parts) + "\n  </nav>\n"
 
 
+# ---------------------------------------------------------------------------
+# FC-OPTIMIZE v1 -- shared, cacheable assets.
+# The big stylesheet and the star-burst script used to be pasted into every
+# page (about 40 KB each time) and the logo was embedded as base64 on every
+# page. They now ship once as site/assets/site.css, site/assets/site.js and
+# site/logo.png; browsers download them on the first visit and reuse them on
+# every other page. The ?v= stamp changes whenever their content changes, so
+# visitors never see a stale copy after a push.
+# ---------------------------------------------------------------------------
+import hashlib as _fc_hashlib
+
+SITE_JS = "(function(){try{try{var themeDef=document.body.dataset.theme||'classic';var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}var themeBtn=document.getElementById('theme-toggle');var themeLabel=function(){if(themeBtn)themeBtn.textContent=(document.body.dataset.theme==='midnight')?'Light mode':'Dark mode';};themeLabel();if(themeBtn)themeBtn.addEventListener('click',function(){var next=(document.body.dataset.theme==='midnight')?themeDef:'midnight';document.body.dataset.theme=next;try{localStorage.setItem('fc-theme',next);}catch(_){}themeLabel();});}catch(_){}if(sessionStorage.getItem('fcWarp')){sessionStorage.removeItem('fcWarp');var afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}}catch(_){}try{var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;var star=document.querySelector('a.star-badge, a.gem-badge');if(!star||!star.getAttribute('href'))return;star.addEventListener('click',function(e){var href=star.getAttribute('href');if(!href||href.charAt(0)==='#')return;e.preventDefault();if(instant){window.location.href=href;return;}if(star.classList.contains('warp'))return;var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem('fcWarp','1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}setTimeout(nav2,560);setTimeout(nav2,1100);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2200);try{var fx=document.createElement('div');fx.id='fx';var fl=document.createElement('div');fl.className='comicflash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var N=W<700?18:30,S=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=3+Math.random()*6;S.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4+Math.random()*7,rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.4,age:0,life:26+Math.random()*22,ink:Math.random()<.5});}var rays=W<700?12:18,seed=[],j;for(j=0;j<rays;j++)seed.push(.6+Math.random()*.5);var wax={age:0,life:24};var t0=performance.now();(function frame(){var alive=false,i,s;cx2.clearRect(0,0,W,H);if(wax.age<=wax.life){wax.age++;alive=true;var wx=Math.min(1,wax.age/wax.life),R0=Math.min(W,H)*.08+wx*44;cx2.globalAlpha=1-wx*.3;cx2.fillStyle='#fffdf7';cx2.strokeStyle='#111';cx2.lineWidth=5;cx2.beginPath();for(i=0;i<16;i++){var aa=i*Math.PI/8,rr=R0*(1+.22*Math.sin(aa*3+wax.age*.5));var px=x+Math.cos(aa)*rr,py=y+Math.sin(aa)*rr;cx2[i?'lineTo':'moveTo'](px,py);}cx2.closePath();cx2.fill();cx2.stroke();for(i=0;i<rays;i++){var aa=i*Math.PI*2/rays,ln=(0.3+0.16*seed[i])*Math.max(W,H)*wx; cx2.beginPath();cx2.moveTo(x+Math.cos(aa)*R0*.7,y+Math.sin(aa)*R0*.7);cx2.lineTo(x+Math.cos(aa)*ln,y+Math.sin(aa)*ln);cx2.strokeStyle=i%2?'#111':'#fffdf7';cx2.lineWidth=i%2?9:4;cx2.stroke();}cx2.globalAlpha=1;}for(i=0;i<S.length;i++){s=S[i];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.97;s.vy=s.vy*.97;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.save();cx2.translate(s.x,s.y);cx2.rotate(s.rot);cx2.beginPath();cx2.moveTo(0,-s.r);cx2.lineTo(s.r*.7,s.r);cx2.lineTo(-s.r*.7,s.r);cx2.closePath();if(s.ink){cx2.fillStyle='#111';cx2.fill();}else{cx2.fillStyle='#fffdf7';cx2.fill();cx2.lineWidth=2;cx2.strokeStyle='#111';cx2.stroke();}cx2.restore();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();}catch(_){}});}catch(_){}})();\n"
+
+# Tiny inline snippet: applies the saved light/dark choice before the first
+# paint so Midnight visitors never see a white flash while site.js loads.
+THEME_BOOT_TAG = ("<script>try{var t=localStorage.getItem('fc-theme');"
+                  "if(t==='midnight'||t==='classic'||t==='parchment'||t==='ink')"
+                  "document.body.dataset.theme=t}catch(_){}</script>\n")
+
+
+def minify_css(css: str) -> str:
+    """Conservative minifier: drops comments, indentation and blank lines.
+    Never touches anything inside a rule, so selectors/values stay intact."""
+    out = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    lines = [ln.strip() for ln in out.splitlines()]
+    return "\n".join(ln for ln in lines if ln) + "\n"
+
+
+SITE_CSS_MIN = minify_css(CSS)
+ASSET_VERSION = _fc_hashlib.sha256(
+    (SITE_CSS_MIN + "\0" + SITE_JS).encode("utf-8")).hexdigest()[:10]
+SITE_JS_TAG = f'<script src="assets/site.js?v={ASSET_VERSION}"></script>'
+
+
+def css_link(prefix: str = "") -> str:
+    return f'<link rel="stylesheet" href="{prefix}assets/site.css?v={ASSET_VERSION}">'
+
+
+def custom_style_block(custom_css) -> str:
+    extra = safe_custom_css(custom_css or "")
+    return f"<style>\n{extra}\n</style>\n" if extra.strip() else ""
+
+
+def lazy_images(fragment: str) -> str:
+    """Page pictures load only when scrolled near and decode off the main
+    thread. The logo is outside the page body, so it still loads at once."""
+    return re.sub(r"<img (?![^>]*\bloading=)",
+                  '<img loading="lazy" decoding="async" ', fragment)
+
+
+def write_assets(out_dir: Path, logo_path: Path) -> str:
+    """Write the shared assets; return the logo src for page markup."""
+    (out_dir / "assets").mkdir(parents=True, exist_ok=True)
+    write_text_atomic(out_dir / "assets" / "site.css", SITE_CSS_MIN)
+    write_text_atomic(out_dir / "assets" / "site.js", SITE_JS)
+    raw = logo_path.read_bytes()
+    if raw[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError(f"{logo_path} is not a PNG file")
+    (out_dir / "logo.png").write_bytes(raw)
+    return "logo.png?v=" + _fc_hashlib.sha256(raw).hexdigest()[:10]
+
+
 def render_page(title: str, tagline: str, footer: str, theme: str,
                 pages, slug: str, body_html: str, logo_uri: str,
                 description: str = "", custom_css: str = "",
@@ -2196,6 +2258,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         placed = re.sub(r"<p[^>]*>\s*\[contact form\]\s*</p>", "", body_html)
     placed, cal_script = place_calendar(placed, cal_cfg)
     placed, set_script = place_settings(placed, theme)
+    placed = lazy_images(placed)
     if placed:
         canvas = f'  <div class="canvas">\n{placed}{cal_script}{set_script}\n  </div>\n'
     footer_text = html.escape(footer) + "\n" if footer.strip() else ""
@@ -2215,16 +2278,20 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         f'<meta property="og:description" content="{html.escape(desc, quote=True)}">\n'
         f'<meta property="og:type" content="website">\n'
         f'<meta property="og:url" content="{canon}">\n'
+        f'<meta property="og:image" content="https://{CUSTOM_DOMAIN}/logo.png">\n'
+        '<meta name="twitter:card" content="summary">\n'
         + LD_ORG + "\n"
-        "<style>\n" + CSS + "\n" + safe_custom_css(custom_css) + "\n</style>\n"
+        + css_link() + "\n"
+        + custom_style_block(custom_css) +
         "</head>\n"
         f'<body data-theme="{theme}" data-star-animation="{STAR_ANIMATION_DEFAULT}">\n'
+        f"{THEME_BOOT_TAG}"
         '<div class="page">\n'
         f"{star_html(pages)}"
         f"{gem_html(pages)}"
         "\n"
         '  <div class="masthead">\n'
-        f'    <a class="logolink" href="index.html" aria-label="Go to the main page"><img src="{logo_uri}" alt="Flamingo and Cactus"></a>\n'
+        f'    <a class="logolink" href="index.html" aria-label="Go to the main page"><img src="{logo_uri}" alt="Flamingo and Cactus" width="96" height="96" fetchpriority="high"></a>\n'
         f"    <h1>{html.escape(title)}</h1>\n"
         f"    <p class=\"tagline\">{html.escape(tagline)}</p>\n"
         "</div>\n"
@@ -2241,85 +2308,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         # a visited page plays the soft arrival flash + rise -- no portal,
         # no soft fade, no "no animation" mode. All transform, opacity, and
         # canvas only -- respects prefers-reduced-motion (skips the canvas).
-        "<script>(function(){"
-        "try{"
-        "try{var themeDef=document.body.dataset.theme||'classic';"
-        "var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}"
-        "if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}"
-        "var themeBtn=document.getElementById('theme-toggle');"
-        "var themeLabel=function(){if(themeBtn)themeBtn.textContent=(document.body.dataset.theme==='midnight')?'Light mode':'Dark mode';};"
-        "themeLabel();"
-        "if(themeBtn)themeBtn.addEventListener('click',function(){"
-        "var next=(document.body.dataset.theme==='midnight')?themeDef:'midnight';"
-        "document.body.dataset.theme=next;"
-        "try{localStorage.setItem('fc-theme',next);}catch(_){}"
-        "themeLabel();});}catch(_){}"
-        "if(sessionStorage.getItem('fcWarp')){sessionStorage.removeItem('fcWarp');"
-        "var afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);"
-        "document.body.classList.add('arrive');"
-        "setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}"
-        "}catch(_){}"
-        "try{"
-        "var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;"
-        "var star=document.querySelector('a.star-badge, a.gem-badge');"
-        "if(!star||!star.getAttribute('href'))return;"
-        "star.addEventListener('click',function(e){"
-        "var href=star.getAttribute('href');"
-        "if(!href||href.charAt(0)==='#')return;"
-        "e.preventDefault();"
-        "if(instant){window.location.href=href;return;}"
-        "if(star.classList.contains('warp'))return;"
-        "var r=star.getBoundingClientRect();"
-        "var x=r.left+r.width/2,y=r.top+r.height/2;"
-        "try{sessionStorage.setItem('fcWarp','1')}catch(_){}"
-        "star.classList.add('warp');document.body.classList.add('warping');"
-        "var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}"
-        "setTimeout(nav2,560);setTimeout(nav2,1100);"
-        "setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2200);"
-        "try{"
-        "var fx=document.createElement('div');fx.id='fx';"
-        "var fl=document.createElement('div');fl.className='comicflash';fx.appendChild(fl);"
-        "var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);"
-        "var dpr=Math.min(window.devicePixelRatio||1,2);"
-        "var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;"
-        "var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);"
-        "var N=W<700?18:30,S=[],i,a,sp;"
-        "for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=3+Math.random()*6;"
-        "S.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4+Math.random()*7,rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.4,age:0,life:26+Math.random()*22,ink:Math.random()<.5});}"
-        "var rays=W<700?12:18,seed=[],j;"
-        "for(j=0;j<rays;j++)seed.push(.6+Math.random()*.5);"
-        "var wax={age:0,life:24};"
-        "var t0=performance.now();"
-        "(function frame(){"
-        "var alive=false,i,s;"
-        "cx2.clearRect(0,0,W,H);"
-        "if(wax.age<=wax.life){wax.age++;alive=true;"
-        "var wx=Math.min(1,wax.age/wax.life),R0=Math.min(W,H)*.08+wx*44;"
-        "cx2.globalAlpha=1-wx*.3;"
-        "cx2.fillStyle='#fffdf7';cx2.strokeStyle='#111';cx2.lineWidth=5;"
-        "cx2.beginPath();"
-        "for(i=0;i<16;i++){var aa=i*Math.PI/8,rr=R0*(1+.22*Math.sin(aa*3+wax.age*.5));"
-        "var px=x+Math.cos(aa)*rr,py=y+Math.sin(aa)*rr;cx2[i?'lineTo':'moveTo'](px,py);}"
-        "cx2.closePath();cx2.fill();cx2.stroke();"
-        "for(i=0;i<rays;i++){var aa=i*Math.PI*2/rays,ln=(0.3+0.16*seed[i])*Math.max(W,H)*wx; "
-        "cx2.beginPath();cx2.moveTo(x+Math.cos(aa)*R0*.7,y+Math.sin(aa)*R0*.7);"
-        "cx2.lineTo(x+Math.cos(aa)*ln,y+Math.sin(aa)*ln);"
-        "cx2.strokeStyle=i%2?'#111':'#fffdf7';cx2.lineWidth=i%2?9:4;cx2.stroke();}"
-        "cx2.globalAlpha=1;}"
-        "for(i=0;i<S.length;i++){s=S[i];s.age++;if(s.age>s.life)continue;alive=true;"
-        "s.x+=s.vx;s.y+=s.vy;s.vx*=.97;s.vy=s.vy*.97;s.rot+=s.vr;"
-        "cx2.globalAlpha=Math.max(0,1-s.age/s.life);"
-        "cx2.save();cx2.translate(s.x,s.y);cx2.rotate(s.rot);"
-        "cx2.beginPath();cx2.moveTo(0,-s.r);cx2.lineTo(s.r*.7,s.r);cx2.lineTo(-s.r*.7,s.r);cx2.closePath();"
-        "if(s.ink){cx2.fillStyle='#111';cx2.fill();}else{cx2.fillStyle='#fffdf7';cx2.fill();cx2.lineWidth=2;cx2.strokeStyle='#111';cx2.stroke();}"
-        "cx2.restore();}"
-        "cx2.globalAlpha=1;"
-        "if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);"
-        "else if(fx.parentNode)fx.parentNode.removeChild(fx);})();"
-        "}catch(_){}"
-        "});"
-        "}catch(_){}"
-        "})();</script>"
+        f"{SITE_JS_TAG}\n"
         "</body>\n"
         "</html>\n"
     )
@@ -2332,6 +2321,7 @@ NOTFOUND = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found &mdash; Flamingo &amp; Cactus</title>
 <meta name="robots" content="noindex">
+__CSSLINK__
 <style>
 __CSS__
 </style>
@@ -2366,6 +2356,7 @@ CONTACT_ACK = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Message sent &mdash; Flamingo &amp; Cactus</title>
 <meta name="robots" content="noindex">
+__CSSLINK__
 <style>
 __CSS__
 </style>
@@ -2537,8 +2528,8 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     site = load_site(data_path)
     form_html = contact_form_html(load_form_config(data_path.parent))
     cal_cfg = load_calendar_config(data_path.parent)
-    logo_uri = logo_data_uri(logo_path)
     out_dir.mkdir(parents=True, exist_ok=True)
+    logo_uri = write_assets(out_dir, logo_path)
 
     for p in site["pages"]:
         raw = read_body(pages_dir, p["slug"])
@@ -2551,12 +2542,14 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
                         site.get("description", ""), site.get("custom_css", ""),
                         site.get("star_animation", "comic"),
                         form_html=form_html, cal_cfg=cal_cfg))
-    nf = (NOTFOUND.replace("__CSS__", CSS + "\n" + safe_custom_css(site.get("custom_css", "")))
-          .replace("__LOGO__", logo_uri)
+    nf = (NOTFOUND.replace("__CSSLINK__", css_link("/"))
+          .replace("__CSS__", safe_custom_css(site.get("custom_css", "")))
+          .replace("__LOGO__", "/" + logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "404.html", nf)
-    ck = (CONTACT_ACK.replace("__CSS__", CSS + "\n" + safe_custom_css(site.get("custom_css", "")))
-          .replace("__LOGO__", logo_uri)
+    ck = (CONTACT_ACK.replace("__CSSLINK__", css_link("/"))
+          .replace("__CSS__", safe_custom_css(site.get("custom_css", "")))
+          .replace("__LOGO__", "/" + logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "contact-ack.html", ck)
     shutil.copyfile(favicon_path, out_dir / "favicon.png")
@@ -2616,6 +2609,18 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
             ok = ok and cond
 
         idx = (tmp / "index.html").read_text(encoding="utf-8")
+        # FC-OPTIMIZE v1: shared assets ship once instead of on every page.
+        _css = (tmp / "assets" / "site.css").read_text(encoding="utf-8") \
+            if (tmp / "assets" / "site.css").is_file() else ""
+        _js = (tmp / "assets" / "site.js").read_text(encoding="utf-8") \
+            if (tmp / "assets" / "site.js").is_file() else ""
+        expect(bool(_css) and bool(_js) and (tmp / "logo.png").is_file(),
+               "shared site.css, site.js and logo.png are built")
+        expect("data:image" not in idx and "assets/site.css?v=" in idx
+               and "assets/site.js?v=" in idx,
+               "pages link the shared assets instead of embedding them")
+        expect(len(idx.encode("utf-8")) < 30000, "home page HTML stays small (<30 KB)")
+        idx = idx + "\n" + _css + "\n" + _js
         expect(len(idx) > 0, "index.html non-empty")
         expect(html.escape(site["title"]) in idx, "title present")
         expect('data-star-animation="comic"' in idx,
@@ -2663,8 +2668,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect("badgepop" in idx and "arrivefade" in idx and "comicko" in idx,
                "comic only: badge pop, ink burst, and soft arrival flash all present")
         warp_scripts = idx.lower().count("<script")
-        expect(warp_scripts == 2 and "ld+json" in idx.lower(),
-               "built pages carry only the burst + structured-data scripts")
+        expect(warp_scripts == 3 and "ld+json" in idx.lower(),
+               "built pages carry only the theme, burst and structured-data scripts")
         expect('name="description"' in idx and html.escape(site["description"])[:40] in idx,
                "every page carries the search snippet")
         expect('rel="canonical" href="https://flamingoandcactus.com/"' in idx,
@@ -2677,7 +2682,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect("<loc>https://flamingoandcactus.com/contact.html</loc>" in sm, "sitemap lists contact")
         expect("flank" not in sm and "latest" not in sm and "feedback" not in sm,
                "sitemap keeps unlisted pages unlisted")
-        contact_built = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
+        contact_built = ((tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else "") + "\n" + _css
         if any(p.get("form") for p in site["pages"]):
             expect('action="https://formsubmit.co/' in contact_built, "contact page posts to the form inbox")
             expect('name="_next" value="https://flamingoandcactus.com/contact-ack.html"' in contact_built,
@@ -3114,7 +3119,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect("'portal'" not in joined and "'fade'" not in joined
                and "mode==='" not in joined and 'mode||"portal"' not in joined,
                "no leftover mode-switching code in the runtime scripts")
-        cf = (tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else ""
+        cf = ((tmp / "contact.html").read_text(encoding="utf-8") if (tmp / "contact.html").is_file() else "") + "\n" + _css
         expect('name="_captcha" value="false"' in cf and
                'name="_next" value="https://flamingoandcactus.com/contact-ack.html"' in cf,
                "contact posts captcha-free and lands on our noindex ack page")
@@ -3133,7 +3138,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
                "dark mode gives the form fields a visible background")
         expect(".cf-status[hidden]{display:none}" in CSS and ".cf-done[hidden]" in CSS and ".cf-error[hidden]" in CSS,
                "the status line and panels stay hidden until used")
-        evc = (tmp / "events.html").read_text(encoding="utf-8") if (tmp / "events.html").is_file() else ""
+        evc = ((tmp / "events.html").read_text(encoding="utf-8") if (tmp / "events.html").is_file() else "") + "\n" + _css
         if "[event calendar]" in (pages_dir / "events.html").read_text(encoding="utf-8"):
             expect('id="evcal"' in evc and 'var EV=' in evc,
                    "events page swaps the calendar in where the marker was")
@@ -3267,7 +3272,7 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
                    "settings page carries the panel")
         financials_built = tmp / "financials.html"
         if financials_built.is_file():
-            fin_html = financials_built.read_text(encoding="utf-8")
+            fin_html = (financials_built.read_text(encoding="utf-8")) + "\n" + _css
             expect('a.btn[href^="flank/"]::before' in fin_html,
                    "financials carries the Flank button's swirl dressing")
         expect('>Settings</a>' in idx,
