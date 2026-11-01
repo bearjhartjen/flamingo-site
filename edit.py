@@ -213,6 +213,33 @@ EDITOR_CSS = site_build.CSS + r'''
   .editbar a.barlink{display:inline-block;padding:6px 10px;border:1px solid #666;border-radius:2px;color:#fff;text-decoration:none;font:12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;text-transform:uppercase}
   .editbar a.barlink:hover{background:#333}
   .editbar .status{color:#bbb;font-size:12.5px}
+  .editbar .devsel{
+    font:12px "Helvetica Neue",Arial,sans-serif;background:#222;color:#eee;
+    border:1px solid #555;border-radius:2px;padding:5px 8px;cursor:pointer;
+  }
+  .editbar .devsel:focus{outline:1px solid #9db8ff}
+  /* Device preview frames — pro WYSIWYG for mobile while editing */
+  #main.device-tablet,
+  #main.device-phone{
+    background:#2a2a2a;
+  }
+  #main.device-tablet #canvas,
+  #main.device-phone #canvas{
+    margin:18px auto 40px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.45);
+    transition:max-width .25s ease, border-radius .25s ease;
+  }
+  #main.device-tablet #canvas{
+    max-width:768px;width:calc(100% - 24px);border:10px solid #1a1a1a;border-radius:12px;
+  }
+  #main.device-phone #canvas{
+    max-width:390px;width:calc(100% - 24px);border:14px solid #111;border-radius:32px;
+    min-height:640px;
+  }
+  #main.device-phone .masthead,
+  #main.device-phone .sitenav,
+  #main.device-phone #foot{
+    max-width:390px;margin-left:auto;margin-right:auto;
+  }
   .toolbar{
     display:none;gap:6px;align-items:center;flex-wrap:wrap;
     background:#f2f0eb;border-bottom:1px solid var(--rule);
@@ -566,6 +593,11 @@ __CSS__
   <button id="btn-edit">Edit</button>
   <button id="btn-save" disabled>Save</button>
   <a id="btn-preview" href="#" target="_blank" rel="noopener" class="barlink">Preview</a>
+  <select id="devsel" class="devsel" title="Preview how the page will look on different devices while you edit">
+    <option value="desktop">Desktop</option>
+    <option value="tablet">Tablet</option>
+    <option value="phone">Phone</option>
+  </select>
   <button id="btn-quit" class="warn">Quit</button>
 </div>
 <div id="builderupdated" hidden>
@@ -974,11 +1006,28 @@ const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const canvas = $("#canvas"), status = $("#status"),
       btnEdit = $("#btn-edit"), btnSave = $("#btn-save"), filepick = $("#filepick");
+const mainEl = $("#main");
+const devsel = $("#devsel");
 let saving = false, draftTimer = null, unsavedResolve = null, pageSettingsSlug = null;
 let draftResolve = null;
 let newPageSource = null;
 const draftKey = slug => "fc-site-draft:" + slug;
 const LAST_PAGE_KEY = "fc-site-last-page";
+const DEVICE_KEY = "fc-site-device-preview";
+function setDevice(mode){
+  mode = mode || "desktop";
+  mainEl.classList.remove("device-tablet", "device-phone");
+  if (mode === "tablet") mainEl.classList.add("device-tablet");
+  else if (mode === "phone") mainEl.classList.add("device-phone");
+  if (devsel) devsel.value = mode;
+  try { localStorage.setItem(DEVICE_KEY, mode); } catch (e) {}
+}
+if (devsel) {
+  let savedDev = "desktop";
+  try { savedDev = localStorage.getItem(DEVICE_KEY) || "desktop"; } catch (e) {}
+  setDevice(savedDev);
+  devsel.addEventListener("change", () => setDevice(devsel.value));
+}
 function globalSettings(site){
   return {title:site.title || "", tagline:site.tagline || "", description:site.description || "",
           footer:site.footer || "", theme:site.theme || "classic", custom_css:site.custom_css || ""};
@@ -1948,17 +1997,23 @@ function hasKeepStyle(el){
   return !!(el.style.color || el.style.backgroundColor || el.style.fontSize
     || el.style.fontFamily || el.style.lineHeight || el.style.letterSpacing);
 }
-// ---------- undo history: snapshots of the canvas ----------
+// ---------- undo history: snapshots of the canvas (pro-grade, Docs-like) ----------
 let hist = [], hi = -1, typeTimer = null;
+const HIST_MAX = 120;
 function histReset(){ if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; } hist = [canvas.innerHTML]; hi = 0; updateHistBtns(); }
 function pushHist(){
   const cur = canvas.innerHTML;
   if (hist[hi] === cur) return;
   hist = hist.slice(0, hi + 1);
   hist.push(cur);
-  if (hist.length > 60) hist.shift();
+  if (hist.length > HIST_MAX) hist.shift();
   hi = hist.length - 1;
   updateHistBtns();
+}
+// Debounced push while typing so rapid keystrokes become one undo step (Google Docs style)
+function pushHistSoon(){
+  if (typeTimer) clearTimeout(typeTimer);
+  typeTimer = setTimeout(() => { typeTimer = null; pushHist(); }, 450);
 }
 function updateHistBtns(){
   const u = $("#btn-undo"), r = $("#btn-redo");
@@ -2030,10 +2085,10 @@ function doRedo(){
   markDirty(); hint(); updateHistBtns();
   updateSizeNum();
 }
-// typing coalesces into one undo step per burst
+// typing coalesces into one undo step per burst (Docs-style)
 canvas.addEventListener("input", () => {
-  clearTimeout(typeTimer);
-  typeTimer = setTimeout(pushHist, 800);
+  markDirty();
+  pushHistSoon();
 });
 // paint an arbitrary wheel color (inline style the sanitizer keeps)
 function paintWheel(el, hex){

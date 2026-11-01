@@ -419,3 +419,32 @@ always shows fresh copies. A tiny inline snippet still applies the saved
 dark/light choice before the first paint. Page pictures lazy-load, the
 big product renders became right-sized WebP files (originals kept in
 `assets/originals/`, unpublished), and link previews now show the logo.
+
+## Editor polish + device preview (pro builder pass)
+
+The local builder (`edit.py`) is the only place content is written. It
+needed to feel closer to a professional tool (Google Docs / Slides level
+editing comfort) while still guaranteeing the published mobile site stays
+solid.
+
+What changed:
+
+- **Device preview selector** in the top bar: Desktop / Tablet / Phone.
+  Switching frames the canvas (phone gets a realistic bezel and 390 px
+  width) so you can edit and instantly see how the page will behave on
+  a phone. The choice is remembered in the browser. This is the main
+  answer to "I want Docs-like editing but the mobile site still has to
+  work."
+- **Undo stack** raised to 120 steps and typing is coalesced more tightly
+  (Docs-style: a burst of keystrokes becomes one undo step). Caret
+  restoration on undo/redo already existed; it is left in place.
+- Status and dirty tracking fire on every keystroke so the Save button
+  lights up immediately.
+- No change to the published HTML sanitizer or the mobile CSS rules in
+  `build.py`. Dragged buttons still drop to static blocks under 700 px
+  so a wide-screen layout cannot break phones. The device preview lets
+  you verify that while you work.
+
+Underlying behaviour is unchanged in spirit: pure static output, local-
+only editor, GitKraken + pre-commit for the rest. The builder is still
+one stdlib Python file.
