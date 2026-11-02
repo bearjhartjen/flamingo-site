@@ -2214,6 +2214,33 @@ def custom_style_block(custom_css) -> str:
     return f"<style>\n{extra}\n</style>\n" if extra.strip() else ""
 
 
+# FC-PICTURE-FALLBACK: older browsers (Safari on macOS 10.15 and earlier,
+# old iPads) cannot show WebP. When uploads/ holds a same-named PNG/JPG/GIF
+# next to a .webp, pages get <picture> so modern browsers take the small
+# WebP and older ones take the fallback.
+_UPLOAD_NAMES: set = set()
+_FALLBACK_EXTS = (".png", ".jpg", ".jpeg", ".gif")
+
+
+def picture_fallbacks(fragment: str, names=None) -> str:
+    names = _UPLOAD_NAMES if names is None else names
+
+    def wrap(m):
+        tag = m.group(0)
+        hit = re.search(r'\bsrc="uploads/([^"/]+)\.webp"', tag)
+        if not hit:
+            return tag
+        stem = hit.group(1)
+        fb = next((stem + e for e in _FALLBACK_EXTS if stem + e in names), None)
+        if not fb:
+            return tag
+        img = tag.replace(f'src="uploads/{stem}.webp"', f'src="uploads/{fb}"', 1)
+        return (f'<picture><source srcset="uploads/{stem}.webp" type="image/webp">'
+                f'{img}</picture>')
+
+    return re.sub(r"<img\b[^>]*>", wrap, fragment)
+
+
 def lazy_images(fragment: str) -> str:
     """Page pictures load only when scrolled near and decode off the main
     thread. The logo is outside the page body, so it still loads at once."""
@@ -2258,7 +2285,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         placed = re.sub(r"<p[^>]*>\s*\[contact form\]\s*</p>", "", body_html)
     placed, cal_script = place_calendar(placed, cal_cfg)
     placed, set_script = place_settings(placed, theme)
-    placed = lazy_images(placed)
+    placed = picture_fallbacks(lazy_images(placed))
     if placed:
         canvas = f'  <div class="canvas">\n{placed}{cal_script}{set_script}\n  </div>\n'
     footer_text = html.escape(footer) + "\n" if footer.strip() else ""
@@ -2530,6 +2557,14 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     cal_cfg = load_calendar_config(data_path.parent)
     out_dir.mkdir(parents=True, exist_ok=True)
     logo_uri = write_assets(out_dir, logo_path)
+    _UPLOAD_NAMES.clear()
+    if uploads_dir.is_dir():
+        _UPLOAD_NAMES.update(f.name for f in uploads_dir.iterdir() if f.is_file())
+        for n in sorted(_UPLOAD_NAMES):
+            stem = n[:-5]
+            if n.lower().endswith(".webp") and not any(stem + e in _UPLOAD_NAMES for e in _FALLBACK_EXTS):
+                print(f"warning: uploads/{n} has no PNG/JPG copy, so older Macs and iPads will not show it",
+                      file=sys.stderr)
 
     for p in site["pages"]:
         raw = read_body(pages_dir, p["slug"])
@@ -2815,6 +2850,11 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect((tmp / ".nojekyll").is_file(), ".nojekyll built")
         expect((tmp / "CNAME").is_file(), "CNAME built")
         expect((tmp / "uploads").is_dir(), "site/uploads/ exists in build")
+        expect(picture_fallbacks('<img class="secimg" src="uploads/a.webp" alt="">', {"a.webp", "a.png"}) ==
+               '<picture><source srcset="uploads/a.webp" type="image/webp"><img class="secimg" src="uploads/a.png" alt=""></picture>',
+               "WebP pictures with a PNG copy get an older-browser fallback")
+        expect(picture_fallbacks('<img src="uploads/b.webp" alt="">', {"b.webp"}) == '<img src="uploads/b.webp" alt="">',
+               "WebP pictures without a copy are left alone")
 
         # FIX 1: hostile hrefs dropped, safe ones survive
         for bad_href in ("//evil.com/x", "/../../etc/passwd", "javascript:alert(1)", "data:text/html,hi"):
