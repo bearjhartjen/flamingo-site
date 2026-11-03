@@ -301,9 +301,42 @@ body[data-theme="midnight"] .contactform{background:#2b2336;border-color:#4d3c6b
 body[data-theme="midnight"] .contactform input[type=text],body[data-theme="midnight"] .contactform input[type=email],body[data-theme="midnight"] .contactform input[type=tel],body[data-theme="midnight"] .contactform textarea{background:#383046;border-color:#9a87c0;color:#f0e9f7}
 body[data-theme="midnight"] .contactform .dropzone{background:#383046;border-color:#9a87c0;color:#d9cff0}
 .canvas .evsrc{display:none}
-.evcal{max-width:640px;margin:18px auto 8px;border:1px solid var(--rule);border-radius:6px;background:#f3e8d2;padding:16px 16px 8px;display:none}
-body[data-theme="ink"] .evcal{background:#332e28;border-color:#6b6152}
-body[data-theme="midnight"] .evcal{background:#2b2336;border-color:#4d3c6b}
+.evcal{max-width:680px;margin:22px auto 12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);padding:20px 20px 14px;box-shadow:0 4px 20px rgba(0,0,0,.04);display:none}
+body[data-theme="ink"] .evcal{background:var(--paper);border-color:var(--rule)}
+body[data-theme="midnight"] .evcal{background:var(--paper);border-color:var(--rule)}
+.evcal-nav-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:18px;border-bottom:1px solid var(--rule2);padding-bottom:12px}
+.evcal-nav-tabs button{padding:7px 18px;font:600 13px "Helvetica Neue",Arial,sans-serif;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:6px;cursor:pointer;transition:all .15s ease}
+.evcal-nav-tabs button:hover{color:var(--ink);background:rgba(0,0,0,.03)}
+.evcal-nav-tabs button.active{color:var(--ink);background:var(--paper);border-color:var(--rule);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+body[data-theme="ink"] .evcal-nav-tabs button.active,body[data-theme="midnight"] .evcal-nav-tabs button.active{background:var(--paper2)}
+.ev-cards-list{display:flex;flex-direction:column;gap:14px;margin:12px 0}
+.ev-card{display:flex;gap:16px;align-items:flex-start;padding:16px 18px;background:var(--paper);border:1px solid var(--rule2);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.03);text-align:left;transition:transform .15s ease,box-shadow .15s ease}
+body[data-theme="ink"] .ev-card,body[data-theme="midnight"] .ev-card{background:var(--paper2);border-color:var(--rule)}
+.ev-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.07);transform:translateY(-1px)}
+.ev-date-badge{flex:0 0 70px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#2b241d;color:#fbf7ee;border-radius:6px;padding:8px 4px;text-align:center}
+body[data-theme="ink"] .ev-date-badge,body[data-theme="midnight"] .ev-date-badge{background:var(--paper2);border:1px solid var(--rule);color:var(--ink)}
+.ev-date-badge .ev-badge-month{font:700 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#e2b84b}
+.ev-date-badge .ev-badge-day{font:800 24px Georgia,serif;line-height:1.1;margin:2px 0}
+.ev-date-badge .ev-badge-wd{font:600 10px "Helvetica Neue",Arial,sans-serif;opacity:.85;letter-spacing:.5px}
+.ev-card-content{flex:1;min-width:0}
+.ev-card-title{margin:0 0 6px;font:700 17px "Helvetica Neue",Arial,sans-serif;color:var(--ink);line-height:1.3}
+.ev-card-tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.ev-card-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(0,0,0,.04);border-radius:4px;font:600 11.5px "Helvetica Neue",Arial,sans-serif;color:var(--ink2)}
+body[data-theme="ink"] .ev-card-tag,body[data-theme="midnight"] .ev-card-tag{background:rgba(255,255,255,.07);color:var(--ink)}
+.ev-card-desc{margin:0 0 10px;font:14px/1.45 Georgia,Times,serif;color:var(--ink2)}
+.ev-card-actions{margin-top:6px}
+.ev-card-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--ink);color:var(--paper);border-radius:4px;text-decoration:none;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px}
+.ev-card-btn:hover{opacity:.88}
+.ev-empty-card{text-align:center;padding:32px 18px;border:1px dashed var(--rule);border-radius:8px;background:rgba(0,0,0,.015);margin:16px 0}
+.ev-empty-card h3{font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);margin:0 0 6px}
+.ev-empty-card p{font:14px Georgia,serif;color:var(--muted);margin:0}
+.ev-past-drawer{margin:24px 0 8px;border-top:1px solid var(--rule);padding-top:14px;text-align:left}
+.ev-past-drawer summary{cursor:pointer;font:600 12.5px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin-bottom:10px}
+@media (max-width:560px){
+.ev-card{flex-direction:column;gap:12px;padding:12px 14px}
+.ev-date-badge{flex-direction:row;gap:8px;width:100%;padding:5px 10px;justify-content:flex-start}
+.ev-date-badge .ev-badge-day{font-size:18px}
+}
 .evcal .evcal-bar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;justify-content:center}
 .evcal .evcal-bar button{min-height:40px;min-width:40px;padding:6px 10px;font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;cursor:pointer}
 .evcal .evcal-bar select{min-height:40px;padding:6px 8px;font:600 16px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}

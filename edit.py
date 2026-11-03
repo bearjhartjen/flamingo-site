@@ -196,6 +196,21 @@ EDITOR_CSS = site_build.CSS + r'''
   #side .widebtn{width:100%;margin:0 2px}
   #side a{color:#9db8ff;font-size:12px;margin:0 2px}
   #main{flex:1;min-width:0}
+  @media(max-width:850px){
+    #app{display:block}
+    #side{position:relative;width:100%;height:auto;max-height:42vh;overflow:auto;flex:none}
+    #side ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:4px}
+    .editbar{position:sticky;top:0;flex-wrap:wrap;gap:6px;padding:8px}
+    .toolbar{top:auto;position:relative;padding:8px;gap:4px}
+    #main.device-phone #canvas,#main.device-tablet #canvas{width:calc(100% - 20px)}
+  }
+  @media(max-width:520px){
+    #side{max-height:35vh;padding:10px}
+    #side .row{flex-wrap:wrap}
+    .editbar .status{order:5;flex-basis:100%}
+    .toolbar{max-height:30vh;overflow:auto}
+    .toolgroup{flex-wrap:wrap}
+  }
   .editbar{
     position:sticky;top:0;z-index:50;background:#141414;color:#fff;
     font:13px "Helvetica Neue",Arial,sans-serif;
@@ -249,6 +264,8 @@ EDITOR_CSS = site_build.CSS + r'''
   .toolgroup{display:flex;align-items:center;gap:5px;border-right:1px solid #d3d0c8;padding:0 8px 0 0;margin-right:2px}
   .toolgroup:last-child{border-right:0}
   .toolgroup .groupname{font:10px "Helvetica Neue",Arial,sans-serif;color:#666;text-transform:uppercase;letter-spacing:.8px;margin-right:2px;white-space:nowrap}
+  .toolbar .tool-input{display:flex;align-items:center;gap:4px;font:10px "Helvetica Neue",Arial,sans-serif;color:#555;white-space:nowrap}
+  .toolbar .tool-input input{display:block}
   .editing .toolbar{display:flex}
   .toolbar button{
     background:#fff;border:1px solid #999;border-radius:2px;
@@ -361,11 +378,14 @@ EDITOR_CSS = site_build.CSS + r'''
     display:none;color:var(--faint);font-style:italic;
     padding:8px 0 40px;pointer-events:none;
   }
-  /* the two generated blocks the owner edits through their own dialogs:
-     the contact form and the events calendar. They are drawn here exactly
-     as the published site draws them, with a builder-only label so it is
-     clear what they are. */
+  /* The builder previews the public event cards and their compact calendar toggle. */
   #canvas [data-form-block],#canvas [data-cal-wrap]{border-radius:4px;margin:14px 0}
+  #canvas .evcal{display:block}
+  #canvas .ev-card{cursor:pointer}
+  #canvas .ev-edit-btn{background:var(--ink);color:var(--paper);border:0;border-radius:4px;padding:5px 10px;font:600 11px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
+  #canvas .ev-builder-actions{text-align:right;margin:0 0 12px}
+  #canvas .ev-builder-actions button{background:var(--ink);color:var(--paper);border:0;border-radius:4px;padding:7px 13px;font:600 12px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
+  #canvas .ev-cal-wrap[hidden],#canvas .ev-cards-wrap[hidden]{display:none}
   .editing #canvas [data-form-block]{outline:2px dashed #1c4fd8;outline-offset:4px}
   .editing #canvas [data-cal-wrap]{outline:2px dashed #1c4fd8;outline-offset:4px}
   .editing #canvas [data-form-block]::before{
@@ -374,12 +394,11 @@ EDITOR_CSS = site_build.CSS + r'''
     font:600 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.4px;
     text-transform:uppercase;color:#29447a}
   .editing #canvas [data-cal-wrap]::before{
-    content:"CALENDAR — press Events to add or change events; click a day to add one";
+    content:"EVENTS — use Manage Events or the card controls to add and edit";
     display:block;margin:6px 0 2px;
     font:600 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.4px;
     text-transform:uppercase;color:#29447a}
-  /* the event list stays out of the editor's way: the calendar is the one
-     place events are made, and the list is what it is drawn from */
+  /* Keep the editable source markup out of the visual canvas. */
   #canvas .evsrc{display:none}
   .evcal-label{font:600 15px "Helvetica Neue",Arial,sans-serif;color:var(--ink)}
   .editing .evcal .ev-day{cursor:pointer}
@@ -409,6 +428,22 @@ EDITOR_CSS = site_build.CSS + r'''
   #app #side .side-h {
     color:#c9a227; font-size:11px; letter-spacing:1.8px;
     margin:12px 2px 4px; border-bottom:1px solid #4a4130; padding-bottom:6px;
+  }
+  @media(max-width:850px){
+    #app{display:block}
+    #side{position:relative;width:100%;height:auto;max-height:34vh;overflow:auto;flex:none}
+    #side ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:4px}
+    #main{min-width:0;width:100%}
+    #app .editbar{position:sticky;top:0;z-index:45;flex-wrap:wrap;gap:6px;padding:8px}
+    #app .toolbar{position:relative;top:auto;max-height:34vh;overflow:auto;padding:8px;gap:5px}
+    #main.device-phone #canvas,#main.device-tablet #canvas{width:calc(100% - 20px)}
+  }
+  @media(max-width:520px){
+    #side{max-height:28vh;padding:8px}
+    #side .row{flex-wrap:wrap}
+    #app .editbar .status{order:5;flex-basis:100%}
+    #app .toolbar{max-height:28vh}
+    #app .toolgroup{flex-wrap:wrap}
   }
   #app #side .side-h button {
     border-color:#4a4130; color:#d8d0c2; border-radius:6px; padding:4px 10px;
@@ -546,6 +581,8 @@ def editor_page(site: dict, slug: str, body: str, live: str | None,
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.png" type="image/png">
 <title>Website builder — __TITLE__</title>
 <style>
 __CSS__
@@ -619,9 +656,9 @@ __CSS__
   <button data-cmd="p">Text</button>
   <button data-cmd="smaller" title="Smaller text">A-</button>
   <button data-cmd="bigger" title="Bigger text">A+</button>
-  <input type="number" id="sizeNum" min="8" max="200" title="Font size in px">
-  <input type="number" id="leadNum" min="1" max="3" step="0.1" title="Line height (1.0–3.0)">
-  <input type="number" id="trackNum" min="-5" max="30" step="0.5" title="Letter spacing in px">
+  <label class="tool-input">Size: px<input type="number" id="sizeNum" min="8" max="200" title="Font size in px" aria-label="Font size in pixels"></label>
+  <label class="tool-input">Line height<input type="number" id="leadNum" min="1" max="3" step="0.1" title="Line height (1.0–3.0)" aria-label="Line height multiplier"></label>
+  <label class="tool-input">Spacing: px<input type="number" id="trackNum" min="-5" max="30" step="0.5" title="Letter spacing in px" aria-label="Letter spacing in pixels"></label>
   <select id="fontSel" title="Font">
     <option value="">Font: default</option>
     <option value='Georgia,Times New Roman,serif' data-first="georgia">Serif (Georgia)</option>
@@ -670,8 +707,8 @@ __CSS__
   <button data-cmd="table" title="Insert a 2x2 table">Table</button>
   <button data-cmd="form" id="btn-form-marker" title="Place the contact form at the cursor">Form location</button>
   <button data-cmd="formedit" id="btn-form-edit" title="Change the wording of the contact form on this page">Form</button>
-  <button data-cmd="events" id="btn-events" title="Add or change the events and the calendar">Events</button>
-  <button data-cmd="calendar" id="btn-calendar" title="Change the shape, size and colour of the calendar marker">Calendar</button>
+  <button data-cmd="events" id="btn-events" title="Add or change events">Manage Events</button>
+  <button data-cmd="calendar" id="btn-calendar" title="Change the optional month calendar marker">Calendar view</button>
   <button data-cmd="news" id="btn-news" title="Add a dated news article to the top of the Latest page">News</button>
   </div>
   <div class="toolgroup"><span class="groupname">Image</span>
@@ -817,7 +854,7 @@ __CSS__
 <div class="ld-back" id="eventsDlg" hidden>
   <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="eventsDlgTitle">
     <h3 id="eventsDlgTitle">Events</h3>
-    <p class="dlg-note">Every event here becomes a mark on the calendar. Click a day on the calendar to add or change an event on it.</p>
+    <p class="dlg-note">Manage the event cards shown on the page. Add a title, date, time, venue, description and optional link.</p>
     <div id="eventsList"></div>
     <div class="dlg-actions">
       <button type="button" class="primary" id="eventAdd">Add an event</button>
@@ -854,9 +891,12 @@ __CSS__
     <div id="evDayList"></div>
     <label class="dlg-field">Year<input id="evYear" type="number" min="2000" max="2100"></label>
     <label class="dlg-field">Time (optional)<input id="evTime" maxlength="60" autocomplete="off" placeholder="e.g. 9 am to 3 pm"></label>
-    <label class="dlg-field">What is it<textarea id="evTitle" maxlength="300"></textarea></label>
-    <p class="dlg-note">A link goes right in the text, in square brackets: check the Rotary website <b>[here](https://owegorotary.org/)</b></p>
-    <p class="dlg-note">The shape, size and colour of the mark on the calendar: <button type="button" id="evMarkerBtn" class="linkbtn">change the marker</button></p>
+    <label class="dlg-field">Event title<input id="evTitle" maxlength="180"></label>
+    <label class="dlg-field">Venue<input id="evVenue" maxlength="180" placeholder="Venue / location"></label>
+    <label class="dlg-field">Details<textarea id="evDetails" maxlength="600" placeholder="Optional description"></textarea></label>
+    <label class="dlg-field">Event link URL<input id="evLinkUrl" maxlength="500" type="url" placeholder="https://..."></label>
+    <label class="dlg-field">Link button text<input id="evLinkText" maxlength="80" placeholder="Event details"></label>
+    <p class="dlg-note">The event cards are the default view. The optional month calendar is available from the page toggle.</p>
     <div class="dlg-actions">
       <button type="button" class="primary" id="evSave">Add event</button>
       <button type="button" class="danger" id="evDelete" hidden>Remove event</button>
@@ -1350,6 +1390,9 @@ function eventPara(ev){
   let text = MONTH_NAMES[ev.month - 1] + " " + eventOrdinal(ev.day) + ", " + ev.year;
   if (ev.time) text += ", " + ev.time;
   text += " — " + ev.title;
+  if (ev.venue) text += " · " + ev.venue;
+  if (ev.details) text += ". " + ev.details;
+  if (ev.linkUrl) text += " [" + (ev.linkText || "Event details") + "](" + ev.linkUrl + ")";
   return textToEventHtml(text);
 }
 function ensureEvSrc(){
@@ -1395,7 +1438,11 @@ function fillEventForm(ev, dateStr){
   $("#evWhen").textContent = when;
   $("#evYear").value = String(y);
   $("#evTime").value = ev ? (ev.times || "") : "";
-  $("#evTitle").value = ev ? eventInlineText(ev) : "";
+  $("#evTitle").value = ev ? (ev.title || eventInlineText(ev)) : "";
+  $("#evVenue").value = ev ? (ev.venue || "") : "";
+  $("#evDetails").value = ev ? (ev.details || "") : "";
+  $("#evLinkUrl").value = ev && ev.link ? (ev.link.url || "") : "";
+  $("#evLinkText").value = ev && ev.link ? (ev.link.text || "") : "";
   $("#evSave").textContent = ev ? "Save changes" : "Add event";
   $("#evDelete").hidden = !ev;
   eventDayList(EVENT_DAY);
@@ -1469,7 +1516,7 @@ function openCalDialog(){
   if (pv) { pv.textContent = CAL_CFG.symbol; pv.style.color = CAL_CFG.color; pv.style.fontSize = (CAL_CFG.size || 17) + "px"; }
   $("#calDlg").hidden = false;
 }
-$("#evMarkerBtn").onclick = () => { openCalDialog(); };
+/* evMarkerBtn removed; marker changes now live in the calendar marker dialog */
 $("#calSmaller").onclick = () => { $("#calSize").value = Math.max(8, (parseInt($("#calSize").value, 10) || 17) - 2); applyCalMarker(); };
 $("#calBigger").onclick = () => { $("#calSize").value = Math.min(48, (parseInt($("#calSize").value, 10) || 17) + 2); applyCalMarker(); };
 $("#calSize").addEventListener("change", applyCalMarker);
@@ -1576,8 +1623,11 @@ $("#evSave").onclick = async () => {
   const y = parseInt($("#evYear").value, 10) || day.y;
   const title = $("#evTitle").value.trim();
   if (!title) { $("#evTitle").focus(); status.textContent = "Give the event a name"; return; }
+  const linkUrl = safeUrl($("#evLinkUrl").value.trim());
+  if ($("#evLinkUrl").value.trim() && !linkUrl) { status.textContent = "Use an http, https, mailto, tel or local page URL"; $("#evLinkUrl").focus(); return; }
   const ev = {month: day.m, day: day.d, year: y, time: $("#evTime").value.trim(),
-              title: title};
+              title: title, venue: $("#evVenue").value.trim(), details: $("#evDetails").value.trim(),
+              linkUrl: linkUrl, linkText: $("#evLinkText").value.trim()};
   const editIdx = EVENT_EDIT ? EVENT_EDIT.idx : null;
   $("#eventDlg").hidden = true;
   writeEvent(ev, editIdx);
@@ -1599,6 +1649,26 @@ canvas.addEventListener("click", e => {
     while (m > 12) { m = 1; y++; }
     CAL_Y = y; CAL_M = m;
     renderCalBlock();
+    return;
+  }
+  const editCard = e.target.closest("[data-ev-edit]");
+  if (editCard) {
+    e.preventDefault();
+    const idx = parseInt(editCard.getAttribute("data-ev-edit"), 10);
+    const ev = EVENTS.find(item => item.idx === idx);
+    if (ev) fillEventForm(ev, null);
+    return;
+  }
+  const addCard = e.target.closest("[data-cal-add]");
+  if (addCard) { e.preventDefault(); fillEventForm(null, null); return; }
+  const tab = e.target.closest("[data-cal-tab]");
+  if (tab) {
+    e.preventDefault();
+    const isGrid = tab.getAttribute("data-cal-tab") === "grid";
+    const wrapper = tab.closest(".evcal");
+    wrapper.querySelector("#ev-cards-static")?.toggleAttribute("hidden", isGrid);
+    wrapper.querySelector("#ev-cal-wrap-static")?.toggleAttribute("hidden", !isGrid);
+    wrapper.querySelectorAll("[data-cal-tab]").forEach(b => b.classList.toggle("active", b === tab));
     return;
   }
   const day = e.target.closest("[data-cal-day]");

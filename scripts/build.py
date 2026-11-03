@@ -1035,9 +1035,42 @@ CSS = r'''  :root{
   /* ---------- events page: month calendar woven from the list ---------- */
   /* hidden until the calendar script takes over (no-JS keeps the page clean) */
   .canvas .evsrc{display:none}
-  .evcal{max-width:640px;margin:18px auto 8px;border:1px solid var(--rule);border-radius:6px;background:#f3e8d2;padding:16px 16px 8px;display:none}
-  body[data-theme="ink"] .evcal{background:#332e28;border-color:#6b6152}
-  body[data-theme="midnight"] .evcal{background:#2b2336;border-color:#4d3c6b}
+  .evcal{max-width:680px;margin:22px auto 12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);padding:20px 20px 14px;box-shadow:0 4px 20px rgba(0,0,0,.04);display:none}
+  body[data-theme="ink"] .evcal{background:var(--paper);border-color:var(--rule)}
+  body[data-theme="midnight"] .evcal{background:var(--paper);border-color:var(--rule)}
+  .evcal-nav-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:18px;border-bottom:1px solid var(--rule2);padding-bottom:12px}
+  .evcal-nav-tabs button{padding:7px 18px;font:600 13px "Helvetica Neue",Arial,sans-serif;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:6px;cursor:pointer;transition:all .15s ease}
+  .evcal-nav-tabs button:hover{color:var(--ink);background:rgba(0,0,0,.03)}
+  .evcal-nav-tabs button.active{color:var(--ink);background:var(--paper);border-color:var(--rule);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  body[data-theme="ink"] .evcal-nav-tabs button.active,body[data-theme="midnight"] .evcal-nav-tabs button.active{background:var(--paper2)}
+  .ev-cards-list{display:flex;flex-direction:column;gap:14px;margin:12px 0}
+  .ev-card{display:flex;gap:16px;align-items:flex-start;padding:16px 18px;background:var(--paper);border:1px solid var(--rule2);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.03);text-align:left;transition:transform .15s ease,box-shadow .15s ease}
+  body[data-theme="ink"] .ev-card,body[data-theme="midnight"] .ev-card{background:var(--paper2);border-color:var(--rule)}
+  .ev-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.07);transform:translateY(-1px)}
+  .ev-date-badge{flex:0 0 70px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#2b241d;color:#fbf7ee;border-radius:6px;padding:8px 4px;text-align:center}
+  body[data-theme="ink"] .ev-date-badge,body[data-theme="midnight"] .ev-date-badge{background:var(--paper2);border:1px solid var(--rule);color:var(--ink)}
+  .ev-date-badge .ev-badge-month{font:700 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;color:#e2b84b}
+  .ev-date-badge .ev-badge-day{font:800 24px Georgia,serif;line-height:1.1;margin:2px 0}
+  .ev-date-badge .ev-badge-wd{font:600 10px "Helvetica Neue",Arial,sans-serif;opacity:.85;letter-spacing:.5px}
+  .ev-card-content{flex:1;min-width:0}
+  .ev-card-title{margin:0 0 6px;font:700 17px "Helvetica Neue",Arial,sans-serif;color:var(--ink);line-height:1.3}
+  .ev-card-tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+  .ev-card-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(0,0,0,.04);border-radius:4px;font:600 11.5px "Helvetica Neue",Arial,sans-serif;color:var(--ink2)}
+  body[data-theme="ink"] .ev-card-tag,body[data-theme="midnight"] .ev-card-tag{background:rgba(255,255,255,.07);color:var(--ink)}
+  .ev-card-desc{margin:0 0 10px;font:14px/1.45 Georgia,Times,serif;color:var(--ink2)}
+  .ev-card-actions{margin-top:6px}
+  .ev-card-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--ink);color:var(--paper);border-radius:4px;text-decoration:none;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px}
+  .ev-card-btn:hover{opacity:.88}
+  .ev-empty-card{text-align:center;padding:32px 18px;border:1px dashed var(--rule);border-radius:8px;background:rgba(0,0,0,.015);margin:16px 0}
+  .ev-empty-card h3{font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);margin:0 0 6px}
+  .ev-empty-card p{font:14px Georgia,serif;color:var(--muted);margin:0}
+  .ev-past-drawer{margin:24px 0 8px;border-top:1px solid var(--rule);padding-top:14px;text-align:left}
+  .ev-past-drawer summary{cursor:pointer;font:600 12.5px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin-bottom:10px}
+  @media (max-width:560px){
+    .ev-card{flex-direction:column;gap:12px;padding:12px 14px}
+    .ev-date-badge{flex-direction:row;gap:8px;width:100%;padding:5px 10px;justify-content:flex-start}
+    .ev-date-badge .ev-badge-day{font-size:18px}
+  }
   .evcal .evcal-bar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;justify-content:center}
   .evcal .evcal-bar button{min-height:40px;min-width:40px;padding:6px 10px;font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px;cursor:pointer}
   .evcal .evcal-bar select{min-height:40px;padding:6px 8px;font:600 16px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:2px}
@@ -1678,13 +1711,68 @@ CONTACT_FORM_SCRIPT = (
 CONTACT_FORM_HTML = contact_form_html()
 
 
+def calendar_cards_html(events: list, for_builder: bool = False) -> str:
+    """Render chronological event cards with a collapsible past section."""
+    today = datetime.date.today()
+    upcoming, past = [], []
+    for ev in events:
+        try:
+            date = datetime.date(int(ev.get("y", 1970)), int(ev.get("m", 1)), int(ev.get("d", 1)))
+        except (TypeError, ValueError):
+            continue
+        (upcoming if date >= today else past).append(ev)
+    key = lambda e: (int(e.get("y", 0)), int(e.get("m", 0)), int(e.get("d", 0)))
+    upcoming.sort(key=key)
+    past.sort(key=key, reverse=True)
+
+    def render(ev, is_past=False):
+        badge = (
+            '<div class="ev-date-badge">'
+            f'<span class="ev-badge-month">{html.escape(str(ev.get("ms", "EVENT")))}</span>'
+            f'<span class="ev-badge-day">{int(ev.get("d", 0))}</span>'
+            f'<span class="ev-badge-wd">{html.escape(str(ev.get("wd", "")))}</span></div>'
+        )
+        title = html.escape(str(ev.get("title") or ev.get("label") or "Event"))
+        tags = []
+        if ev.get("times"):
+            tags.append(f'<span class="ev-card-tag">Time: {html.escape(str(ev["times"]))}</span>')
+        if ev.get("venue"):
+            tags.append(f'<span class="ev-card-tag">Venue: {html.escape(str(ev["venue"]))}</span>')
+        tags_html = '<div class="ev-card-tags">' + ''.join(tags) + '</div>' if tags else ''
+        details = str(ev.get("details") or "")
+        if ev.get("link") and ev["link"].get("text"):
+            details = re.sub(re.escape(str(ev["link"]["text"])), '', details, count=1).strip(' .,:;')
+        desc = f'<p class="ev-card-desc">{html.escape(details)}</p>' if details else ''
+        link = ev.get("link") or {}
+        action = ''
+        if link.get("url"):
+            text = str(link.get("text") or "Event details")
+            if text.lower() in ("here", "link"):
+                text = "Event details"
+            action = (f'<div class="ev-card-actions"><a class="ev-card-btn" href="{html.escape(str(link["url"]), quote=True)}" '
+                      f'target="_blank" rel="noopener">{html.escape(text)} &rarr;</a></div>')
+        edit = ''
+        if for_builder:
+            edit = (f'<div class="ev-card-actions"><button type="button" class="ev-edit-btn" '
+                    f'data-ev-edit="{int(ev.get("idx", 0))}">Edit event</button></div>')
+        past_class = ' past-card' if is_past else ''
+        return (f'<article class="ev-card{past_class}" data-ev-idx="{int(ev.get("idx", 0))}">{badge}'
+                f'<div class="ev-card-content"><h3 class="ev-card-title">{title}</h3>{tags_html}{desc}{action}{edit}</div></article>')
+
+    if upcoming:
+        current = '<div class="ev-cards-list">' + ''.join(render(e) for e in upcoming) + '</div>'
+    else:
+        current = ('<div class="ev-empty-card"><h3>No upcoming events scheduled right now</h3>'
+                   '<p>Check back soon for new craft fairs and pop-ups.</p></div>')
+    if past:
+        current += (f'<details class="ev-past-drawer"><summary>Past Events ({len(past)})</summary>'
+                    '<div class="ev-cards-list">' + ''.join(render(e, True) for e in past) + '</div></details>')
+    return current
+
+
 def calendar_static_html(events: list, year: int, month: int,
                          nav: bool = False, cfg: dict | None = None) -> str:
-    """A month grid for the events, rendered on the server.
-
-    The live page draws the same grid with its own script; this static
-    version is what the builder shows in the canvas while the owner edits
-    the events, and it doubles as the no-JS fallback."""
+    """Render cards by default plus an optional month grid for the builder toggle."""
     import calendar as _calendar
     cfg = dict(CAL_DEFAULTS, **(cfg or {}))
     symbol = html.escape(cfg.get("symbol") or "●")
@@ -1703,37 +1791,29 @@ def calendar_static_html(events: list, year: int, month: int,
     cells = ['<span class="ev-day empty"></span>'] * first_dow
     for day in range(1, days + 1):
         mine = by_day.get(day, [])
-        cls = "ev-day"
-        if mine:
-            cls += " ev-set"
-        if (day == today.day and year == today.year and month == today.month):
+        cls = "ev-day" + (" ev-set" if mine else "")
+        if day == today.day and year == today.year and month == today.month:
             cls += " today"
-        tip = " | ".join(ev.get("day", "") + ((" · " + ev["times"]) if ev.get("times") else "")
-                         + " — " + ev.get("label", "") for ev in mine)
+        tip = " | ".join(str(ev.get("day", "")) + (" · " + str(ev["times"]) if ev.get("times") else "") + " — " + str(ev.get("label", "")) for ev in mine)
         attrs = (f' data-cal-day="{year:04d}-{month:02d}-{day:02d}" data-d="{day}"'
-                 f' title="{html.escape(tip, quote=True)}"'
-                 f' aria-label="{html.escape(tip, quote=True)}"')
-        dot = (f'<span class="ev-dot" style="color:{color}">{symbol}</span>'
-               if mine else "")
+                 f' title="{html.escape(tip, quote=True)}" aria-label="{html.escape(tip, quote=True)}"')
+        dot = f'<span class="ev-dot" style="color:{color}">{symbol}</span>' if mine else ""
         cells.append(f'<span class="{cls}"{attrs}>{day}{dot}</span>')
-    bar = ""
+    bar = ''
     if nav:
-        bar = ('<div class="evcal-bar">'
-               '<button type="button" data-cal-prev aria-label="Previous month">&lsaquo;</button>'
+        bar = ('<div class="evcal-bar"><button type="button" data-cal-prev aria-label="Previous month">&lsaquo;</button>'
                f'<span class="evcal-label">{html.escape(month_name)} {year}</span>'
-               '<button type="button" data-cal-next aria-label="Next month">&rsaquo;</button>'
-               "</div>")
-    empty = ('<div class="evcal-empty" hidden>No events found for this month.</div>'
-             if not by_day else "")
-    return (
-        f'<div class="evcal" data-cal-block style="display:block;--ev-mark:{color};--ev-mark-size:{size}px">'
-        f'{bar}'
-        '<div class="evcal-head" aria-hidden="true">'
-        "<span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>"
-        "<span>Thu</span><span>Fri</span><span>Sat</span></div>"
-        f'<div class="evcal-grid">{"".join(cells)}</div>'
-        f'{empty}</div>'
-    )
+               '<button type="button" data-cal-next aria-label="Next month">&rsaquo;</button></div>')
+    empty = '<div class="evcal-empty" hidden>No events found for this month.</div>' if not by_day else ''
+    builder_add = '<div class="ev-builder-actions"><button type="button" id="builderAddEvent" data-cal-add>+ Add Event</button></div>' if nav else ''
+    return (f'<div class="evcal" data-cal-block style="display:block;--ev-mark:{color};--ev-mark-size:{size}px">'
+            f'{builder_add}<div class="evcal-nav-tabs">'
+            '<button type="button" class="ev-tab-btn active" data-cal-tab="cards">Upcoming Events</button>'
+            '<button type="button" class="ev-tab-btn" data-cal-tab="grid">Month Calendar</button></div>'
+            f'<div class="ev-cards-wrap" id="ev-cards-static">{calendar_cards_html(events, for_builder=nav)}</div>'
+            '<div class="ev-cal-wrap" id="ev-cal-wrap-static" hidden>'
+            f'{bar}<div class="evcal-head" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>'
+            f'<div class="evcal-grid">{"".join(cells)}</div>{empty}</div></div>')
 
 
 def page_events(body_html: str) -> list[dict]:
@@ -1892,26 +1972,46 @@ def _parse_list_events(body_html: str) -> list[dict]:
         if hit:
             link = {"url": html.unescape(hit.group(1)),
                     "text": re.sub(r"<[^>]*>", "", hit.group(2)).strip()}
+        clean_desc = text
+        for pat in (_EVENT_SPAN_RE, _EVENT_AT_RE, _EVENT_DATE_RE, _EVENT_YEAR_RE):
+            clean_desc = pat.sub(" ", clean_desc)
+        clean_desc = re.sub(r"\s+", " ", clean_desc)
+        clean_desc = re.sub(r"^[\s,.:;\-–—]+|[\s,.:;\-–—]+$", "", clean_desc)
+        if link and link.get("text"):
+            clean_desc = re.sub(r"\b" + re.escape(link["text"]) + r"\b", "", clean_desc, count=1, flags=re.I)
+            clean_desc = re.sub(r"\s+", " ", clean_desc).strip(" .,:;–—")
+        dot_split = clean_desc.split(". ", 1)
+        headline = dot_split[0].strip()
+        ev_details = dot_split[1].strip() if len(dot_split) > 1 else ""
+        if " · " in headline:
+            hparts = headline.split(" · ", 1)
+            ev_title, ev_venue = hparts[0].strip(), hparts[1].strip()
+        elif " — " in headline:
+            hparts = headline.split(" — ", 1)
+            ev_title, ev_venue = hparts[0].strip(), hparts[1].strip()
+        elif ", " in headline:
+            hparts = headline.split(", ", 1)
+            ev_title, ev_venue = hparts[0].strip(), hparts[1].strip()
+        else:
+            ev_title, ev_venue = headline, ""
+
         events.append({
             "y": stamp.year, "m": stamp.month, "d": stamp.day,
             "wd": _WEEKDAYS[stamp.weekday()],
             "ms": _MONTH_SHORT[stamp.month - 1],
             "key": f"{stamp.month}/{stamp.day}",
-            # which paragraph the event came from (index among the page's
-            # <p>/<li> blocks) so an editor can rewrite that one entry
             "idx": i,
-            # the paragraph's own markup, so a link inside it survives an edit
             "html": frag,
-            # search runs on the full untruncated text; label is display-only
             "match": stamp.strftime("%B %d, %Y ") + text,
-            # the whole line, for the day detail that opens on a click
             "full": text,
-            # a link inside the line, if there is one
             "link": link,
             "times": (f"{unit1} – {unit2}" if unit1 and unit2
                       else single if single else ""),
             "day": f"{_WEEKDAYS[stamp.weekday()]}, {_MONTH_SHORT[stamp.month - 1]} {stamp.day}, {stamp.year}",
             "label": label,
+            "title": ev_title,
+            "venue": ev_venue,
+            "details": ev_details,
         })
         if len(events) >= 80:
             break
@@ -1962,161 +2062,73 @@ def load_calendar_config(data_dir) -> dict:
 
 EVENTS_CALENDAR_MARKUP = (
     '<div class="evcal" id="evcal">'
+    '<div class="evcal-nav-tabs" role="tablist" aria-label="Events view">'
+    '<button type="button" class="ev-tab-btn active" data-cal-tab="cards" role="tab" aria-selected="true">Upcoming Events</button>'
+    '<button type="button" class="ev-tab-btn" data-cal-tab="grid" role="tab" aria-selected="false">Month Calendar</button>'
+    '</div>'
+    '<div class="ev-cards-wrap" id="ev-cards"></div>'
+    '<div class="ev-cal-wrap" id="ev-cal-wrap" hidden>'
     '<div class="evcal-bar">'
     '<button type="button" id="ev-prev" aria-label="Previous month">&lsaquo;</button>'
     '<select id="ev-month" aria-label="Month"></select>'
     '<select id="ev-year" aria-label="Year"></select>'
     '<button type="button" id="ev-next" aria-label="Next month">&rsaquo;</button>'
-    '<input type="text" id="ev-search" class="ev-search" '
-    'placeholder="Search events by name or date" aria-label="Search events">'
+    '<input type="text" id="ev-search" class="ev-search" placeholder="Search events by name or date" aria-label="Search events">'
     '<button type="button" id="ev-reset" class="ev-reset" hidden>Show all</button>'
-    "</div>"
-    '<div class="evcal-head" aria-hidden="true">'
-    "<span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>"
-    "<span>Thu</span><span>Fri</span><span>Sat</span>"
-    "</div>"
+    '</div>'
+    '<div class="evcal-head" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>'
     '<div class="evcal-grid" id="ev-grid"></div>'
     '<div class="evcal-empty" id="ev-empty" hidden>No events found for this month.</div>'
     '<div class="ev-detail" id="ev-detail" hidden></div>'
-    "</div>"
+    '</div></div>'
 )
 
 
 def place_calendar(body_html: str, cfg: dict | None = None) -> tuple[str, str]:
-    """Swap an `[event calendar]` marker paragraph for the month calendar.
-
-    The calendar is generated from the dated items already on the page — the
-    list itself is untouched and still rendered keeps right below it. Returns
-    (page_body, extra_script): extra_script is '' with no marker."""
+    """Swap the event marker for the agenda/cards view and a compact calendar toggle."""
     import json as _json
     cfg = dict(CAL_DEFAULTS, **(cfg or {}))
     events = _parse_list_events(body_html)
-    marker_re = re.compile(r"<(?:p|li)[^>]*>\s*\[event calendar\]\s*</(?:p|li)>",
-                           flags=re.IGNORECASE)
+    marker_re = re.compile(r"<(?:p|li)[^>]*>\s*\[event calendar\]\s*</(?:p|li)>", re.I)
     if not marker_re.search(body_html):
         return body_html, ""
-    # the source index and markup are for the editor only — the published
-    # page does not need them
     data = _json.dumps([{k: v for k, v in ev.items() if k not in ("idx", "html")}
                         for ev in events], ensure_ascii=True).replace("</", "<\\/")
-    script = ('<script>/* events calendar: derived from the list on this '
-              'page; the list stays the source of truth */(function(){'
-              'var EV=' + data + ";"
-              'var MARK=' + json.dumps(cfg.get("symbol") or "●") + ',' +
-              'MARKCOLOR=' + json.dumps(cfg.get("color") or "#1a7f37") + ';'
-              'MARKSIZE=' + json.dumps(str(int(cfg.get("size") or 17))) + ';'
-              'var cal=document.getElementById("evcal");if(!cal)return;'
-              'cal.style.display="block";'
-              'cal.style.setProperty("--ev-mark",MARKCOLOR);'
-              'cal.style.setProperty("--ev-mark-size",MARKSIZE+"px");'
-              'var grid=document.getElementById("ev-grid"),'
-              'monthSel=document.getElementById("ev-month"),'
-              'yearSel=document.getElementById("ev-year"),'
-              'empty=document.getElementById("ev-empty"),'
-              'detail=document.getElementById("ev-detail"),'
-              'search=document.getElementById("ev-search"),'
-              'reset=document.getElementById("ev-reset");'
-              'var months=["January","February","March","April","May","June",'
-              '"July","August","September","October","November","December"];'
-              'var t0=new Date(),ty=t0.getFullYear();'
-              'var ys={};var ymin=ty-1,ymax=ty+5;'
-              'for(var i=0;i<EV.length;i++){var y=EV[i].y;if(y<ymin)ymin=y;if(y>ymax)ymax=y;}'
-              'for(var y=ymin;y<=ymax;y++)ys[y]=1;'
-              'var yyears=[];for(var k in ys)yyears.push(+k);yyears.sort(function(a,b){return a-b;});'
-              'months.forEach(function(m,i){var o=document.createElement("option");o.value=i+1;o.textContent=m;monthSel.appendChild(o);});'
-              'yyears.forEach(function(y){var o=document.createElement("option");o.value=y;o.textContent=y;yearSel.appendChild(o);});'
-              'var cm=t0.getMonth()+1, cy=ty; '
-              'var near=null,nf=null,nk=null,tk=t0.getFullYear()*10000+(t0.getMonth()+1)*100+t0.getDate();'
-              'for(var i=0;i<EV.length;i++){var ek=EV[i].y*10000+EV[i].m*100+EV[i].d;'
-              'if(!nk||ek<nk)nk=ek,near=EV[i];'
-              'if(ek>=tk&&(!nf||ek<nf))nf=ek,near=EV[i];}'
-              'if(near){cm=near.m;cy=near.y;}'
-              'monthSel.value=cm; yearSel.value=cy;'
-              'function q(){return (search.value||"").trim().toLowerCase();}'
-              'function evOn(ev){var s=q();if(!s)return true;'
-              'return (ev.match.toLowerCase().indexOf(s)>=0);}'
-              'function render(){'
-              'var y=cy, mo=cm;'
-              'var first=new Date(y,mo-1,1), days=new Date(y,mo,0).getDate(), dow=first.getDay();'
-              'grid.innerHTML="";'
-              'for(var i=0;i<dow;i++){var blank=document.createElement("span");blank.className="ev-day empty";grid.appendChild(blank);}'
-              'var nOn=0;'
-              # clicking a day opens its events; clicking it again closes them
-              'var openDay=0;'
-              'function closeDay(){if(!detail)return;detail.hidden=true;detail.innerHTML="";openDay=0;'
-              'var cs=grid.querySelectorAll(".ev-open");for(var i=0;i<cs.length;i++)cs[i].classList.remove("ev-open");}'
-              'function openDayFor(d){if(!detail)return;var mine=[];'
-              'for(var i=0;i<EV.length;i++){var e=EV[i];if(e.y===cy&&e.m===cm&&e.d===d)mine.push(e);}'
-              'if(!mine.length)return;'
-              'detail.innerHTML="";'
-              'var head=document.createElement("p");head.className="ev-detail-head";'
-              'try{head.textContent=new Date(cy,cm-1,d).toLocaleDateString("en-US",'
-              '{weekday:"long",month:"long",day:"numeric",year:"numeric"});}catch(_){head.textContent="";}'
-              'detail.appendChild(head);'
-              'for(var k=0;k<mine.length;k++){var ev=mine[k];'
-              'var item=document.createElement("p");item.className="ev-detail-item";'
-              'if(ev.times){var tm=document.createElement("span");tm.className="ev-detail-time";tm.textContent=ev.times;item.appendChild(tm);}'
-              'var txt=ev.full||ev.label||"";'
-              'if(ev.link&&ev.link.url&&ev.link.text){'
-              'var li=txt.lastIndexOf(ev.link.text);'
-              'if(li>=0){item.appendChild(document.createTextNode(txt.slice(0,li)));'
-              'var a=document.createElement("a");a.href=ev.link.url;a.textContent=ev.link.text;'
-              'a.target="_blank";a.rel="noopener";item.appendChild(a);'
-              'item.appendChild(document.createTextNode(txt.slice(li+ev.link.text.length)));}'
-              'else{item.appendChild(document.createTextNode(txt));}}'
-              'else{item.appendChild(document.createTextNode(txt));}'
-              'detail.appendChild(item);}'
-              'detail.hidden=false;'
-              'var cs=grid.querySelectorAll(".ev-day");'
-              'for(var i=0;i<cs.length;i++){if(cs[i].getAttribute("data-d")==String(d))cs[i].classList.add("ev-open");}'
-              'openDay=d;}'
-              'grid.addEventListener("click",function(e){'
-              'var cell=(e.target.closest)?e.target.closest(".ev-day"):null;if(!cell)return;'
-              'var dd=cell.getAttribute("data-d");if(!dd)return;var d=+dd;'
-              'if(openDay===d){closeDay();return;}closeDay();openDayFor(d);});'
-              'for(var d=1;d<=days;d++){(function(d){'
-              'var mine=[];for(var i=0;i<EV.length;i++){var e=EV[i];if(e.y===y&&e.m===mo&&e.d===d&&evOn(e))mine.push(e);}'
-              'var cell=document.createElement("span");cell.className="ev-day";cell.textContent=d;'
-              'if(d===new Date().getDate()&&y===new Date().getFullYear()&&mo===new Date().getMonth()+1)cell.classList.add("today");'
-              'if(mine.length){nOn++;cell.classList.add("ev-set");'
-              'var dot=document.createElement("span");dot.className="ev-dot";dot.textContent=MARK;dot.style.color=MARKCOLOR;dot.style.fontSize=MARKSIZE+"px";cell.appendChild(dot);'
-              'var tip=[];for(var j=0;j<mine.length;j++)tip.push(mine[j].day+(mine[j].times?" · "+mine[j].times:"")+" — "+mine[j].label);'
-              'cell.setAttribute("role","img");'
-              'cell.setAttribute("aria-label",tip.join(" | "));'
-              'cell.setAttribute("data-d",d);'
-              'cell.style.display="";}'
-              'else{cell.style.display=q()?"none":"";}'
-              'grid.appendChild(cell);})(d);}'
-              'empty.hidden=!!nOn;'
-              'empty.textContent=q()?"No events match your search.":"No events found for this month.";'
-              'closeDay();'
-              '}'
-              'function setSearch(){var s=q();reset.hidden=!s;'
-              'if(s){var first=null;'
-              'for(var i=0;i<EV.length;i++){var e=EV[i];if(evOn(e)){if(first===null||e.y*10000+e.m*100+e.d<first.y*10000+first.m*100+first.d)first=e;}}'
-              'if(first){cm=first.m;cy=first.y;}}'
-              'monthSel.value=cm;yearSel.value=cy;render();}'
-              'function syncSel(){var o=[];'
-              'for(var i=0;i<yearSel.options.length;i++)o.push(+yearSel.options[i].value);'
-              'if(o.indexOf(+cy)<0){var no=document.createElement("option");no.value=cy;no.textContent=cy;yearSel.appendChild(no);}'
-              'yearSel.value=cy;monthSel.value=cm;}'
-              'monthSel.addEventListener("change",function(){cm=+monthSel.value;render();});'
-              'yearSel.addEventListener("change",function(){cy=+yearSel.value;render();});'
-              'document.getElementById("ev-prev").addEventListener("click",function(){cm--;if(cm<1){cm=12;cy--;}syncSel();render();});'
-              'document.getElementById("ev-next").addEventListener("click",function(){cm++;if(cm>12){cm=1;cy++;}syncSel();render();});'
-              'search.addEventListener("input",setSearch);'
-              'reset.addEventListener("click",function(){search.value="";setSearch();});'
-              'render();})();</script>'
-    )
-    placed = [""]
-    state = {"n": 0}
-    def _swap(_m):
-        if state["n"] == 0:
-            state["n"] += 1
-            return EVENTS_CALENDAR_MARKUP
-        return ""
-    body_new = marker_re.sub(_swap, body_html)
-    return body_new, script
+    script = r"""<script>(function(){
+var EV=__EVENTS__,cal=document.getElementById("evcal");if(!cal)return;
+var MARK=__MARK__,MARKCOLOR=__COLOR__,MARKSIZE=__SIZE__;
+cal.style.display="block";cal.style.setProperty("--ev-mark",MARKCOLOR);cal.style.setProperty("--ev-mark-size",MARKSIZE+"px");
+var cards=document.getElementById("ev-cards"),grid=document.getElementById("ev-grid"),monthSel=document.getElementById("ev-month"),yearSel=document.getElementById("ev-year"),empty=document.getElementById("ev-empty"),detail=document.getElementById("ev-detail"),search=document.getElementById("ev-search"),reset=document.getElementById("ev-reset"),calWrap=document.getElementById("ev-cal-wrap");
+var months=["January","February","March","April","May","June","July","August","September","October","November","December"],today=new Date(),ty=today.getFullYear(),cm=today.getMonth()+1,cy=ty;
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function dateKey(e){return e.y*10000+e.m*100+e.d;}
+function renderCards(){var now=today.getFullYear()*10000+(today.getMonth()+1)*100+today.getDate(),up=[],past=[];EV.forEach(function(e){(dateKey(e)>=now?up:past).push(e);});up.sort(function(a,b){return dateKey(a)-dateKey(b);});past.sort(function(a,b){return dateKey(b)-dateKey(a);});
+function card(e,isPast){var title=esc(e.title||e.label||"Event"),tags="";if(e.times)tags+='<span class="ev-card-tag">Time: '+esc(e.times)+'</span>';if(e.venue)tags+='<span class="ev-card-tag">Venue: '+esc(e.venue)+'</span>';var desc=e.details?'<p class="ev-card-desc">'+esc(e.details)+'</p>':'';var action="";if(e.link&&e.link.url){var txt=e.link.text||"Event details";if(/^(here|link)$/i.test(txt))txt="Event details";action='<div class="ev-card-actions"><a class="ev-card-btn" href="'+esc(e.link.url)+'" target="_blank" rel="noopener">'+esc(txt)+' &rarr;</a></div>';}
+return '<article class="ev-card'+(isPast?' past-card':'')+'"><div class="ev-date-badge"><span class="ev-badge-month">'+esc(e.ms)+'</span><span class="ev-badge-day">'+esc(e.d)+'</span><span class="ev-badge-wd">'+esc(e.wd)+'</span></div><div class="ev-card-content"><h3 class="ev-card-title">'+title+'</h3>'+(tags?'<div class="ev-card-tags">'+tags+'</div>':'')+desc+action+'</div></article>';}
+var output=up.length?'<div class="ev-cards-list">'+up.map(function(e){return card(e,false);}).join("")+'</div>':'<div class="ev-empty-card"><h3>No upcoming events scheduled right now</h3><p>Check back soon for new craft fairs and pop-ups.</p></div>';
+if(past.length)output+='<details class="ev-past-drawer"><summary>Past Events ('+past.length+')</summary><div class="ev-cards-list">'+past.map(function(e){return card(e,true);}).join("")+'</div></details>';cards.innerHTML=output;}
+var ys={};var ymin=ty-1,ymax=ty+5;EV.forEach(function(e){if(e.y<ymin)ymin=e.y;if(e.y>ymax)ymax=e.y;});for(var y=ymin;y<=ymax;y++)ys[y]=1;Object.keys(ys).map(Number).sort(function(a,b){return a-b;}).forEach(function(y){var o=document.createElement("option");o.value=y;o.textContent=y;yearSel.appendChild(o);});months.forEach(function(m,i){var o=document.createElement("option");o.value=i+1;o.textContent=m;monthSel.appendChild(o);});
+var near=null,tk=ty*10000+(today.getMonth()+1)*100+today.getDate();EV.forEach(function(e){if(dateKey(e)>=tk&&(!near||dateKey(e)<dateKey(near)))near=e;});if(near){cm=near.m;cy=near.y;}monthSel.value=cm;yearSel.value=cy;
+function q(){return(search.value||"").trim().toLowerCase();}function evOn(e){return !q()||String(e.match||e.label||"").toLowerCase().indexOf(q())>=0;}
+function closeDay(){detail.hidden=true;detail.innerHTML="";grid.querySelectorAll(".ev-open").forEach(function(n){n.classList.remove("ev-open");});}
+function openDay(d){var mine=EV.filter(function(e){return e.y===cy&&e.m===cm&&e.d===d;});if(!mine.length)return;detail.innerHTML="";var head=document.createElement("p");head.className="ev-detail-head";head.textContent=new Date(cy,cm-1,d).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});detail.appendChild(head);mine.forEach(function(e){var item=document.createElement("p");item.className="ev-detail-item";if(e.times){var t=document.createElement("span");t.className="ev-detail-time";t.textContent=e.times;item.appendChild(t);}item.appendChild(document.createTextNode(e.full||e.label||""));detail.appendChild(item);});detail.hidden=false;grid.querySelectorAll(".ev-day").forEach(function(n){if(n.getAttribute("data-d")==String(d))n.classList.add("ev-open");});}
+function renderGrid(){var y=cy,mo=cm,first=new Date(y,mo-1,1),days=new Date(y,mo,0).getDate(),dow=first.getDay();grid.innerHTML="";for(var i=0;i<dow;i++){var blank=document.createElement("span");blank.className="ev-day empty";grid.appendChild(blank);}var count=0;for(var d=1;d<=days;d++){var mine=EV.filter(function(e){return e.y===y&&e.m===mo&&e.d===d&&evOn(e);}),cell=document.createElement("button");cell.type="button";cell.className="ev-day";cell.textContent=d;cell.setAttribute("data-d",d);if(d===today.getDate()&&y===ty&&mo===today.getMonth()+1)cell.classList.add("today");if(mine.length){count++;cell.classList.add("ev-set");var dot=document.createElement("span");dot.className="ev-dot";dot.textContent=MARK;cell.appendChild(dot);cell.setAttribute("aria-label",mine.map(function(e){return e.day+" — "+e.label;}).join(" | "));}else if(q()){cell.hidden=true;}grid.appendChild(cell);}empty.hidden=!!count;empty.textContent=q()?"No events match your search.":"No events found for this month.";closeDay();}
+renderCards();renderGrid();
+cal.addEventListener("click",function(e){var tab=e.target.closest("[data-cal-tab]");if(tab){cal.querySelectorAll("[data-cal-tab]").forEach(function(b){b.classList.toggle("active",b===tab);b.setAttribute("aria-selected",b===tab?"true":"false");});var gridMode=tab.getAttribute("data-cal-tab")==="grid";calWrap.hidden=!gridMode;cards.hidden=gridMode;return;}var day=e.target.closest("[data-d]");if(day){var d=+day.getAttribute("data-d");if(day.classList.contains("ev-open"))closeDay();else{closeDay();openDay(d);}}});
+function sync(){monthSel.value=cm;var found=false;for(var i=0;i<yearSel.options.length;i++)if(+yearSel.options[i].value===cy)found=true;if(!found){var o=document.createElement("option");o.value=cy;o.textContent=cy;yearSel.appendChild(o);}yearSel.value=cy;}
+monthSel.addEventListener("change",function(){cm=+monthSel.value;renderGrid();});yearSel.addEventListener("change",function(){cy=+yearSel.value;renderGrid();});document.getElementById("ev-prev").addEventListener("click",function(){if(--cm<1){cm=12;cy--;}sync();renderGrid();});document.getElementById("ev-next").addEventListener("click",function(){if(++cm>12){cm=1;cy++;}sync();renderGrid();});search.addEventListener("input",function(){var s=q();reset.hidden=!s;if(s){var first=null;EV.forEach(function(e){if(evOn(e)&&(!first||dateKey(e)<dateKey(first)))first=e;});if(first){cm=first.m;cy=first.y;sync();}}renderGrid();});reset.addEventListener("click",function(){search.value="";reset.hidden=true;renderGrid();});
+})();</script>"""
+    script = (script.replace('__EVENTS__', data)
+              .replace('__MARK__', json.dumps(cfg.get('symbol') or '●'))
+              .replace('__COLOR__', json.dumps(cfg.get('color') or '#1a7f37'))
+              .replace('__SIZE__', str(int(cfg.get('size') or 17))))
+    placed = [0]
+    def replace(_m):
+        if placed[0]:
+            return ''
+        placed[0] = 1
+        return EVENTS_CALENDAR_MARKUP
+    return marker_re.sub(replace, body_html), script
 
 
 def badge_slug(pages, name):
@@ -3186,8 +3198,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
                    "the calendar marker never leaks onto the public page")
             expect(".evcal-empty[hidden]" in evc and ".evcal .evcal-bar button[hidden]" in evc,
                    "calendar hidden/empty states obey the hidden attribute")
-            expect("t0.getFullYear()*10000+(t0.getMonth()+1)*100+t0.getDate()" in evc,
-                   "calendar search matches by name, date and month")
+            expect('data-cal-tab="cards"' in evc and 'No upcoming events scheduled right now' in evc,
+                   "events page defaults to a useful agenda with an empty state")
             expect('"match"' in evc and "ymin=ty-1,ymax=ty+5" in evc,
                    "search runs on the full untruncated text; year list covers every event year")
             expect(".canvas .evsrc{display:none}" in evc,
