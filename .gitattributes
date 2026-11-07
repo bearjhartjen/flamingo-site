@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------------------
+# How this repo is built: a stdlib-only Python program, not a static export.
+#
+#   - Code (primary): edit.py (the builder/editor server) + scripts/*.py
+#     (build.py renders the site; flank ledger tooling in scripts/).
+#   - Source content: data/pages/*.html — the pages the builder renders
+#     FROM, edited via the builder. Real authored HTML, counted as HTML.
+#   - Generated output: site/** — the built, deployed static site. Without
+#     the generated flag below, the repo reads as an HTML project even
+#     though every site/*.html is Python output.
+#   - Backup snapshots: old copies of edit.py/build.py (never source).
+#
+# GitHub's Linguist only re-reads this file when it is committed, so the
+# language chart updates after the next commit+push.
+# ---------------------------------------------------------------------------
+
+# --- Code: the builder itself ---
+*.py linguist-language=Python
+*.sh linguist-language=Shell
+
+# --- Source content ---
+# data/pages/*.html is the editable source of truth, so it needs no
+# override: HTML by extension, counted as HTML. (Markdown, JSON and YAML
+# are data/prose and out of the language stats by default.)
+
+# --- Generated output: the deployed static site ---
+site/** linguist-generated=true
+
+# --- Stale backup snapshots of the builder code ---
+.fix-form-backup/** linguist-generated=true
+.flamingo-events-backup-*/** linguist-generated=true
