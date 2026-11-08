@@ -1059,8 +1059,10 @@ CSS = r'''  :root{
   body[data-theme="ink"] .ev-card-tag,body[data-theme="midnight"] .ev-card-tag{background:rgba(255,255,255,.07);color:var(--ink)}
   .ev-card-desc{margin:0 0 10px;font:14px/1.45 Georgia,Times,serif;color:var(--ink2)}
   .ev-card-actions{margin-top:6px}
-  .ev-card-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--ink);color:var(--paper);border-radius:4px;text-decoration:none;font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px}
-  .ev-card-btn:hover{opacity:.88}
+  .canvas a.ev-card-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;margin-top:10px;background:var(--ink);color:var(--paper)!important;border:2px solid var(--ink);border-radius:6px;text-decoration:none;font:700 14px/1.2 "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .canvas a.ev-card-btn:hover{opacity:.9;text-decoration:none;color:var(--paper)!important}
+  .canvas a.ev-card-btn:visited{color:var(--paper)!important}
+  .canvas a.ev-card-btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   .ev-empty-card{text-align:center;padding:32px 18px;border:1px dashed var(--rule);border-radius:8px;background:rgba(0,0,0,.015);margin:16px 0}
   .ev-empty-card h3{font:700 16px "Helvetica Neue",Arial,sans-serif;color:var(--ink);margin:0 0 6px}
   .ev-empty-card p{font:14px Georgia,serif;color:var(--muted);margin:0}

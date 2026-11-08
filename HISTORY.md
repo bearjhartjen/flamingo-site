@@ -448,3 +448,53 @@ What changed:
 Underlying behaviour is unchanged in spirit: pure static output, local-
 only editor, GitKraken + pre-commit for the rest. The builder is still
 one stdlib Python file.
+
+## Editor overhaul — every fix in one pass (November 2026)
+
+The builder had grown one fix at a time and it showed: the toolbar hid
+until you pressed Edit, the comic star floated over the page title, save
+failures were a single quiet line, and there was no way to see the built
+page without a new tab. This pass spent all of it down at once, in the
+house dark-brown chrome, with no change to the frozen parts (the page
+cleaner, the loopback guard, the comic star lock, the single FormInit
+send).
+
+- **The toolbar is always there.** It no longer waits for Edit mode.
+  Touching a toolbar button in viewing mode turns editing on for you.
+- **The star and the plate are gone from the editor canvas.** The sidebar
+  already jumps to those hidden pages with its star and diamond markers.
+  Floating them over the canvas buried the site title every time.
+- **Every notice has a home now.** The dark status line is a pill that
+  changes colour (amber for unsaved, green for saved, red for failed),
+  and important messages also land as toasts in the corner with a retry
+  button when a save fails. Your draft is kept either way.
+- **Version history.** Each save keeps a snapshot of the page (twenty
+  deep). The History button lists them with times; restoring one makes
+  an unsaved edit you review before the next save.
+- **Command menu (Ctrl+K) and find & replace (Ctrl+H).** The palette
+  jumps to pages, runs the toolbar tools, and opens the block menu when
+  you press `/` at the start of an empty line. Find highlights matches
+  on the page, counts them, and can replace one or all — it never
+  touches links, the contact form, or the calendar.
+- **Drag to reorder.** Hovering a block shows its three-dot handle in
+  the left margin. Drag it to slide the block elsewhere. The arrow keys
+  with Alt and the little arrow bar still do the same job.
+- **Split preview.** Split puts the live built page beside the canvas,
+  so the cleaner output is visible where you work instead of in a new
+  tab. The device frame still applies.
+- **Pre-publish checks.** Checks reads the canvas for missing image alt
+  text, broken internal links, unsafe link schemes, and content that
+  overflows its frame. It advises only — Save is never blocked. Clicking
+  a warning jumps to the offending block and flashes it.
+- **Build check button.** Run build check does exactly what CI does
+  (`scripts/build.py --check`) and shows the log in a dialog. The health
+  pill in the top bar carries the result between runs.
+- **Page search, word count, and alt warnings** sit in the sidebar, with
+  unsaved dots on every page that holds a draft, not just the open one.
+- **Keyboard.** `?` opens help, Esc unwinds dialogs in order, Tab stays
+  trapped inside an open dialog, and the tab title gains a dot while
+  this page holds unsaved work.
+- **Images.** Dropping a picture anywhere on the editor now shows a
+  "drop to insert" veil, accepts up to three at once, selects the first
+  one, and puts its alt-text box in reach, so the check list stays
+  honest.

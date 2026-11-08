@@ -168,6 +168,7 @@ EDITOR_CSS = site_build.CSS + r'''
     display:flex;align-items:center;gap:3px;border-radius:3px;padding:4px 5px;min-height:34px;
   }
   #side li.cur{background:#2c2c2c}
+  #side li.unsaved .nm::after{content:"  ●";color:#e2b84b;font-size:10px}
   #side li.cur.unsaved .nm::after{content:"  ●";color:#e2b84b;font-size:10px}
   #side li .nm{flex:1;min-width:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #side li.cur .nm{font-weight:700}
@@ -214,25 +215,37 @@ EDITOR_CSS = site_build.CSS + r'''
   .editbar{
     position:sticky;top:0;z-index:50;background:#141414;color:#fff;
     font:13px "Helvetica Neue",Arial,sans-serif;
-    display:flex;gap:10px;align-items:center;padding:9px 14px;
+    display:flex;gap:8px;align-items:center;padding:9px 14px;flex-wrap:wrap;
   }
   .editbar .spacer{flex:1}
   .editbar button{
     font:12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;
     background:#fff;color:#141414;border:1px solid #fff;border-radius:2px;
-    padding:6px 12px;cursor:pointer;
+    padding:6px 12px;cursor:pointer;white-space:nowrap;
   }
   .editbar button.warn{background:#141414;color:#fff;border-color:#fff}
   .editbar button:disabled{opacity:.45;cursor:default}
   .editbar a{color:#fff}
   .editbar a.barlink{display:inline-block;padding:6px 10px;border:1px solid #666;border-radius:2px;color:#fff;text-decoration:none;font:12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;text-transform:uppercase}
   .editbar a.barlink:hover{background:#333}
-  .editbar .status{color:#bbb;font-size:12.5px}
+  .editbar .status{color:#bbb;font-size:12.5px;border-radius:99px;padding:4px 12px;border:1px solid transparent;white-space:nowrap;max-width:26ch;overflow:hidden;text-overflow:ellipsis}
+  .editbar .status.st-view{color:#b8ab88}
+  .editbar .status.st-edit{color:#f3ecda;border-color:#4a4130;background:#2b241d}
+  .editbar .status.st-dirty{color:#1f1a14;background:#e2b84b;border-color:#e2b84b;font-weight:700}
+  .editbar .status.st-saving{color:#f3ecda;border-color:#4a4130;background:#2b241d;animation:statuspulse 1s ease-in-out infinite}
+  .editbar .status.st-saved{color:#dff3e3;border-color:#2f6f4a;background:#243328}
+  .editbar .status.st-error{color:#ffe1de;border-color:#8a4a44;background:#3a2624}
+  @keyframes statuspulse{0%,100%{opacity:1}50%{opacity:.55}}
   .editbar .devsel{
     font:12px "Helvetica Neue",Arial,sans-serif;background:#222;color:#eee;
     border:1px solid #555;border-radius:2px;padding:5px 8px;cursor:pointer;
   }
   .editbar .devsel:focus{outline:1px solid #9db8ff}
+  .editbar .health{display:inline-flex;align-items:center;gap:6px;cursor:pointer;background:#222;border:1px solid #555;border-radius:99px;padding:5px 10px;font:11px "Helvetica Neue",Arial,sans-serif;color:#ccc;text-transform:none;letter-spacing:.2px}
+  .editbar .health:hover{color:#fff;border-color:#c9a227}
+  .editbar .health .dot{width:8px;height:8px;border-radius:50%;background:#2f6f4a;flex:0 0 auto}
+  .editbar .health.warn .dot{background:#e2b84b}
+  .editbar .health.err .dot{background:#b3261e}
   /* Device preview frames — pro WYSIWYG for mobile while editing */
   #main.device-tablet,
   #main.device-phone{
@@ -256,27 +269,24 @@ EDITOR_CSS = site_build.CSS + r'''
     max-width:390px;margin-left:auto;margin-right:auto;
   }
   .toolbar{
-    display:none;gap:6px;align-items:center;flex-wrap:wrap;
+    display:flex;gap:6px;align-items:center;flex-wrap:wrap;
     background:#f2f0eb;border-bottom:1px solid var(--rule);
-    padding:8px 14px;position:sticky;top:39px;z-index:40;
+    padding:8px 14px;position:sticky;top:44px;z-index:40;
     font:12px "Helvetica Neue",Arial,sans-serif;
   }
+  .toolbar .tool-input{display:flex;align-items:center;gap:4px;font:10px "Helvetica Neue",Arial,sans-serif;color:#555;white-space:nowrap}
+  .toolbar .tool-input input{display:block}
   .toolgroup{display:flex;align-items:center;gap:5px;border-right:1px solid #d3d0c8;padding:0 8px 0 0;margin-right:2px}
   .toolgroup:last-child{border-right:0}
   .toolgroup .groupname{font:10px "Helvetica Neue",Arial,sans-serif;color:#666;text-transform:uppercase;letter-spacing:.8px;margin-right:2px;white-space:nowrap}
-  .toolbar .tool-input{display:flex;align-items:center;gap:4px;font:10px "Helvetica Neue",Arial,sans-serif;color:#555;white-space:nowrap}
-  .toolbar .tool-input input{display:block}
-  .editing .toolbar{display:flex}
   .toolbar button{
     background:#fff;border:1px solid #999;border-radius:2px;
     padding:4px 10px;cursor:pointer;font-size:12px;
   }
   .toolbar button:hover{background:#141414;color:#fff;border-color:#141414}
   .toolbar button:disabled{opacity:.4;cursor:default}
-  .toolbar button.swatch{
-    width:16px;height:16px;padding:0;box-sizing:border-box;border:1px solid #777;
-  }
-  .toolbar button.swatch:hover{border-color:#141414;box-shadow:0 0 0 1px #141414}
+  .toolbar .swatch{width:16px;height:16px;padding:0;box-sizing:border-box;border:1px solid #777}
+  .toolbar .swatch:hover{border-color:#141414;box-shadow:0 0 0 1px #141414}
   .toolbar #sizeNum{
     width:58px;text-align:center;font-weight:700;font-size:12px;color:#141414;
     background:#fff;border:1px solid #999;border-radius:2px;padding:3px 4px;
@@ -300,12 +310,56 @@ EDITOR_CSS = site_build.CSS + r'''
     background:#fff;border:1px solid #999;border-radius:2px;padding:4px 2px;
   }
   .toolbar #fontSel:focus{border-color:#1c4fd8;outline:1px solid #1c4fd8}
-  /* the live-site star would sit under the dark page list: shift it right */
-  /* the badges belong to the page, not to the toolbar: keep them clear
-     of the sticky toolbar and under its z-index so its buttons work */
-  .star-badge{left:300px;top:360px;z-index:5;}
-  .gem-badge{z-index:5;}
-  .gem-badge{top:120px;}
+  /* Editor badges: the live site positions these absolutely for visual
+     flair. In the editor they must never cover the canvas or the toolbar —
+     pin them to the page's top corners with a small offset and low z-index,
+     and never intercept edits. The JS near the star badges still finds
+     their links by id, so behaviour is unchanged. */
+  #app .page{position:relative}
+  /* Editor badges: hidden entirely — the sidebar already navigates via the
+     ★/◇ markers. Floating them over the canvas here only buried the title. */
+  #app .star-badge,#app .gem-badge{display:none}
+  /* Toasts: every notice that used to vanish into #status now has a
+     persistent home. aria-live only — toasts never steal focus. */
+  #toasts{position:fixed;right:16px;bottom:16px;z-index:500;display:flex;flex-direction:column;gap:8px;max-width:min(380px,90vw)}
+  .toast{background:#2b241d;color:#f3ecda;border:1px solid #4a4130;border-left:4px solid #c9a227;border-radius:8px;padding:10px 14px;font:13px/1.45 "Helvetica Neue",Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.35);display:flex;gap:10px;align-items:flex-start}
+  .toast.success{border-left-color:#2f9e5f}
+  .toast.warn{border-left-color:#e2b84b}
+  .toast.error{border-left-color:#b3261e;background:#3a2624}
+  .toast button{flex:0 0 auto;background:#f3ecda;color:#1f1a14;border:0;border-radius:6px;padding:4px 10px;font:700 11px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
+  .toast .toast-x{background:none;border:0;color:#b8ab88;padding:0 2px;font-size:14px}
+  /* Split preview: editing canvas left, live-built page right. */
+  #splitwrap{display:flex;align-items:stretch;gap:0}
+  #splitwrap.split-on #canvas{flex:1 1 auto;min-width:0}
+  #previewpane{flex:0 0 42%;min-width:300px;border-left:2px solid #4a4130;background:#fff;display:none;flex-direction:column}
+  #previewpane.on{display:flex}
+  #previewpane .pp-head{display:flex;align-items:center;gap:8px;background:#2b241d;color:#f3ecda;padding:8px 12px;font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:1px;text-transform:uppercase}
+  #previewpane iframe{flex:1;border:0;width:100%;min-height:60vh;background:#fff}
+  #previewpane .pp-reload{margin-left:auto;background:#f3ecda;color:#1f1a14;border:0;border-radius:6px;padding:4px 10px;font:700 11px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
+  /* Command palette + find bar + checks list */
+  .cmdk{background:#fff;color:#141414;border-radius:10px;width:560px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;font:13px "Helvetica Neue",Arial,sans-serif}
+  .cmdk input{width:100%;box-sizing:border-box;border:0;border-bottom:1px solid #e5e0d5;padding:14px 16px;font:15px "Helvetica Neue",Arial,sans-serif;outline:none}
+  .cmdk .cmdk-list{max-height:46vh;overflow:auto;padding:6px}
+  .cmdk .cmdk-item{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:6px;cursor:pointer}
+  .cmdk .cmdk-item.sel{background:#2b241d;color:#f3ecda}
+  .cmdk .cmdk-item .hint{margin-left:auto;font-size:11px;color:#888}
+  .cmdk .cmdk-item.sel .hint{color:#b8ab88}
+  .cmdk .cmdk-group{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#888;padding:8px 10px 2px}
+  #findbar{background:#fffdf7;border-bottom:1px solid var(--rule);padding:6px 14px;display:flex;gap:6px;align-items:center;font:12px "Helvetica Neue",Arial,sans-serif}
+  #findbar[hidden]{display:none}
+  #findbar input{flex:0 1 220px;padding:6px 8px;border:1px solid #999;border-radius:2px;font-size:12px}
+  #findbar .findcount{color:#666;font-size:11px;white-space:nowrap}
+  #findbar button{padding:4px 10px;border:1px solid #999;background:#fff;border-radius:2px;cursor:pointer;font-size:12px}
+  #findbar button:hover{background:#141414;color:#fff}
+  .find-hit{background:#ffe066;box-shadow:0 0 0 1px #c9a227;border-radius:2px}
+  .checklist{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
+  .checklist li{display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border-radius:6px;cursor:pointer}
+  .checklist li:hover{background:#f7f1e1}
+  .checklist li .ck-ico{flex:0 0 auto;font-weight:700}
+  .checklist li.ok{color:#1a7f37}
+  .checklist li.warn{color:#9a6700}
+  .checklist li.err{color:#b3261e}
+  #dropveil{position:fixed;inset:0;z-index:400;background:rgba(43,36,29,.72);color:#f3ecda;display:none;align-items:center;justify-content:center;font:600 20px "Helvetica Neue",Arial,sans-serif;text-align:center;padding:20px}
   .toolbar input[type=color]{
     width:26px;height:22px;padding:1px;border:1px solid #999;border-radius:2px;
     background:#fff;cursor:pointer;vertical-align:middle;
@@ -359,6 +413,9 @@ EDITOR_CSS = site_build.CSS + r'''
   #blockbar button{border:0;border-radius:3px;background:#333;color:#fff;padding:5px 8px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
   #blockbar button:hover{background:#1c4fd8}
   #blockbar button.danger:hover{background:#a1261e}
+  #draghandle{position:fixed;z-index:95;background:#2b241d;color:#f3ecda;border:1px solid #4a4130;border-radius:6px;padding:4px 6px;font-size:12px;cursor:grab;user-select:none;line-height:1}
+  #draghandle:active{cursor:grabbing}
+  .drop-line{outline:3px solid #1c4fd8;outline-offset:2px}
   #imgInspector{display:none;align-items:center;gap:4px}
   #imgInspector input{width:150px;font-size:11px;padding:4px 6px;border:1px solid #999;border-radius:2px}
   .editing #imgInspector.on{display:flex}
@@ -593,8 +650,9 @@ __CSS__
 <div id="app">
 <aside id="side">
   <div class="side-h"><span>Pages</span><button id="btn-help" title="Show editor help">Help</button></div>
+  <label>Search pages<input id="pageFilter" type="text" placeholder="Filter pages…" autocomplete="off"></label>
   <ul id="pagelist"></ul>
-  <div class="row"><button id="btn-addpage">+ Page</button></div>
+  <div class="row"><button id="btn-addpage">+ Page</button><button id="btn-history" title="Saved version history for this page">History</button></div>
   <div class="side-h">Site</div>
   <label>Title<input id="in-title"></label>
   <label>Tagline<input id="in-tagline"></label>
@@ -619,6 +677,9 @@ __CSS__
   <div class="side-h">Check</div>
   <a id="link-built" href="#" target="_blank" rel="noopener">view built page</a>
   <a id="link-live" href="#" target="_blank" rel="noopener">view live site</a>
+  <button id="btn-buildcheck" class="widebtn" title="Run scripts/build.py --check (read-only, like CI)">Run build check</button>
+  <p class="side-help" id="pageStats">0 words · 0 images</p>
+  <p class="side-help" id="altWarn" hidden></p>
 </aside>
 <main id="main">
 <div class="editbar">
@@ -629,12 +690,16 @@ __CSS__
   <button id="btn-calendar-top" title="Change the shape, size and colour of the calendar marker">Calendar marker</button>
   <button id="btn-edit">Edit</button>
   <button id="btn-save" disabled>Save</button>
-  <a id="btn-preview" href="#" target="_blank" rel="noopener" class="barlink">Preview</a>
+  <a id="btn-preview" href="#" target="_blank" rel="noopener" class="barlink" title="Open the built page in a new tab">Preview</a>
+  <button id="btn-split" title="Show the built page beside the editor (split preview)">Split</button>
+  <button id="btn-checks" title="Run pre-publish checks on this page">Checks</button>
+  <button id="btn-cmdk" title="Command menu (Ctrl+K)">Command</button>
   <select id="devsel" class="devsel" title="Preview how the page will look on different devices while you edit">
     <option value="desktop">Desktop</option>
     <option value="tablet">Tablet</option>
     <option value="phone">Phone</option>
   </select>
+  <button id="health" class="health" title="Open build health &amp; checks"><span class="dot" aria-hidden="true"></span><span id="healthtxt">checking…</span></button>
   <button id="btn-quit" class="warn">Quit</button>
 </div>
 <div id="builderupdated" hidden>
@@ -722,6 +787,19 @@ __CSS__
   <button data-cmd="clear">Clear style</button>
   <button type="button" id="btn-html-source">HTML source</button>
   </div>
+</div>
+<div id="findbar" hidden>
+  <button type="button" id="findClose" title="Close find (Esc)">✕</button>
+  <span>Find</span>
+  <input id="findInput" type="text" autocomplete="off" placeholder="Search on this page… (Ctrl+H)">
+  <button type="button" id="findPrev">↑</button>
+  <button type="button" id="findNext">↓</button>
+  <span class="findcount" id="findCount">0 of 0</span>
+  <button type="button" id="findCase" title="Match case" aria-pressed="false">Aa</button>
+  <span style="margin:0 6px;color:#999">Replace</span>
+  <input id="replaceInput" type="text" autocomplete="off" placeholder="Replace with…">
+  <button type="button" id="replaceOne">Replace</button>
+  <button type="button" id="replaceAll">Replace all</button>
 </div>
 <div class="ld-back" id="linkdlg" hidden>
   <div class="ld-box" role="dialog" aria-label="Link editor">
@@ -922,12 +1000,49 @@ __CSS__
   <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <h3 id="helpTitle">Using the site editor</h3>
     <p><b>1. Pick a page.</b> Use the Pages list to switch pages. Use Page settings to rename, hide, add a badge or enable the contact form.</p>
-    <p><b>2. Edit the preview.</b> Press Edit, then click text and type. Use the labeled toolbar groups to format text and add pictures, links, sections, tables and news articles.</p>
+    <p><b>2. Edit the preview.</b> The toolbar is always there — press Edit, or just start typing. Use the labeled toolbar groups to format text and add pictures, links, sections, tables and news articles. Press Split for the built page side by side, Checks for a pre-publish review, and Ctrl+K for the command menu.</p>
     <p><b>Colors are for text.</b> The "Text" wheel and the color swatches color the letters themselves — a click inside a paragraph colors just the run of text the caret sits in. The "Highlight" wheel is a marker pen: it paints the background behind the word you clicked into or the text you selected, never a whole block.</p>
     <p><b>3. Manage content.</b> Hover a page block for move, duplicate and delete controls. Select an image to change its size, alignment or alt text.</p>
     <p><b>4. Save and publish.</b> Save writes the editable source and stages the built site. Commit and push in GitKraken to publish.</p>
-    <p class="dlg-note">Shortcuts: Ctrl+S save · Ctrl+Z undo · Ctrl+Y redo · Alt+↑/↓ move a block. A draft is saved in this browser while you edit. If custom CSS hides the editor, open /?no-css=1.</p>
+    <p class="dlg-note">Shortcuts: Ctrl+S save · Ctrl+K command menu · Ctrl+H find &amp; replace · Ctrl+Z undo · Ctrl+Y redo · Alt+↑/↓ move a block · / opens the block menu at the caret · ? opens this help. A draft is saved in this browser while you edit. If custom CSS hides the editor, open /?no-css=1.</p>
     <div class="dlg-actions"><button type="button" class="primary" id="helpClose">Got it</button></div>
+  </div>
+</div>
+<div class="ld-back" id="cmdkDlg" hidden>
+  <div class="cmdk" role="dialog" aria-modal="true" aria-label="Command menu">
+    <input id="cmdkInput" type="text" autocomplete="off" placeholder="Type a command or pick a page…">
+    <div class="cmdk-list" id="cmdkList" role="listbox"></div>
+  </div>
+</div>
+<div class="ld-back" id="checksDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="checksTitle">
+    <h3 id="checksTitle">Pre-publish checks</h3>
+    <p class="dlg-note">Advisory only — Save is never blocked. Click any warning to jump to it on the canvas.</p>
+    <ul class="checklist" id="checksList"></ul>
+    <p class="dlg-note" id="checksScore"></p>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="checksRerun">Run again</button>
+      <button type="button" id="checksClose">Close</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="historyDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+    <h3 id="historyTitle">Version history</h3>
+    <p class="dlg-note">Every saved version on this page, newest first. Restoring creates an unsaved edit you can review before saving.</p>
+    <div id="historyList"></div>
+    <div class="dlg-actions"><button type="button" class="primary" id="historyClose">Close</button></div>
+  </div>
+</div>
+<div class="ld-back" id="buildcheckDlg" hidden>
+  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="buildcheckTitle">
+    <h3 id="buildcheckTitle">Build check</h3>
+    <p class="dlg-note">The same checks CI runs on every push (<code>scripts/build.py --check</code>). Read-only — it never edits files.</p>
+    <pre id="buildcheckLog" style="white-space:pre-wrap;background:#141414;color:#e8e2d6;border-radius:6px;padding:12px;min-height:120px;max-height:40vh;overflow:auto;font-size:12px;margin:8px 0"></pre>
+    <div class="dlg-actions">
+      <button type="button" class="primary" id="buildcheckRerun">Run again</button>
+      <button type="button" id="buildcheckClose">Close</button>
+    </div>
   </div>
 </div>
 <div class="ld-back" id="bigbtndlg" hidden>
@@ -966,12 +1081,14 @@ __CSS__
   </div>
   <nav class="sitenav" id="nav"></nav>
   <div class="hr"></div>
-  <div class="canvas" id="canvas">__BODY__</div>
+  <div id="splitwrap"><div class="canvas" id="canvas">__BODY__</div><div id="previewpane"><div class="pp-head">Live preview <button type="button" class="pp-reload" id="ppReload">Reload preview</button><button type="button" class="pp-reload" id="ppClose">Close</button></div><iframe id="previewFrame" title="Live preview of the built page"></iframe></div></div>
   <div id="hint">Blank page — press Edit and start typing, use the toolbar for blocks, or drop a picture in.</div>
   <footer id="foot"></footer>
 </div>
 </main>
 </div>
+<div id="toasts" aria-live="polite"></div>
+<div id="dropveil">Drop an image to insert it into this page</div>
 <input type="file" id="filepick" accept="image/png,image/jpeg,image/gif" style="display:none">
 <script>
 let SITE = __SITE_JSON__;
@@ -1074,6 +1191,129 @@ function globalSettings(site){
 }
 let serverSiteSnapshot = JSON.stringify(globalSettings(SITE));
 
+/* ---------- overhaul: toasts, status pill, dialog shell ---------- */
+function toast(msg, kind, actionLabel, actionFn){
+  const box = $("#toasts"); if (!box) return;
+  const el = document.createElement("div");
+  el.className = "toast " + (kind || "info");
+  const span = document.createElement("span");
+  span.textContent = msg; el.appendChild(span);
+  if (actionLabel && actionFn) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = actionLabel;
+    b.onclick = () => { el.remove(); actionFn(); };
+    el.appendChild(b);
+  }
+  const x = document.createElement("button"); x.type = "button"; x.className = "toast-x"; x.textContent = "✕";
+  x.setAttribute("aria-label", "Dismiss notice");
+  x.onclick = () => el.remove(); el.appendChild(x);
+  box.appendChild(el);
+  setTimeout(() => { if (el.isConnected) el.remove(); }, kind === "error" ? 12000 : 5000);
+  while (box.children.length > 4) box.firstChild.remove();
+}
+let statusTimer = null;
+function setStatus(msg, kind){
+  status.textContent = msg;
+  status.className = "status " + (kind || (dirty ? "st-dirty" : (editing ? "st-edit" : "st-view")));
+  if (kind === "st-saved") { clearTimeout(statusTimer); statusTimer = setTimeout(() => setStatus(editing ? "editing — nothing saved yet" : "viewing"), 3500); }
+  document.title = dirty ? "● Builder — " + ((SITE.pages.find(p => p.slug === SLUG) || {}).nav || SLUG) : "Builder — " + ((SITE.pages.find(p => p.slug === SLUG) || {}).nav || SLUG);
+}
+function setHealth(state, text){
+  const h = $("#health"); if (!h) return;
+  h.className = "health " + (state || "");
+  $("#healthtxt").textContent = text;
+}
+/* Unified dialog shell: stack + LIFO Esc + focus return */
+const dlgStack = [];
+function openDlg(id){
+  const el = document.getElementById(id); if (!el || !el.hidden) return;
+  dlgStack.push({ id: id, prev: document.activeElement });
+  el.hidden = false;
+  const box = el.querySelector(".ld-box, .cmdk, input, button");
+  const focusEl = el.querySelector("[data-autofocus]") || el.querySelector("input, textarea, select, button");
+  if (focusEl) setTimeout(() => focusEl.focus(), 0);
+}
+function closeDlg(id){
+  const el = document.getElementById(id); if (!el) return;
+  for (let i = dlgStack.length - 1; i >= 0; i--) {
+    if (dlgStack[i].id === id) {
+      const prev = dlgStack[i].prev;
+      dlgStack.splice(i, 1);
+      el.hidden = true;
+      if (prev && prev.isConnected) prev.focus();
+      return;
+    }
+  }
+  el.hidden = true;
+}
+function closeTopDlg(){
+  if (!dlgStack.length) return false;
+  closeDlg(dlgStack[dlgStack.length - 1].id); return true;
+}
+/* Wire every existing .ld-back open/close through the shell */
+$$(".ld-back").forEach(el => {
+  if (!el.id) return;
+  el.addEventListener("click", e => { if (e.target === el) closeDlg(el.id); });
+  el.addEventListener("keydown", e => {
+    if (!e.key || e.key !== "Tab") return;
+    const focusable = Array.from(el.querySelectorAll("button, input, textarea, select, a[href]")).filter(n => !n.disabled && n.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); return; }
+    if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (e.target && (e.target.id === "findInput" || e.target.id === "replaceInput" || e.target.id === "pageFilter" || e.target.id === "cmdkInput")) {
+    if (e.target.id === "findInput" || e.target.id === "replaceInput") { $("#findbar").hidden = true; canvas.focus(); }
+    return;
+  }
+  const findbar = $("#findbar");
+  if (findbar && !findbar.hidden) { findbar.hidden = true; return; }
+  closeTopDlg();
+});
+/* Version snapshots: survive reload, restore from any save */
+function snapKey(slug){ return "fc-site-snap:" + slug; }
+function pushSnapshot(body){
+  try {
+    let snaps = JSON.parse(localStorage.getItem(snapKey(SLUG)) || "[]");
+    snaps.unshift({ ts: Date.now(), body: body });
+    snaps = snaps.slice(0, 20);
+    localStorage.setItem(snapKey(SLUG), JSON.stringify(snaps));
+  } catch (e) {}
+}
+function getSnapshots(){
+  try { return JSON.parse(localStorage.getItem(snapKey(SLUG)) || "[]"); } catch (e) { return []; }
+}
+/* Page stats + alt audit, shown in the sidebar */
+function refreshStats(){
+  const words = (canvas.innerText || "").trim().split(/\\s+/).filter(Boolean).length;
+  const imgs = canvas.querySelectorAll("img").length;
+  const missing = Array.from(canvas.querySelectorAll("img")).filter(i => !i.getAttribute("alt")).length;
+  const ps = $("#pageStats"); if (ps) ps.textContent = words + " words · " + imgs + " image" + (imgs === 1 ? "" : "s");
+  const aw = $("#altWarn");
+  if (aw) {
+    aw.hidden = !missing;
+    aw.textContent = missing ? "⚠ " + missing + " image" + (missing === 1 ? "" : "s") + " missing alt text — click to fix" : "";
+    aw.style.cursor = missing ? "pointer" : "default";
+    aw.onclick = missing ? () => { const bad = Array.from(canvas.querySelectorAll("img")).find(i => !i.getAttribute("alt")); if (bad) { $$("#canvas img").forEach(i => i.classList.remove("sel")); selImg = bad; bad.classList.add("sel"); setEditing(true); imgButtons(); $("#imgAlt").focus(); } } : null;
+  }
+}
+canvas.addEventListener("input", () => refreshStats());
+canvas.addEventListener("click", () => refreshStats());
+/* Split preview */
+let splitOn = false;
+function updateSplit(){
+  const wrap = $("#splitwrap"), pane = $("#previewpane");
+  if (!wrap || !pane) return;
+  wrap.classList.toggle("split-on", splitOn);
+  pane.classList.toggle("on", splitOn);
+  if (splitOn) loadPreviewFrame();
+}
+function loadPreviewFrame(){
+  const f = $("#previewFrame"); if (!f) return;
+  f.src = "/built?slug=" + encodeURIComponent(SLUG) + "&t=" + Date.now();
+}
 async function api(path, payload){
   const o = {method: payload === undefined ? "GET" : "POST", cache: "no-store"};
   if (payload !== undefined) { o.headers = {"Content-Type": "application/json"}; o.body = JSON.stringify(payload); }
@@ -1086,22 +1326,23 @@ function replaceSite(next){ SITE = Object.assign({}, next, {live:SITE.live}); se
 async function previewCurrent(e){
   if (e) e.preventDefault();
   const tab = window.open("about:blank", "_blank");
-  if (!tab) { status.textContent = "Allow popups to open the page preview"; return; }
+  if (!tab) { setStatus("Allow popups to open the page preview", "st-error"); return; }
   if (dirty && !(await confirmLeave())) { tab.close(); return; }
   tab.opener = null;
   tab.location.replace("/built?slug=" + encodeURIComponent(SLUG));
 }
-function setEditing(on){
+function setEditing(on, silent){
   editing = on;
   if (!on && typeof blockbar !== "undefined") blockbar.hidden = true;
   document.body.classList.toggle("editing", on);
   canvas.contentEditable = on ? "true" : "false";
   $$("[data-ed]").forEach(el => el.contentEditable = on ? "true" : "false");
   btnEdit.textContent = on ? "Viewing" : "Edit";
+  btnEdit.setAttribute("aria-pressed", on ? "true" : "false");
   updateSaveBtn();
-  if (dirty) status.textContent = "Unsaved changes — Save to stage";
-  else status.textContent = on ? "editing — nothing saved yet" : "viewing";
+  setStatus(dirty ? "Unsaved changes — Save to stage" : (on ? "editing — nothing saved yet" : "viewing"));
   hint();
+  if (!silent && on) toast("Editing on — click the canvas to type. Toolbar tools work now.", "info");
 }
 function updateSaveBtn(){
   btnSave.disabled = saving || !(editing || dirty);
@@ -1120,8 +1361,16 @@ function persistDraft(){
       form: FORM,
       savedAt: Date.now()
     }));
-  } catch (e) { status.textContent = "Unsaved changes — browser draft storage is full"; }
+  } catch (e) { setStatus("Unsaved changes — browser draft storage is full", "st-error"); }
 }
+/* Draft hygiene: flush on hide/crash, cross-tab warning, stale discard */
+document.addEventListener("visibilitychange", () => { if (document.hidden && dirty) persistDraft(); });
+window.addEventListener("storage", e => {
+  if (!e.newValue || !e.key) return;
+  if (e.key !== draftKey(SLUG)) return;
+  if (dirty) toast("Another tab just edited this page. Finish here, then switch tabs — or reload to see their draft.", "warn");
+});
+setInterval(() => { if (dirty && !document.hidden) persistDraft(); }, 60000);
 function clearDraft(slug=SLUG){
   clearTimeout(draftTimer);
   try { localStorage.removeItem(draftKey(slug)); } catch (e) {}
@@ -1131,14 +1380,15 @@ function markDirty(msg){
   editRevision++;
   updateSaveBtn();
   const currentRow = $("#pagelist li.cur"); if (currentRow) currentRow.classList.add("unsaved");
-  status.textContent = msg || "Unsaved changes — Save to stage";
+  setStatus(msg || "Unsaved changes — Save to stage", "st-dirty");
   writeDraft();
+  refreshStats();
 }
 function askUnsaved(){
-  return new Promise(resolve => { unsavedResolve = resolve; $("#unsavedDlg").hidden = false; });
+  return new Promise(resolve => { unsavedResolve = resolve; openDlg("unsavedDlg"); });
 }
 function settleUnsaved(choice){
-  $("#unsavedDlg").hidden = true;
+  closeDlg("unsavedDlg");
   const resolve = unsavedResolve; unsavedResolve = null;
   if (resolve) resolve(choice);
 }
@@ -1153,26 +1403,27 @@ async function discardCurrentDraft(){
   editRevision++; replaceSite(site); canvas.innerHTML = page.body; dirty = false; selImg = null; syncFormMarker();
   syncFormMarker(); histReset(); renderAll(); updateSaveBtn(); imgButtons();
   status.textContent = "Edits discarded — showing the saved page";
+  setStatus("Edits discarded — showing the saved page", "st-saved");
 }
 async function confirmLeave(){
-  if (saving) { status.textContent = "Save is still running — wait before switching pages"; return false; }
+  if (saving) { setStatus("Save is still running — wait before switching pages", "st-error"); toast("Save is still running — wait before switching pages.", "warn"); return false; }
   if (!dirty) return true;
   writeDraft();
   const choice = await askUnsaved();
   if (choice === "stay") return false;
   if (choice === "save") { await save(); return !dirty; }
   try { await discardCurrentDraft(); return true; }
-  catch (err) { status.textContent = "could not discard draft: " + err.message; return false; }
+  catch (err) { setStatus("could not discard draft: " + err.message, "st-error"); toast("Could not discard draft: " + err.message, "error"); return false; }
 }
 function askDraftChoice(when){
   return new Promise(resolve => {
     draftResolve = resolve;
     $("#draftWhen").textContent = when;
-    $("#draftDlg").hidden = false;
+    openDlg("draftDlg");
   });
 }
 function settleDraft(choice){
-  $("#draftDlg").hidden = true;
+  closeDlg("draftDlg");
   const resolve = draftResolve; draftResolve = null;
   if (resolve) resolve(choice);
 }
@@ -1193,8 +1444,7 @@ async function restoreDraft(){
   const siteSettingsCurrent = !!draft.siteBase && draft.siteBase === serverSiteSnapshot;
   if (draft.site && siteSettingsCurrent) SITE = Object.assign({}, SITE, draft.site);
   dirty = true; ensureExitBlock(); renderAll(); histReset(); updateSaveBtn();
-  status.textContent = siteSettingsCurrent ? "Draft restored — review it, then Save to stage"
-                                          : "Page draft restored; newer saved site settings kept";
+  setStatus("Draft restored — review it, then Save to stage");
   return true;
 }
 window.addEventListener("beforeunload", e => {
@@ -1227,10 +1477,15 @@ function renderAll(){
       nav.appendChild(a);
     }
   });
+  const filter = ($("#pageFilter") ? $("#pageFilter").value.trim().toLowerCase() : "");
   const ul = $("#pagelist"); ul.innerHTML = "";
   SITE.pages.forEach(p => {
+    if (filter && !(p.nav.toLowerCase().includes(filter) || p.slug.toLowerCase().includes(filter))) return;
     const li = document.createElement("li");
-    if (p.slug === SLUG) li.className = "cur" + (dirty ? " unsaved" : "");
+    let hasDraft = false;
+    try { hasDraft = !!localStorage.getItem(draftKey(p.slug)); } catch (e) {}
+    if (p.slug === SLUG) li.className = "cur" + (dirty || hasDraft ? " unsaved" : "");
+    else if (hasDraft) li.className = "unsaved";
     const nm = document.createElement("span"); nm.className = "nm";
     const badge = p.badge === "gem" ? "◇ " : (p.hidden && p.badge !== "none" ? "★ " : "");
     nm.textContent = badge + p.nav;
@@ -1275,12 +1530,14 @@ function renderAll(){
     liveA.style.display = "none";
   }
   hint();
+  refreshStats();
   updateLinkStat();
   updateFontSel();
   imgButtons();
 }
 $("#link-built").addEventListener("click", previewCurrent);
 $("#btn-preview").addEventListener("click", previewCurrent);
+if ($("#pageFilter")) $("#pageFilter").addEventListener("input", () => renderAll());
 /* ---------- the contact form and the events calendar ------------------
    Both are generated blocks: the editor draws the real thing where it
    will sit, and swaps it back for its marker paragraph when the page is
@@ -2589,6 +2846,56 @@ function moveBlock(dir){
 }
 let blockTarget = null, blockHideTimer = null;
 const blockbar = $("#blockbar");
+/* Drag handle: grab the left edge of a block to reorder it with the mouse.
+   Keyboard equivalent stays Alt+Arrow / blockbar arrows. */
+const draghandle = document.createElement("div");
+draghandle.id = "draghandle"; draghandle.hidden = true; draghandle.textContent = "⋮⋮";
+draghandle.title = "Drag to move this block";
+draghandle.setAttribute("aria-label", "Drag to move block");
+document.body.appendChild(draghandle);
+let dragBlock = null;
+function showDraghandle(el){
+  if (!editing || !el || !canvas.contains(el) || blockbar.contains(document.activeElement)) {
+    draghandle.hidden = true; return;
+  }
+  const r = el.getBoundingClientRect();
+  draghandle.hidden = false;
+  draghandle.style.left = Math.max(4, r.left - 26) + "px";
+  draghandle.style.top = (r.top + 2) + "px";
+  draghandle.dataset.for = "";
+  draghandle._for = el;
+  draghandle.draggable = true;
+}
+draghandle.addEventListener("dragstart", e => {
+  dragBlock = draghandle._for;
+  if (!dragBlock) { e.preventDefault(); return; }
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", "fc-block");
+  blockbar.hidden = true;
+});
+draghandle.addEventListener("dragend", () => {
+  dragBlock = null; draghandle.hidden = true;
+  $$(".drop-line").forEach(n => n.classList.remove("drop-line"));
+});
+canvas.addEventListener("dragover", e => {
+  if (!dragBlock) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = "move";
+  $$(".drop-line").forEach(n => n.classList.remove("drop-line"));
+  const b = topBlock(e.target);
+  if (b && b !== dragBlock) b.classList.add("drop-line");
+});
+canvas.addEventListener("drop", e => {
+  if (!dragBlock) return;
+  e.preventDefault();
+  const b = topBlock(e.target);
+  if (b && b !== dragBlock) {
+    const r = b.getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) b.parentNode.insertBefore(dragBlock, b);
+    else b.parentNode.insertBefore(dragBlock, b.nextSibling);
+    pushHist(); markDirty(); hint();
+  }
+  dragBlock = null; $$(".drop-line").forEach(n => n.classList.remove("drop-line"));
+});
 function showBlockbar(el){
   if (!editing || !el || !canvas.contains(el)) return;
   blockTarget = el;
@@ -2607,7 +2914,7 @@ function hideBlockbar(){ clearTimeout(blockHideTimer); blockbar.hidden = true; b
 canvas.addEventListener("mousemove", e => {
   if (!editing || blockbar.contains(e.target)) return;
   const b = topBlock(e.target);
-  if (b) showBlockbar(b);
+  if (b) { showBlockbar(b); showDraghandle(b); } else { draghandle.hidden = true; }
 });
 canvas.addEventListener("mouseleave", () => {
   blockHideTimer = setTimeout(() => { if (!blockbar.matches(":hover")) hideBlockbar(); }, 180);
@@ -3447,7 +3754,7 @@ async function save(){
     footer: SITE.footer.slice(0, 500),
     theme: SITE.theme
   };
-  status.textContent = "saving…";
+  setStatus("saving…", "st-saving");
   saving = true; updateSaveBtn();
   try {
     const result = await api("/api/save", Object.assign({}, settings, {slug:saveSlug, body:sentBody, siteBase:serverSiteSnapshot, form:FORM, calendar:CAL_CFG}));
@@ -3455,7 +3762,8 @@ async function save(){
     if (SLUG !== saveSlug) return false;
     if (editRevision !== saveRevision) {
       dirty = true; writeDraft(); updateSaveBtn();
-      status.textContent = "Saved this version; newer edits are still unsaved";
+      setStatus("Saved this version; newer edits are still unsaved", "st-dirty");
+      toast("Saved this version; newer edits are still unsaved.", "warn");
       return false;
     }
     replaceSite(result.site);
@@ -3464,16 +3772,23 @@ async function save(){
       canvas.innerHTML = result.body; syncFormMarker(); ensureExitBlock(); histReset(); selImg = null; replaceTarget = null;
       renderCalBlock();
     }
-    dirty = false; clearDraft(SLUG);
+    dirty = false; clearDraft(SLUG); pushSnapshot(result.body);
     renderAll(); updateSaveBtn();
     const updateBar = document.getElementById("builderupdated");
     if (updateBar) updateBar.hidden = true;
-    status.textContent = cleanChanged
+    setHealth("", "build clean · " + new Date().toLocaleTimeString());
+    setStatus(cleanChanged
       ? "Saved and staged; unsupported markup was cleaned. Preview before publishing."
-      : "Saved and staged — commit/push in GitKraken to publish";
+      : "Saved and staged — commit/push in GitKraken to publish", "st-saved");
+    toast(cleanChanged
+      ? "Saved and staged. Some unsupported markup was cleaned — Preview before publishing."
+      : "Saved and staged — commit/push in GitKraken to publish.", "success");
+    if (splitOn) loadPreviewFrame();
+    refreshStats();
     return true;
   } catch (err) {
-    status.textContent = "Save failed — your draft is kept: " + err.message;
+    setStatus("Save failed — your draft is kept: " + err.message, "st-error");
+    toast("Save failed — your browser draft is kept: " + err.message, "error", "Retry save", () => save());
     return false;
   } finally { saving = false; updateSaveBtn(); }
 }
@@ -3490,6 +3805,12 @@ $("#gemBadge").addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "s" && (editing || dirty)) { e.preventDefault(); save(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openCmdK(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "h") { e.preventDefault(); openFind(); }
+  if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey
+      && !(document.activeElement && document.activeElement.closest("input,textarea,select,[contenteditable='true']"))) {
+    openDlg("helpDlg");
+  }
   const inEd = editing && document.activeElement && document.activeElement.closest
     && document.activeElement.closest("#canvas,[data-ed]");
   if (inEd && e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown"))
@@ -3500,6 +3821,20 @@ document.addEventListener("keydown", e => {
       && (e.key.toLowerCase() === "y"
         || (e.shiftKey && e.key.toLowerCase() === "z")))
     { e.preventDefault(); doRedo(); }
+  /* Inline block menu: / at the start of an empty block */
+  if (inEd && e.key === "/") {
+    const sel = getSelection(); if (!sel.rangeCount) return;
+    const r = sel.getRangeAt(0);
+    const node = r.startContainer;
+    const text = node && node.textContent ? node.textContent.slice(0, r.startOffset) : "";
+    const parentBlock = node.parentElement && node.parentElement.closest("p,h2,h3,li,blockquote");
+    const txt = parentBlock ? parentBlock.innerText.trim() : text.trim();
+    if (txt.length <= 1) {
+      e.preventDefault();
+      if (node && node.nodeType === 3) node.textContent = node.textContent.replace("/", "");
+      openCmdK("blocks");
+    }
+  }
 });
 /* ---------- exit block: the caret must always have somewhere to go ----------
    A page whose last block is a card, table, divider or gallery traps the
@@ -3517,10 +3852,289 @@ function ensureExitBlock(){
 $("#btn-quit").onclick = async () => {
   if (!(await confirmLeave())) return;
   await fetch("/api/shutdown", {method: "POST"});
-  status.textContent = "builder stopped — close this tab";
+  setStatus("builder stopped — close this tab", "st-error");
 };
+/* ---------- overhaul wiring: toolbar auto-edit, split, checks, history ---------- */
+$("#toolbar").addEventListener("click", e => {
+  if (!editing && e.target.closest("button")) setEditing(true, true);
+});
+if ($("#btn-split")) $("#btn-split").addEventListener("click", () => {
+  splitOn = !splitOn;
+  $("#btn-split").textContent = splitOn ? "Split ✓" : "Split";
+  updateSplit();
+});
+if ($("#ppReload")) $("#ppReload").addEventListener("click", loadPreviewFrame);
+if ($("#ppClose")) $("#ppClose").addEventListener("click", () => { splitOn = false; $("#btn-split").textContent = "Split"; updateSplit(); });
+if ($("#btn-cmdk")) $("#btn-cmdk").addEventListener("click", () => openCmdK());
+if ($("#btn-checks")) $("#btn-checks").addEventListener("click", () => { openDlg("checksDlg"); runChecks(); });
+if ($("#health")) $("#health").addEventListener("click", () => { openDlg("checksDlg"); runChecks(); });
+if ($("#checksClose")) $("#checksClose").addEventListener("click", () => closeDlg("checksDlg"));
+if ($("#checksRerun")) $("#checksRerun").addEventListener("click", runChecks);
+if ($("#btn-history")) $("#btn-history").addEventListener("click", () => { openDlg("historyDlg"); renderHistory(); });
+if ($("#historyClose")) $("#historyClose").addEventListener("click", () => closeDlg("historyDlg"));
+if ($("#buildcheckClose")) $("#buildcheckClose").addEventListener("click", () => closeDlg("buildcheckDlg"));
+if ($("#buildcheckRerun")) $("#buildcheckRerun").addEventListener("click", runBuildCheck);
+if ($("#btn-buildcheck")) $("#btn-buildcheck").addEventListener("click", () => { openDlg("buildcheckDlg"); runBuildCheck(); });
+/* Command palette */
+const CMDK_ACTIONS = [
+  { g: "Page", t: "Save (Ctrl+S)", run: () => save() },
+  { g: "Page", t: "Toggle editing", run: () => setEditing(!editing) },
+  { g: "Page", t: "Split preview on/off", run: () => $("#btn-split").click() },
+  { g: "Page", t: "Run build check", run: () => { openDlg("buildcheckDlg"); runBuildCheck(); } },
+  { g: "Page", t: "Pre-publish checks", run: () => { openDlg("checksDlg"); runChecks(); } },
+  { g: "Page", t: "Version history", run: () => { openDlg("historyDlg"); renderHistory(); } },
+  { g: "Page", t: "Find & replace (Ctrl+H)", run: () => openFind() },
+  { g: "Page", t: "HTML source", run: () => { const b = $("#btn-html-source"); if (b) b.click(); } },
+  { g: "Blocks", t: "Heading", run: () => runCmd("h2") },
+  { g: "Blocks", t: "Subhead", run: () => runCmd("h3") },
+  { g: "Blocks", t: "Text", run: () => runCmd("p") },
+  { g: "Blocks", t: "Bullets", run: () => runCmd("ul") },
+  { g: "Blocks", t: "Numbers", run: () => runCmd("ol") },
+  { g: "Blocks", t: "Quote", run: () => runCmd("quote") },
+  { g: "Blocks", t: "Picture", run: () => runCmd("image") },
+  { g: "Blocks", t: "Gallery", run: () => runCmd("gallery") },
+  { g: "Blocks", t: "Media library", run: () => runCmd("media") },
+  { g: "Blocks", t: "Divider", run: () => runCmd("divider") },
+  { g: "Blocks", t: "Section panel", run: () => runCmd("section") },
+  { g: "Blocks", t: "Table", run: () => runCmd("table") },
+  { g: "Blocks", t: "Big button", run: () => runCmd("bigbtn") },
+  { g: "Blocks", t: "Link", run: () => runCmd("link") },
+  { g: "Blocks", t: "Manage events", run: () => runCmd("events") },
+  { g: "Blocks", t: "Calendar marker", run: () => runCmd("calendar") },
+  { g: "Blocks", t: "Add news article", run: () => runCmd("news") },
+];
+function runCmd(cmd){
+  if (!editing) setEditing(true, true);
+  const b = document.querySelector("#toolbar [data-cmd='" + cmd + "']");
+  if (b) b.click();
+}
+let cmdkSel = 0, cmdkItems = [];
+function openCmdK(preset){
+  openDlg("cmdkDlg");
+  const q = $("#cmdkInput"); q.value = preset === "blocks" ? "" : "";
+  renderCmdK(q.value);
+  setTimeout(() => q.focus(), 0);
+}
+function renderCmdK(q){
+  q = (q || "").toLowerCase().trim();
+  const list = $("#cmdkList"); list.innerHTML = ""; cmdkItems = [];
+  const add = (item) => { cmdkItems.push(item); };
+  if (!q || "blocks".includes(q)) {
+    SITE.pages.filter(p => !q || p.nav.toLowerCase().includes(q) || p.slug.includes(q)).slice(0, 8).forEach(p => {
+      add({ g: "Page", t: "Go to " + p.nav + " (" + p.slug + ".html)", run: () => openPage(p.slug) });
+    });
+  }
+  CMDK_ACTIONS.filter(a => !q || a.t.toLowerCase().includes(q)).slice(0, 20).forEach(a => add(a));
+  let lastG = "";
+  cmdkItems.forEach((item, i) => {
+    if (item.g !== lastG) {
+      const g = document.createElement("div"); g.className = "cmdk-group"; g.textContent = item.g;
+      list.appendChild(g); lastG = item.g;
+    }
+    const row = document.createElement("div");
+    row.className = "cmdk-item" + (i === cmdkSel ? " sel" : "");
+    row.setAttribute("role", "option");
+    row.dataset.i = i;
+    row.innerHTML = "<span>" + item.t.replace(/</g, "&lt;") + "</span><span class='hint'>" + item.g + "</span>";
+    row.addEventListener("click", () => { closeDlg("cmdkDlg"); item.run(); });
+    list.appendChild(row);
+  });
+  if (!cmdkItems.length) list.innerHTML = "<div class='cmdk-item'>No matches</div>";
+}
+if ($("#cmdkInput")) {
+  $("#cmdkInput").addEventListener("input", e => { cmdkSel = 0; renderCmdK(e.target.value); });
+  $("#cmdkInput").addEventListener("keydown", e => {
+    if (e.key === "ArrowDown") { e.preventDefault(); cmdkSel = Math.min(cmdkSel + 1, cmdkItems.length - 1); renderCmdK(e.target.value); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); cmdkSel = Math.max(cmdkSel - 1, 0); renderCmdK(e.target.value); }
+    else if (e.key === "Enter" && cmdkItems[cmdkSel]) { e.preventDefault(); closeDlg("cmdkDlg"); cmdkItems[cmdkSel].run(); }
+  });
+}
+/* Find & replace (text nodes only, highlight spans stripped on close) */
+let findHits = [], findIdx = -1, findCase = false;
+function openFind(){ $("#findbar").hidden = false; $("#findInput").focus(); runFind(); }
+function closeFind(){ clearFind(); $("#findbar").hidden = true; }
+function clearFind(){ $$(".find-hit").forEach(n => { const p = n.parentNode; p.insertBefore(document.createTextNode(n.textContent), n); p.removeChild(n); }); findHits = []; findIdx = -1; $("#findCount").textContent = "0 of 0"; }
+function runFind(){
+  clearFind();
+  const q = $("#findInput").value;
+  if (!q) return;
+  const needle = findCase ? q : q.toLowerCase();
+  const walker = document.createTreeWalker(canvas, NodeFilter.SHOW_TEXT, null);
+  const nodes = [];
+  while (walker.nextNode()) {
+    const n = walker.currentNode;
+    if (!n.textContent || !n.parentElement || n.parentElement.closest("[data-form-block],[data-cal-wrap]")) continue;
+    if (n.parentElement.closest("script,style")) continue;
+    const hay = findCase ? n.textContent : n.textContent.toLowerCase();
+    if (hay.includes(needle)) nodes.push(n);
+  }
+  nodes.forEach(n => {
+    const frag = document.createDocumentFragment();
+    let rest = n.textContent;
+    while (true) {
+      const idx = (findCase ? rest : rest.toLowerCase()).indexOf(needle);
+      if (idx < 0) { frag.appendChild(document.createTextNode(rest)); break; }
+      if (idx > 0) frag.appendChild(document.createTextNode(rest.slice(0, idx)));
+      const hit = document.createElement("span"); hit.className = "find-hit"; hit.textContent = rest.slice(idx, idx + q.length);
+      frag.appendChild(hit); findHits.push(hit);
+      rest = rest.slice(idx + q.length);
+    }
+    n.parentNode.replaceChild(frag, n);
+  });
+  $("#findCount").textContent = findHits.length ? "1 of " + findHits.length : "0 of 0";
+  if (findHits.length) goFind(0);
+}
+function goFind(i){
+  if (!findHits.length) return;
+  findIdx = ((i % findHits.length) + findHits.length) % findHits.length;
+  findHits.forEach((h, j) => h.style.outline = j === findIdx ? "2px solid #1c4fd8" : "");
+  $("#findCount").textContent = (findIdx + 1) + " of " + findHits.length;
+  findHits[findIdx].scrollIntoView({ block: "center", behavior: "smooth" });
+}
+if ($("#findInput")) {
+  $("#findInput").addEventListener("input", runFind);
+  $("#findInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); goFind(findIdx + (e.shiftKey ? -1 : 1)); } });
+  $("#findNext").onclick = () => goFind(findIdx + 1);
+  $("#findPrev").onclick = () => goFind(findIdx - 1);
+  $("#findClose").onclick = closeFind;
+  $("#findCase").onclick = () => {
+    findCase = !findCase;
+    $("#findCase").setAttribute("aria-pressed", findCase ? "true" : "false");
+    $("#findCase").style.background = findCase ? "#141414" : "";
+    $("#findCase").style.color = findCase ? "#fff" : "";
+    runFind();
+  };
+  $("#replaceAll").onclick = () => {
+    const rep = $("#replaceInput").value;
+    if (!$("#findInput").value || !findHits.length) return;
+    pushHist();
+    findHits.forEach(h => h.textContent = rep);
+    clearFind(); markDirty(); runFind();
+    toast("Replaced all matches.", "success");
+  };
+  $("#replaceOne").onclick = () => {
+    if (!findHits.length || findIdx < 0) return;
+    pushHist();
+    findHits[findIdx].textContent = $("#replaceInput").value;
+    clearFind(); markDirty(); runFind();
+  };
+}
+/* Pre-publish checks (advisory; never blocks Save) */
+function runChecks(){
+  const list = $("#checksList"); list.innerHTML = "";
+  const items = [];
+  const addItem = (cls, ico, text, jump) => items.push({ cls, ico, text, jump });
+  if (canvas.querySelectorAll("img").length === 0) addItem("ok", "✓", "All images have alt text (no images on this page).");
+  Array.from(canvas.querySelectorAll("img")).forEach(img => {
+    const alt = img.getAttribute("alt");
+    if (!alt) addItem("warn", "⚠", "Image missing alt: " + (img.getAttribute("src") || "").slice(0, 60), () => {
+      $$("#canvas img").forEach(i => i.classList.remove("sel"));
+      selImg = img; img.classList.add("sel"); setEditing(true, true); imgButtons(); $("#imgAlt").focus();
+      badScroll(img);
+    });
+  });
+  const known = new Set(SITE.pages.map(p => p.slug));
+  Array.from(canvas.querySelectorAll("a[href]")).forEach(a => {
+    const href = a.getAttribute("href") || "";
+    if (href.startsWith("http")) return;
+    if (href.startsWith("#")) return;
+    if (href.startsWith("/")) {
+      const slug = href.replace(/^\\//, "").replace(/\\.html$/, "").split("/")[0];
+      if (slug && !known.has(slug) && slug !== "flank") addItem("err", "✕", "Broken internal link: " + href, () => badScroll(a));
+    } else if (href) {
+      const slug = href.split("#")[0].replace(/\\.html$/, "");
+      if (slug && !known.has(slug) && !href.startsWith("mailto:") && !href.startsWith("tel:")) addItem("warn", "⚠", "Possible broken link: " + href + " — check it opens", () => badScroll(a));
+    }
+  });
+  Array.from(canvas.querySelectorAll("a[href^='javascript:'],a[href^='data:']")).forEach(a => {
+    addItem("err", "✕", "Unsafe link scheme (blocked from publishing): " + (a.getAttribute("href") || "").slice(0, 60), () => badScroll(a));
+  });
+  if (canvas.scrollWidth > canvas.clientWidth + 2) addItem("warn", "⚠", "Content overflows this width — check the phone preview for a horizontal scroll.", null);
+  if (!items.length) addItem("ok", "✓", "No issues found on this page.");
+  items.forEach(it => {
+    const li = document.createElement("li"); li.className = it.cls;
+    li.innerHTML = "<span class='ck-ico'>" + it.ico + "</span><span>" + it.text.replace(/</g, "&lt;") + "</span>";
+    if (it.jump) li.onclick = () => { closeDlg("checksDlg"); it.jump(); };
+    list.appendChild(li);
+  });
+  const warns = items.filter(i => i.cls !== "ok").length;
+  $("#checksScore").textContent = warns ? warns + " warning" + (warns === 1 ? "" : "s") + " — Save still works; fix when you can." : "Clean — ready to save and commit.";
+  setHealth(warns ? "warn" : "", warns ? warns + " warning" + (warns === 1 ? "" : "s") : "build clean · " + new Date().toLocaleTimeString());
+}
+function badScroll(el){ el.scrollIntoView({ block: "center", behavior: "smooth" }); el.style.outline = "3px solid #b3261e"; setTimeout(() => { el.style.outline = ""; }, 1600); }
+/* Version history dialog */
+function renderHistory(){
+  const box = $("#historyList"); box.innerHTML = "";
+  const snaps = getSnapshots();
+  if (!snaps.length) { box.innerHTML = "<p class='dlg-note'>No saved versions yet on this page. Save once to create the first snapshot.</p>"; return; }
+  snaps.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #eee";
+    const lab = document.createElement("span"); lab.style.flex = "1"; lab.textContent = new Date(s.ts).toLocaleString() + " (" + Math.round((s.body || "").length / 1024) + " KB)";
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "Restore";
+    b.onclick = () => {
+      pushHist();
+      canvas.innerHTML = s.body; selImg = null; syncFormMarker(); ensureExitBlock();
+      markDirty(); histReset(); renderAll();
+      closeDlg("historyDlg");
+      toast("Restored the " + new Date(s.ts).toLocaleString() + " version as an unsaved edit — Save to stage it.", "info");
+    };
+    row.appendChild(lab); row.appendChild(b); box.appendChild(row);
+  });
+}
+/* Build check (real CI gate, read-only) */
+async function runBuildCheck(){
+  const log = $("#buildcheckLog");
+  log.textContent = "Running scripts/build.py --check…";
+  setHealth("warn", "checking build…");
+  try {
+    const j = await api("/api/check", {});
+    log.textContent = j.output || "check passed";
+    setHealth(j.ok ? "" : "err", j.ok ? "build clean · " + new Date().toLocaleTimeString() : "build check failed");
+    toast(j.ok ? "Build check passed." : "Build check failed — see the log.", j.ok ? "success" : "error");
+  } catch (e) {
+    log.textContent = "Could not run the check: " + e.message;
+    setHealth("err", "build check failed");
+    toast("Build check failed: " + e.message, "error");
+  }
+}
+/* Image drop polish */
+let dragDepth = 0;
+window.addEventListener("dragenter", e => {
+  if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes("Files")) return;
+  e.preventDefault(); dragDepth++;
+  const v = $("#dropveil"); if (v) v.style.display = "flex";
+});
+window.addEventListener("dragleave", e => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) { const v = $("#dropveil"); if (v) v.style.display = "none"; }
+});
+window.addEventListener("dragover", e => { if (e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files")) e.preventDefault(); });
+window.addEventListener("drop", e => {
+  dragDepth = 0;
+  const v = $("#dropveil"); if (v) v.style.display = "none";
+  const files = e.dataTransfer ? Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/")) : [];
+  if (!files.length) return;
+  e.preventDefault();
+  if (!editing) setEditing(true, true);
+  files.slice(0, 3).forEach((f, i) => insertImageFile(f, i === 0));
+  toast(files.length + " image" + (files.length === 1 ? "" : "s") + " added.", "success");
+});
+function insertImageFile(file, focusAlt){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const img = document.createElement("img");
+      img.src = String(reader.result);
+      img.alt = "";
+      appendNode(img);
+      if (focusAlt) { $$("#canvas img").forEach(i => i.classList.remove("sel")); selImg = img; img.classList.add("sel"); imgButtons(); $("#imgAlt").focus(); }
+    } catch (e) { toast("Could not add that image.", "error"); }
+  };
+  reader.readAsDataURL(file);
+}
 renderAll();
-setEditing(false);
+setEditing(false, true);
 ensureExitBlock();
 histReset();
 renderCalBlock();
@@ -3816,6 +4430,19 @@ class Handler(BaseHTTPRequestHandler):
                               "--port", str(BUILDER_PORT), "--no-open"])
                 threading.Timer(0.4, _relaunch).start()
                 return
+            if url.path == "/api/check":
+                # Read-only build verification (same checks CI runs).
+                # Never passes user input to a shell; capped output + timeout.
+                with _MUTEX:
+                    try:
+                        proc = subprocess.run(
+                            [sys.executable, str(ROOT / "scripts" / "build.py"), "--check"],
+                            cwd=str(ROOT), capture_output=True, text=True, timeout=30)
+                        out = (proc.stdout or "") + (proc.stderr or "")
+                        out = out[-8000:]
+                        return self._json(200, {"ok": proc.returncode == 0, "output": out})
+                    except Exception as e:
+                        return self._json(200, {"ok": False, "output": str(e)[:2000]})
             if url.path == "/api/save":
                 doc = self._read_json()
                 with _MUTEX:
