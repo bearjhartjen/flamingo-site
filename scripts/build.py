@@ -701,17 +701,18 @@ def sanitize(fragment: str) -> str:
 # ---------------------------------------------------------------------------
 
 CSS = r'''  :root{
-    --paper:#faf3e6;
-    --paper2:#f5ecd9;
+    --paper:#ffffff;
+    --paper2:#f4f4f4;
     --ink:#141414;
     --ink2:#3d3d3d;
     --muted:#6b6b6b;
     --faint:#8c8c8c;
-    --rule:#c9c2b4;
-    --rule2:#e8e2d6;
+    --rule:#d9d9d9;
+    --rule2:#ececec;
     --link:#0b2a8c;
     --gold:#c9a227;
   }
+  body[data-theme="classic"] .contactform{background:#ffffff}
   body[data-theme="parchment"]{
     --paper:#f7f1e1;
     --paper2:#f3ecda;
@@ -2443,14 +2444,14 @@ SETTINGS_NAMES = {
 }
 
 SETTINGS_CHIPS = {
-    "classic": ("#faf3e6", "#c9c2b4", "#141414", "#0b2a8c", "#c9a227"),
+    "classic": ("#ffffff", "#d9d9d9", "#141414", "#0b2a8c", "#c9a227"),
     "parchment": ("#f7f1e1", "#b8ab88", "#2b2417", "#1a3a7c", "#c9a227"),
     "ink": ("#262220", "#6b6152", "#f5efe0", "#9db8ff", "#c9a227"),
     "midnight": ("#221c2c", "#4d3c6b", "#f0e9f7", "#d3b8ff", "#c9a227"),
 }
 
 SETTINGS_DESCS = {
-    "classic": "Warm paper, ink black",
+    "classic": "White paper, ink black",
     "parchment": "Aged paper, soft brown",
     "ink": "Charcoal slate, cream text",
     "midnight": "Deep violet night",

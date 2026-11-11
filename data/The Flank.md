@@ -865,4 +865,14 @@
 - **Notes:** This was a monthly interest payment on the Visions FCU share certificate. The certificate is of 3.65% APY. There was another $0.02 in soft savings from interest. 
 - **Transaction was made on:** 11-1-2026
 
+---
 
+## Transaction 74
+
+- **Withdraw of:** $20.63
+- **Deposit of:** $0.00
+- **New balance:** $5,766.19
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** yes
+- **Notes:** [[FCEnc n:99 iv:qNmMMcuV+qpE9TcXspzQLg== ct:aMNzHuXOijFSCWtZUoOqogfn/Ekk1UZu5WoRN5AUPikteEPHUk32a/+GZ6v2jFOsYI46mmameA+uhIqAzafKkJhyyzxIx2bLPxFc4uc1ld1WKXyMb7mrpCqSJXSJpLRP2h9WmUXWC6AL52ByYd0qzA==]]
+- **Transaction was made on:** 11-11-2026

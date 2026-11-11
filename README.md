@@ -44,7 +44,7 @@ is stripped before it can reach a published page. `python3 scripts/build.py
 --check` rebuilds into a temporary directory and verifies the whole site,
 and the `verify.yml` workflow runs the same check on every push.
 
-Three light themes exist: Classic (white with a whisper of tan),
+Three light themes exist: Classic (near-white),
 Parchment (a stronger cream), and Ink (dark). Midnight (a lighter
 dark-purple) is the fourth. The theme is a single
 setting in `data/site.json` and restyles every page at once. Every page also
