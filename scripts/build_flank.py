@@ -57,7 +57,7 @@ DEFAULT_OUT = ROOT / "site" / "flank"
 # "- **Private:**" field at all. The field in the ledger is the source of
 # truth; scripts/encrypt_flank.py encrypts every "yes" row on sync.
 PRIVATE_TX = frozenset({6, 18, 22, 24, 25, 27, 30, 31, 33, 34, 36, 39, 40, 44,
-                        48, 53, 54, 55, 56, 58, 59, 60, 61, 62, 65, 68})
+                        48, 53, 54, 55, 56, 58, 59, 60, 61, 62, 65, 68, 74, 76})
 
 
 # --------------------------------------------------------------------------- logo

@@ -508,15 +508,20 @@ def _clean_href(href: str) -> str | None:
         return h
     if h.startswith("#"):
         return h
-    # Absolute paths: only safe page paths (no empty segments, no "//").
+    # Absolute paths: safe page paths and uploaded files (no empty segments, no "//").
     if h.startswith("/"):
         if h.startswith("//"):
             return None
-        if h == "/" or re.fullmatch(r"/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.html", h):
+        segs = h.lstrip("/").split("/")
+        if h == "/" or (all(segs) and all(re.fullmatch(r"[A-Za-z0-9_.-]+", s) for s in segs)
+                        and segs[-1].lower().endswith((".html", ".pdf"))):
             return h
         return None
-    # Plain page links (index.html) and relative subpage links (flank/index.html).
-    if re.fullmatch(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.html", h):
+    # Relative page links (index.html), subpage links (flank/index.html), and
+    # uploaded files (uploads/foo.pdf).
+    segs = h.split("/")
+    if (all(segs) and all(re.fullmatch(r"[A-Za-z0-9_.-]+", s) for s in segs)
+            and segs[-1].lower().endswith((".html", ".pdf"))):
         return h
     return None
 
@@ -1192,9 +1197,16 @@ CSS = r'''  :root{
     .tagline{font-size:13px}
     nav.sitenav{
       display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;
-      font-size:11px;line-height:2.1;
+      font-size:11px;line-height:1.4;
     }
-    nav.sitenav a,nav.sitenav .cur{margin:0 10px;white-space:nowrap}
+    nav.sitenav a,nav.sitenav .cur{
+      margin:0;white-space:nowrap;
+      padding:6px 12px;min-height:34px;display:inline-flex;align-items:center;
+      border:1px solid var(--rule);border-radius:999px;
+      background:var(--paper2);color:var(--ink2);
+    }
+    nav.sitenav a:hover{color:var(--ink);border-color:var(--ink)}
+    nav.sitenav .cur{background:var(--ink);color:var(--paper);border-color:var(--ink)}
     .star-badge{top:10px;left:10px;right:auto;width:140px;height:140px}
     .star-badge .star-title{font-size:10px;max-width:70%;line-height:1.25;letter-spacing:.2px}
     .star-badge .star-sub{display:none}

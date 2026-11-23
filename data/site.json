@@ -61,6 +61,10 @@
     {
       "slug": "polls",
       "nav": "Polls"
+    },
+    {
+      "slug": "promotional",
+      "nav": "Promotional"
     }
   ]
 }

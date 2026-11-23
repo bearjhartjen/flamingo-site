@@ -876,3 +876,51 @@
 - **Private:** yes
 - **Notes:** [[FCEnc n:99 iv:qNmMMcuV+qpE9TcXspzQLg== ct:aMNzHuXOijFSCWtZUoOqogfn/Ekk1UZu5WoRN5AUPikteEPHUk32a/+GZ6v2jFOsYI46mmameA+uhIqAzafKkJhyyzxIx2bLPxFc4uc1ld1WKXyMb7mrpCqSJXSJpLRP2h9WmUXWC6AL52ByYd0qzA==]]
 - **Transaction was made on:** 11-11-2026
+
+---
+## Transaction 75
+
+- **Withdraw of:** $44.00
+- **Deposit of:** $0.00
+- **New balance:** $5,722.19
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This withdrawal was for miscellaneous craft fair expenditures. Approved by Bear J. Hartjen.
+- **Transaction was made on:** 11-14-2026
+
+
+---
+
+## Transaction 76
+
+- **Withdraw of:** $71.40
+- **Deposit of:** $0.00
+- **New balance:** $5,650.79
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** yes
+- **Notes:** [[FCEnc n:87 iv:rCJAwnMewo9YJnSDm9rXrA== ct:wQHaWxMZUoAg9i3o71+GiYFI+ulOhcfan5hfTMfrL1Bh1JrRLNw6u9dc01wHWI5EQA50he8LblHotXmrjUHKPHJVuXIRIOgFD2ZnjDSEfNC66fA8BhVdr7i8/kb4qk0Z]]
+- **Transaction was made on:** 11-18-2026
+
+---
+
+## Transaction 77
+
+- **Withdraw of:** $0.00
+- **Deposit of:** $450.00
+- **New balance:** $6,100.79
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** Normal monthly $450 deposit.
+- **Transaction was made on:** 11-18-2026
+
+---
+
+## Transaction 78
+
+- **Withdraw of:** $0.00
+- **Deposit of:** $5.00
+- **New balance:** $6,105.79
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This was a $5 credit back to the account for using direct bank linking with open code.
+- **Transaction was made on:** 11-20-2026
