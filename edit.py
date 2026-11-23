@@ -3080,7 +3080,7 @@ function linkValidate(h){
   if (!h) return {ok:false, msg:"Type or pick a destination."};
   if (/["<>]/.test(h)) return {ok:false, msg:"No quotes or angle brackets."};
   if (h.includes("..")) return {ok:false, msg:"“..” is not allowed in a link."};
-  if (/^[A-Za-z0-9_.-]+(\\/[A-Za-z0-9_.-]+)*\\.html$/.test(h)) return {ok:true, msg:"Page on this site."};
+  if (/^[A-Za-z0-9_.-]+(\\/[A-Za-z0-9_.-]+)*\\.(html|pdf)$/i.test(h)) return {ok:true, msg:"Page or file on this site."};
   if (h.startsWith("//")) return {ok:false, msg:"That would leave this site — paste the full address instead."};
   const m = /^([A-Za-z][A-Za-z0-9+.-]*):/.exec(h);
   if (m) {
