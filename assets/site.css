@@ -63,12 +63,15 @@ margin:14px 0 2px;
 }
 .tagline{color:var(--muted);font-size:14px;font-style:italic;margin:0 0 14px}
 nav.sitenav{
-text-align:center;margin:0 0 18px;
-font:12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;
+display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+gap:5px 0;
+margin:0 0 18px;
+font:11.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;
 }
-nav.sitenav a{color:var(--muted);text-decoration:none;margin:0 12px}
+nav.sitenav a,nav.sitenav .cur{margin:0 6px;white-space:nowrap;padding:3px 0}
+nav.sitenav a{color:var(--muted);text-decoration:none}
 nav.sitenav a:hover{color:var(--ink);text-decoration:underline}
-nav.sitenav .cur{color:var(--ink);margin:0 12px;border-bottom:2px solid var(--ink);padding-bottom:2px}
+nav.sitenav .cur{color:var(--ink);border-bottom:2px solid var(--ink);padding-bottom:1px}
 .hr{height:2px;background:var(--ink);margin:0}
 .hr.thin{height:1px;background:var(--rule)}
 .canvas{position:relative;color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
