@@ -770,12 +770,15 @@ CSS = r'''  :root{
   }
   .tagline{color:var(--muted);font-size:14px;font-style:italic;margin:0 0 14px}
   nav.sitenav{
-    text-align:center;margin:0 0 18px;
-    font:12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.2px;text-transform:uppercase;
+    display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+    gap:5px 0;
+    margin:0 0 18px;
+    font:11.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;
   }
-  nav.sitenav a{color:var(--muted);text-decoration:none;margin:0 12px}
+  nav.sitenav a,nav.sitenav .cur{margin:0 6px;white-space:nowrap;padding:3px 0}
+  nav.sitenav a{color:var(--muted);text-decoration:none}
   nav.sitenav a:hover{color:var(--ink);text-decoration:underline}
-  nav.sitenav .cur{color:var(--ink);margin:0 12px;border-bottom:2px solid var(--ink);padding-bottom:2px}
+  nav.sitenav .cur{color:var(--ink);border-bottom:2px solid var(--ink);padding-bottom:1px}
   .hr{height:2px;background:var(--ink);margin:0}
   .hr.thin{height:1px;background:var(--rule)}
   .canvas{position:relative;color:var(--ink2);font-size:15.5px;line-height:1.65;padding:10px 0 0}
@@ -2146,6 +2149,175 @@ monthSel.addEventListener("change",function(){cm=+monthSel.value;renderGrid();})
     return marker_re.sub(replace, body_html), script
 
 
+POLL_DEFAULTS = {"intro": "", "polls": []}
+POLL_TEXT_LIMITS = {"id": 64, "title": 160, "question": 400, "details": 2000,
+                    "opens": 10, "closes": 10, "decision": 2000}
+POLL_URL_FIELDS = ("anon_form", "signed_form", "anon_csv", "signed_csv")
+
+
+def sanitize_poll(raw) -> dict:
+    """One poll, with only the known keys and safe values."""
+    src = raw if isinstance(raw, dict) else {}
+    out = {}
+    for key, limit in POLL_TEXT_LIMITS.items():
+        out[key] = str(src.get(key, "") or "").strip()[:limit]
+    for key in POLL_URL_FIELDS:
+        url = str(src.get(key, "") or "").strip()
+        out[key] = url if re.match(r"^https://[^\s<>\"']+$", url) else ""
+    out["closed"] = bool(src.get("closed"))
+    return out
+
+
+def load_polls(data_dir) -> dict:
+    """data/polls.json, sanitised; an empty document when it is missing."""
+    path = Path(data_dir) / "polls.json"
+    doc = {}
+    if path.exists():
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            doc = {}
+    if not isinstance(doc, dict):
+        doc = {}
+    polls = [sanitize_poll(p) for p in (doc.get("polls") or []) if isinstance(p, dict)]
+    return {"intro": str(doc.get("intro", "") or "")[:2000], "polls": polls}
+
+
+def _poll_open(poll: dict, today: datetime.date) -> bool:
+    if poll.get("closed"):
+        return False
+    opens, closes = poll.get("opens", ""), poll.get("closes", "")
+    try:
+        if opens and today < datetime.date.fromisoformat(opens):
+            return False
+        if closes and today > datetime.date.fromisoformat(closes):
+            return False
+    except ValueError:
+        return True
+    return True
+
+
+def _poll_date_text(poll: dict) -> str:
+    def fmt(value):
+        try:
+            return datetime.date.fromisoformat(value).strftime("%B %-d, %Y")
+        except ValueError:
+            return value
+    opens, closes = poll.get("opens", ""), poll.get("closes", "")
+    if opens and closes:
+        return f"Open {fmt(opens)} to {fmt(closes)}"
+    if opens:
+        return f"Opened {fmt(opens)}"
+    if closes:
+        return f"Closes {fmt(closes)}"
+    return ""
+
+
+POLLS_CSS = """<style>
+.poll{border:1px solid #d8d2c4;border-radius:6px;padding:18px 20px;margin:16px 0;background:#fffdf7}
+.poll h3{margin:0 0 4px;font-size:22px}
+.poll-q{margin:0 0 8px;font-size:17px}
+.poll-details{color:#4a453c;margin:0 0 8px}
+.poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 10px;letter-spacing:.3px}
+.poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 12px}
+.poll-tabs{display:flex;gap:6px;margin:0 0 12px}
+.poll-tabs button{border:1px solid #bbb2a0;background:#fff;border-radius:4px;padding:6px 14px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer;color:#3a352c}
+.poll-tabs button.on{background:#141414;color:#fff;border-color:#141414}
+.poll-pane[hidden]{display:none}
+.poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:#3a352c;margin:12px 0 0}
+.poll-counts b{font-size:15px}
+.poll-form iframe{width:100%;max-width:640px;height:520px;border:1px solid #cfc7b6;border-radius:6px;background:#fff}
+.poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
+.poll-links a{display:inline-block;margin:0 10px 6px 0}
+.pc-item{padding:8px 0;border-bottom:1px solid #ece6d8;margin:0;font-size:15px}
+.pc-vote{font:700 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:#1a7f37;margin-right:8px}
+.pc-vote.no{color:#a1261e}
+.pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin-left:8px}
+.pc-empty{color:#7a7364;font-style:italic}
+</style>"""
+
+
+def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str]:
+    """Swap `[poll list]` for the poll sections and their live-count script."""
+    marker_re = re.compile(r"<(?:p|li)[^>]*>\s*\[poll list\]\s*</(?:p|li)>", re.I)
+    if not marker_re.search(body_html):
+        return body_html, ""
+    doc = polls_doc or POLL_DEFAULTS
+    today = datetime.date.today()
+    parts = []
+    for poll in doc.get("polls", []):
+        pid = html.escape(poll.get("id") or "poll", quote=True)
+        title = html.escape(poll.get("title") or "Poll")
+        question = html.escape(poll.get("question") or "")
+        details = html.escape(poll.get("details") or "")
+        is_open = _poll_open(poll, today)
+        status = "Voting is open" if is_open else "Voting is closed"
+        when = _poll_date_text(poll)
+        decision = html.escape(poll.get("decision") or "")
+        form = poll.get("anon_form") or ""
+        signed = poll.get("signed_form") or ""
+        if form:
+            embed = html.escape(form + ("&" if "?" in form else "?") + "embedded=true", quote=True)
+            form_html = (f'<div class="poll-form"><iframe src="{embed}" '
+                         'loading="lazy" title="Vote form" allowfullscreen></iframe></div>')
+        else:
+            form_html = '<p class="pc-empty">The voting form is not connected yet.</p>'
+        links = []
+        if signed:
+            links.append(f'<a href="{html.escape(signed, quote=True)}" target="_blank" rel="noopener">'
+                         'Vote with a Google sign-in</a>')
+        if form:
+            links.append(f'<a href="{html.escape(form, quote=True)}" target="_blank" rel="noopener">'
+                         'Open the anonymous form in its own tab</a>')
+        links_html = f'<p class="poll-links">{" · ".join(links)}</p>' if links else ""
+        decision_html = f'<p class="poll-details"><b>Decision:</b> {decision}</p>' if decision else ""
+        parts.append(
+            f'<section class="poll" data-poll="{pid}" data-anon="{html.escape(poll.get("anon_csv") or "", quote=True)}"'
+            f' data-signed="{html.escape(poll.get("signed_csv") or "", quote=True)}">'
+            f'<h3>{title}</h3>'
+            f'<p class="poll-q">{question}</p>'
+            f'<p class="poll-details">{details}</p>'
+            f'<p class="poll-when">{html.escape(status)}{(" · " + html.escape(when)) if when else ""}</p>'
+            '<p class="poll-note">All votes and comments are public. Anyone can vote once per browser; '
+            'a Google sign-in is optional and is shown as a separate confidence count.</p>'
+            '<div class="poll-tabs"><button type="button" class="on" data-ptab="vote">Vote</button>'
+            '<button type="button" data-ptab="comments">Comments</button></div>'
+            f'<div class="poll-pane" data-ppane="vote">{form_html}{links_html}</div>'
+            '<div class="poll-pane" data-ppane="comments" hidden><p class="pc-empty">No comments yet.</p></div>'
+            f'{decision_html}'
+            '<p class="poll-counts" data-pcounts>Counts load once the form is connected.</p>'
+            '</section>')
+    if not parts:
+        parts.append('<p class="pc-empty">No polls are up right now.</p>')
+    intro = f'<p>{html.escape(doc.get("intro"))}</p>' if doc.get("intro") else ""
+    markup = POLLS_CSS + intro + "".join(parts)
+    script = r"""<script>(function(){
+function csv(t){var r=[],row=[],f="",i=0;for(;i<t.length;i++){var c=t[i];
+if(c=='"'){if(t[i+1]=='"'){f+='"';i++;}else{var q=true;i++;while(i<t.length&&q){if(t[i]=='"'){if(t[i+1]=='"'){f+='"';i++;}else{q=false;}i++;}else{f+=t[i];i++;}}i--;}}
+else if(c==","){row.push(f);f="";}else if(c=="\n"){row.push(f);r.push(row);row=[];f="";}else if(c!="\r"){f+=c;}}
+if(f.length||row.length){row.push(f);r.push(row);}return r;}
+function pick(rows){var out=[];for(var i=1;i<rows.length;i++){var R=rows[i];if(!R||!R.length)continue;
+var vote=(R[1]||"").trim().toLowerCase();var comment=(R[2]||"").trim();out.push({vote:vote,comment:comment});}return out;}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+var secs=document.querySelectorAll("section.poll");
+secs.forEach(function(sec){
+ var counts=sec.querySelector("[data-pcounts]"),paneC=sec.querySelector('[data-ppane="comments"]');
+ var urls=[{u:sec.getAttribute("data-anon"),signed:false},{u:sec.getAttribute("data-signed"),signed:true}].filter(function(x){return x.u;});
+ if(!urls.length)return;
+ Promise.all(urls.map(function(x){return fetch(x.u,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("bad");return r.text();}).then(function(t){return pick(csv(t)).map(function(v){v.signed=x.signed;return v;});}).catch(function(){return null;});})).then(function(all){
+  if(all.some(function(a){return a===null;})){counts.textContent="Counts could not load. Open the form or sheet directly to see them.";return;}
+  var rows=[].concat.apply([],all),yes=0,no=0,signed=0;
+  rows.forEach(function(r){if(r.vote.indexOf("yes")===0)yes++;else if(r.vote.indexOf("no")===0)no++;if(r.signed)signed++;});
+  counts.innerHTML="<b>"+yes+"</b> yes · <b>"+no+"</b> no · "+rows.length+" total · "+signed+" signed in, "+(rows.length-signed)+" not signed in";
+  var withC=rows.filter(function(r){return r.comment;});
+  if(withC.length){paneC.innerHTML=withC.map(function(r){var n=r.vote.indexOf("no")===0?' class="pc-vote no"':' class="pc-vote"';var v=r.vote.indexOf("no")===0?"No":"Yes";return '<p class="pc-item"><span'+n+'>'+v+'</span>'+esc(r.comment)+(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>')+'</p>';}).join("");}
+ });
+});
+document.addEventListener("click",function(e){var b=e.target.closest("[data-ptab]");if(!b)return;var sec=b.closest("section.poll");sec.querySelectorAll("[data-ptab]").forEach(function(x){x.classList.toggle("on",x===b);});var want=b.getAttribute("data-ptab");sec.querySelectorAll("[data-ppane]").forEach(function(p){p.hidden=p.getAttribute("data-ppane")!==want;});});
+})();</script>"""
+    return marker_re.sub(lambda m: markup, body_html), script
+
+
 def badge_slug(pages, name):
     """Slug of the hidden page carrying this badge, or None.
 
@@ -2292,7 +2464,8 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
                 description: str = "", custom_css: str = "",
                 star_animation: str = STAR_ANIMATION_DEFAULT,
                 form_html: str = "",
-                cal_cfg: dict | None = None) -> str:
+                cal_cfg: dict | None = None,
+                polls_doc: dict | None = None) -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
     page_title = page_meta.get("title", "").strip() or title
     desc = page_meta.get("description", "").strip() or description.strip() or tagline.strip() or title
@@ -2311,10 +2484,11 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         # the literal implementation token leak onto a page without a form.
         placed = re.sub(r"<p[^>]*>\s*\[contact form\]\s*</p>", "", body_html)
     placed, cal_script = place_calendar(placed, cal_cfg)
+    placed, poll_script = place_polls(placed, polls_doc)
     placed, set_script = place_settings(placed, theme)
     placed = picture_fallbacks(lazy_images(placed))
     if placed:
-        canvas = f'  <div class="canvas">\n{placed}{cal_script}{set_script}\n  </div>\n'
+        canvas = f'  <div class="canvas">\n{placed}{cal_script}{poll_script}{set_script}\n  </div>\n'
     footer_text = html.escape(footer) + "\n" if footer.strip() else ""
     footer_block = ('  <footer>\n' + footer_text +
                     "  </footer>\n")
@@ -2603,7 +2777,8 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
         site["theme"], site["pages"], p["slug"], clean, logo_uri,
                         site.get("description", ""), site.get("custom_css", ""),
                         site.get("star_animation", "comic"),
-                        form_html=form_html, cal_cfg=cal_cfg))
+                        form_html=form_html, cal_cfg=cal_cfg,
+                        polls_doc=load_polls(pages_dir.parent)))
     nf = (NOTFOUND.replace("__CSSLINK__", css_link("/"))
           .replace("__CSS__", safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", "/" + logo_uri)

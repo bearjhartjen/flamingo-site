@@ -371,6 +371,33 @@ EDITOR_CSS = site_build.CSS + r'''
   .ld-back{position:fixed;inset:0;background:rgba(20,20,20,.5);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:12vh 12px 12px}
   .ld-back[hidden]{display:none}
   .ld-box{background:#fff;color:#141414;border-radius:6px;padding:20px 22px;width:520px;max-width:94vw;max-height:80vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);font:13px "Helvetica Neue",Arial,sans-serif}
+  .ld-box.wide{width:900px}
+  .evcal2-head{display:flex;align-items:center;gap:8px;margin:12px 0 10px}
+  .evcal2-head strong{font:600 13px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;min-width:160px;text-align:center}
+  .evcal2-head button{border:1px solid #999;background:#fff;border-radius:3px;padding:5px 10px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer;color:#222}
+  .evcal2-head button:hover{border-color:#1c4fd8;color:#1c4fd8}
+  .evcal2-head button.on{background:#141414;color:#fff;border-color:#141414}
+  .evcal2{display:grid;grid-template-columns:1fr 296px;gap:18px;margin:0 0 6px}
+  .evcal2-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 0 5px;font:600 10px "Helvetica Neue",Arial,sans-serif;color:#777;letter-spacing:.7px;text-transform:uppercase;text-align:center}
+  .evcal2-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .evcal2-day{position:relative;min-height:46px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;font:13px "Helvetica Neue",Arial,sans-serif;color:#222;text-align:left;padding:5px 7px}
+  .evcal2-day:hover{border-color:#1c4fd8}
+  .evcal2-day.has{font-weight:600;background:#fafaf7}
+  .evcal2-day.sel{outline:2px solid #1c4fd8;outline-offset:-2px;border-color:#1c4fd8}
+  .evcal2-day.today{box-shadow:inset 0 0 0 1px #b9c8f2}
+  .evcal2-day.empty{border:0;background:transparent;cursor:default;min-height:46px}
+  .evcal2-day .evdot{position:absolute;right:6px;bottom:4px;font-size:11px;line-height:1}
+  .evcal2-pane{border-left:1px solid #e3e3e3;padding-left:16px;min-height:300px}
+  .evcal2-pane h4{margin:0 0 2px;font-size:13px;letter-spacing:0;text-transform:none}
+  .evcal2-pane .evwhen2{font:11px "Helvetica Neue",Arial,sans-serif;color:#777;margin:0 0 10px}
+  .evcal2-empty{font:12px "Helvetica Neue",Arial,sans-serif;color:#777;padding:6px 0 10px}
+  .evcal2-pane .evrow{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+  .evcal2-pane .evrow .evtime{font:700 11px "Helvetica Neue",Arial,sans-serif;color:#1c4fd8;white-space:nowrap}
+  .evcal2-pane .evrow .evwhat{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:12.5px Georgia,serif;color:#222}
+  .evcal2-pane .evrow button{border:1px solid #999;background:#fff;border-radius:3px;padding:3px 8px;font:11px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
+  .evcal2-pane .evrow button:hover{border-color:#1c4fd8;color:#1c4fd8}
+  .evcal2-pane .evrow button.del:hover{border-color:#a1261e;color:#a1261e}
+  .evcal2-pane .evadd{margin-top:12px;width:100%;border:1px dashed #1c4fd8;background:#fff;color:#1c4fd8;border-radius:4px;padding:9px;font:600 12px "Helvetica Neue",Arial,sans-serif;cursor:pointer}
   .ld-box h3{margin:0 0 4px;font-size:14px;letter-spacing:.8px;text-transform:uppercase}
   .ld-box label{display:block;margin:10px 0 3px;font-size:12px;color:#444}
   .ld-box input[type=text]{width:100%;box-sizing:border-box;font-size:13px;padding:7px 9px;border:1px solid #999;border-radius:2px}
@@ -773,6 +800,7 @@ __CSS__
   <button data-cmd="form" id="btn-form-marker" title="Place the contact form at the cursor">Form location</button>
   <button data-cmd="formedit" id="btn-form-edit" title="Change the wording of the contact form on this page">Form</button>
   <button data-cmd="events" id="btn-events" title="Add or change events">Manage Events</button>
+  <button data-cmd="polls" id="btn-polls" title="Add or change polls">Manage Polls</button>
   <button data-cmd="calendar" id="btn-calendar" title="Change the optional month calendar marker">Calendar view</button>
   <button data-cmd="news" id="btn-news" title="Add a dated news article to the top of the Latest page">News</button>
   </div>
@@ -930,13 +958,61 @@ __CSS__
   </div>
 </div>
 <div class="ld-back" id="eventsDlg" hidden>
-  <div class="ld-box" role="dialog" aria-modal="true" aria-labelledby="eventsDlgTitle">
+  <div class="ld-box wide" role="dialog" aria-modal="true" aria-labelledby="eventsDlgTitle">
     <h3 id="eventsDlgTitle">Events</h3>
-    <p class="dlg-note">Manage the event cards shown on the page. Add a title, date, time, venue, description and optional link.</p>
-    <div id="eventsList"></div>
+    <p class="dlg-note">Pick a day, then add or edit that day's events. This is exactly what the public calendar shows.</p>
+    <div class="evcal2-head">
+      <button type="button" id="evCalPrev" aria-label="Previous month">&lsaquo;</button>
+      <strong id="evCalLabel"></strong>
+      <button type="button" id="evCalNext" aria-label="Next month">&rsaquo;</button>
+      <button type="button" id="evCalToday">Today</button>
+      <button type="button" id="evCalMarker">Marker&hellip;</button>
+    </div>
+    <div class="evcal2">
+      <div>
+        <div class="evcal2-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+        <div class="evcal2-grid" id="evCalGrid"></div>
+      </div>
+      <div class="evcal2-pane" id="evDayPane"></div>
+    </div>
     <div class="dlg-actions">
-      <button type="button" class="primary" id="eventAdd">Add an event</button>
+      <button type="button" class="primary" id="eventAdd">Add event</button>
       <button type="button" id="eventsClose">Done</button>
+    </div>
+  </div>
+</div>
+<div class="ld-back" id="pollsDlg" hidden>
+  <div class="ld-box wide" role="dialog" aria-modal="true" aria-labelledby="pollsDlgTitle">
+    <h3 id="pollsDlgTitle">Polls</h3>
+    <p class="dlg-note">Each poll is a product or project put up for a yes or no vote. Add the two Google Form links and the two public sheet links when they exist; the page shows live counts and public comments from those sheets.</p>
+    <label class="dlg-field">Page introduction (shown above every poll)<textarea id="pollIntro" maxlength="2000"></textarea></label>
+    <div id="pollsList"></div>
+    <div id="pollForm" hidden>
+      <h4 id="pollFormTitle" style="margin:14px 0 2px;font-size:13px">New poll</h4>
+      <div class="dlg-row">
+        <label class="dlg-field" style="flex:1">Product or project name<input id="pollTitle" maxlength="160"></label>
+      </div>
+      <label class="dlg-field">Question voters read<input id="pollQuestion" maxlength="400" placeholder="Should we build this?"></label>
+      <label class="dlg-field">Details<textarea id="pollDetails" maxlength="2000"></textarea></label>
+      <div class="dlg-row">
+        <label class="dlg-field" style="flex:1">Opens<input id="pollOpens" type="date"></label>
+        <label class="dlg-field" style="flex:1">Closes<input id="pollCloses" type="date"></label>
+      </div>
+      <label class="dlg-field">Anonymous form URL<input id="pollAnonForm" maxlength="500" placeholder="https://docs.google.com/forms/..."></label>
+      <label class="dlg-field">Signed-in form URL<input id="pollSignedForm" maxlength="500" placeholder="https://docs.google.com/forms/..."></label>
+      <label class="dlg-field">Anonymous sheet CSV URL<input id="pollAnonCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
+      <label class="dlg-field">Signed-in sheet CSV URL<input id="pollSignedCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
+      <label class="dlg-field">Decision note (published when it closes)<textarea id="pollDecision" maxlength="2000"></textarea></label>
+      <div class="dlg-row"><label><input type="checkbox" id="pollClosed"> Voting closed</label></div>
+      <div class="dlg-actions">
+        <button type="button" class="primary" id="pollSave">Save this poll</button>
+        <button type="button" id="pollCancel">Cancel</button>
+        <button type="button" class="danger" id="pollDelete">Delete poll</button>
+      </div>
+    </div>
+    <div class="dlg-actions" id="pollsListActions">
+      <button type="button" class="primary" id="pollAdd">Add a poll</button>
+      <button type="button" id="pollsClose">Done</button>
     </div>
   </div>
 </div>
@@ -1683,6 +1759,7 @@ async function deleteEvent(ev){
   await renderCalBlock();
 }
 function fillEventForm(ev, dateStr){
+  EVRETURN = !$("#eventsDlg").hidden;
   let y, m, d;
   if (ev) { y = ev.y; m = ev.m; d = ev.d; }
   else if (dateStr) { const bits = String(dateStr).split("-").map(Number); y = bits[0]; m = bits[1]; d = bits[2]; }
@@ -1729,30 +1806,104 @@ function eventDayList(day){
     list.appendChild(row);
   });
 }
+let EVCAL = null;
+let EVRETURN = false;
+const EV_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function evKey(e){ return (e.y || 0) * 10000 + (e.m || 0) * 100 + (e.d || 0); }
+function evTodayObj(){ const t = new Date(); return {y: t.getFullYear(), m: t.getMonth() + 1, d: t.getDate()}; }
+function evDayString(day){ return day.y + "-" + day.m + "-" + day.d; }
+function evFmtDay(day){
+  try { return new Date(day.y, day.m - 1, day.d, 12).toLocaleDateString("en-US",
+    {weekday: "long", month: "long", day: "numeric", year: "numeric"}); }
+  catch(e){ return ""; }
+}
 async function openEventsDialog(){
   await renderCalBlock();
-  const list = $("#eventsList");
-  list.innerHTML = "";
-  if (!EVENTS.length) {
-    const p = document.createElement("p");
-    p.className = "dlg-note";
-    p.textContent = "No events yet. Click a day on the calendar to add one.";
-    list.appendChild(p);
+  if (!EVCAL) {
+    const today = evTodayObj();
+    const next = EVENTS.slice().sort((a, b) => evKey(a) - evKey(b)).find(e => evKey(e) >= evKey(today));
+    EVCAL = next ? {y: next.y, m: next.m, d: next.d} : today;
   }
-  EVENTS.forEach(ev => {
-    const row = document.createElement("div"); row.className = "evrow";
-    const when = document.createElement("span"); when.className = "evwhen";
-    when.textContent = ev.day + (ev.times ? " · " + ev.times : "");
-    const what = document.createElement("span"); what.className = "evwhat";
-    what.textContent = ev.label || "";
-    const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit";
-    edit.onclick = () => { $("#eventsDlg").hidden = true; fillEventForm(ev, null); };
-    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "Delete";
-    del.onclick = async () => { await deleteEvent(ev); openEventsDialog(); };
-    row.appendChild(when); row.appendChild(what); row.appendChild(edit); row.appendChild(del);
-    list.appendChild(row);
-  });
+  drawEventsDialog();
   $("#eventsDlg").hidden = false;
+}
+function drawEventsDialog(){
+  const grid = $("#evCalGrid");
+  if (!grid) return;
+  const y = EVCAL.y, m = EVCAL.m, today = evTodayObj();
+  $("#evCalLabel").textContent = EV_MONTHS[m - 1] + " " + y;
+  const first = new Date(y, m - 1, 1).getDay();
+  const days = new Date(y, m, 0).getDate();
+  grid.innerHTML = "";
+  for (let i = 0; i < first; i++) {
+    const blank = document.createElement("span");
+    blank.className = "evcal2-day empty";
+    grid.appendChild(blank);
+  }
+  for (let d = 1; d <= days; d++) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "evcal2-day";
+    btn.textContent = String(d);
+    if (d === today.d && m === today.m && y === today.y) btn.classList.add("today");
+    if (EVCAL.d === d) btn.classList.add("sel");
+    const mine = EVENTS.filter(ev => ev.y === y && ev.m === m && ev.d === d);
+    if (mine.length) {
+      btn.classList.add("has");
+      btn.title = mine.map(ev => (ev.times ? ev.times + " · " : "") + (ev.label || "")).join(" | ");
+      const dot = document.createElement("span");
+      dot.className = "evdot";
+      dot.textContent = CAL_CFG.symbol || "●";
+      dot.style.color = CAL_CFG.color || "#1a7f37";
+      btn.appendChild(dot);
+    }
+    btn.onclick = () => { EVCAL = {y: y, m: m, d: d}; drawEventsDialog(); };
+    grid.appendChild(btn);
+  }
+  const pane = $("#evDayPane");
+  pane.innerHTML = "";
+  const head = document.createElement("h4");
+  head.textContent = evFmtDay(EVCAL);
+  pane.appendChild(head);
+  const mine = EVENTS.filter(ev => ev.y === EVCAL.y && ev.m === EVCAL.m && ev.d === EVCAL.d);
+  const count = document.createElement("p");
+  count.className = "evwhen2";
+  count.textContent = mine.length ? (mine.length === 1 ? "1 event" : mine.length + " events") : "No events";
+  pane.appendChild(count);
+  if (!mine.length) {
+    const empty = document.createElement("p");
+    empty.className = "evcal2-empty";
+    empty.textContent = "Nothing on this day yet.";
+    pane.appendChild(empty);
+  }
+  mine.forEach(ev => {
+    const row = document.createElement("div");
+    row.className = "evrow";
+    const time = document.createElement("span");
+    time.className = "evtime";
+    time.textContent = ev.times || "All day";
+    const what = document.createElement("span");
+    what.className = "evwhat";
+    what.textContent = ev.label || "Event";
+    what.title = ev.label || "Event";
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.textContent = "Edit";
+    edit.onclick = () => { $("#eventsDlg").hidden = true; fillEventForm(ev, null); };
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "del";
+    del.textContent = "Delete";
+    del.onclick = async () => { await deleteEvent(ev); drawEventsDialog(); };
+    row.appendChild(time); row.appendChild(what); row.appendChild(edit); row.appendChild(del);
+    pane.appendChild(row);
+  });
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "evadd";
+  add.textContent = "+ Add on this day";
+  add.onclick = () => fillEventForm(null, evDayString(EVCAL));
+  pane.appendChild(add);
 }
 function applyCalMarker(){
   const sym = $("#calSymbol").value, col = $("#calColor").value;
@@ -1764,6 +1915,7 @@ function applyCalMarker(){
   if (pv) { pv.textContent = CAL_CFG.symbol; pv.style.color = CAL_CFG.color; pv.style.fontSize = CAL_CFG.size + "px"; }
   renderCalBlock();
   markDirty();
+  if (typeof drawEventsDialog === "function" && !$("#eventsDlg").hidden) drawEventsDialog();
 }
 function openCalDialog(){
   $("#calSymbol").value = CAL_CFG.symbol;
@@ -1817,9 +1969,131 @@ $("#formCancel").onclick = () => { $("#formDlg").hidden = true; };
 });
 $("#calSymbol").addEventListener("change", applyCalMarker);
 $("#calColor").addEventListener("change", applyCalMarker);
-$("#eventAdd").onclick = () => { fillEventForm(null, null); };
+$("#eventAdd").onclick = () => { fillEventForm(null, EVCAL ? evDayString(EVCAL) : null); };
 $("#eventsClose").onclick = () => { $("#eventsDlg").hidden = true; };
-$("#evCancel").onclick = () => { $("#eventDlg").hidden = true; };
+$("#evCalPrev").onclick = () => { let m = EVCAL.m - 1, y = EVCAL.y; if (m < 1) { m = 12; y--; } EVCAL = {y: y, m: m, d: EVCAL.d}; drawEventsDialog(); };
+$("#evCalNext").onclick = () => { let m = EVCAL.m + 1, y = EVCAL.y; if (m > 12) { m = 1; y++; } EVCAL = {y: y, m: m, d: EVCAL.d}; drawEventsDialog(); };
+$("#evCalToday").onclick = () => { EVCAL = evTodayObj(); drawEventsDialog(); };
+$("#evCalMarker").onclick = () => { openCalDialog(); };
+$("#evCancel").onclick = () => { $("#eventDlg").hidden = true; if (EVRETURN) openEventsDialog(); };
+/* ---- polls: products put up for a yes or no vote ---- */
+let POLLS = {intro: "", polls: []};
+let POLL_EDIT = null;
+async function openPollsDialog(){
+  try { const j = await api("/api/polls", {}); if (j && j.doc) POLLS = j.doc; } catch(e){}
+  $("#pollIntro").value = POLLS.intro || "";
+  POLL_EDIT = null;
+  $("#pollForm").hidden = true;
+  $("#pollsListActions").hidden = false;
+  renderPollsList();
+  $("#pollsDlg").hidden = false;
+}
+function renderPollsList(){
+  const list = $("#pollsList");
+  list.innerHTML = "";
+  if (!POLLS.polls.length) {
+    const p = document.createElement("p");
+    p.className = "dlg-note";
+    p.textContent = "No polls yet. Add a product or project and the page will show it.";
+    list.appendChild(p);
+    return;
+  }
+  POLLS.polls.forEach((poll, idx) => {
+    const row = document.createElement("div");
+    row.className = "evrow";
+    const when = document.createElement("span");
+    when.className = "evwhen";
+    when.textContent = (poll.opens || "—") + " → " + (poll.closes || "—");
+    const what = document.createElement("span");
+    what.className = "evwhat";
+    what.textContent = poll.title || poll.question || "Poll";
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.textContent = "Edit";
+    edit.onclick = () => fillPollForm(idx);
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "del";
+    del.textContent = "Delete";
+    del.onclick = async () => {
+      POLLS.polls.splice(idx, 1);
+      await savePollsDoc();
+      renderPollsList();
+    };
+    row.appendChild(when); row.appendChild(what); row.appendChild(edit); row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+function fillPollForm(idx){
+  POLL_EDIT = (idx === null) ? null : idx;
+  const p = (idx === null) ? {} : (POLLS.polls[idx] || {});
+  $("#pollTitle").value = p.title || "";
+  $("#pollQuestion").value = p.question || "";
+  $("#pollDetails").value = p.details || "";
+  $("#pollOpens").value = p.opens || "";
+  $("#pollCloses").value = p.closes || "";
+  $("#pollAnonForm").value = p.anon_form || "";
+  $("#pollSignedForm").value = p.signed_form || "";
+  $("#pollAnonCsv").value = p.anon_csv || "";
+  $("#pollSignedCsv").value = p.signed_csv || "";
+  $("#pollDecision").value = p.decision || "";
+  $("#pollClosed").checked = !!p.closed;
+  $("#pollFormTitle").textContent = (idx === null) ? "New poll" : "Edit poll";
+  $("#pollDelete").hidden = (idx === null);
+  $("#pollForm").hidden = false;
+  $("#pollsListActions").hidden = true;
+  $("#pollTitle").focus();
+}
+function readPollForm(){
+  return {
+    id: (POLL_EDIT !== null && POLLS.polls[POLL_EDIT] && POLLS.polls[POLL_EDIT].id) || ("poll-" + Date.now()),
+    title: $("#pollTitle").value.trim(),
+    question: $("#pollQuestion").value.trim(),
+    details: $("#pollDetails").value.trim(),
+    opens: $("#pollOpens").value,
+    closes: $("#pollCloses").value,
+    anon_form: $("#pollAnonForm").value.trim(),
+    signed_form: $("#pollSignedForm").value.trim(),
+    anon_csv: $("#pollAnonCsv").value.trim(),
+    signed_csv: $("#pollSignedCsv").value.trim(),
+    decision: $("#pollDecision").value.trim(),
+    closed: $("#pollClosed").checked
+  };
+}
+async function savePollsDoc(){
+  const payload = {intro: $("#pollIntro").value, polls: POLLS.polls};
+  const j = await api("/api/polls/save", payload);
+  if (j && j.doc) POLLS = j.doc;
+}
+$("#pollAdd").onclick = () => fillPollForm(null);
+$("#pollsClose").onclick = () => { $("#pollsDlg").hidden = true; };
+$("#pollCancel").onclick = () => {
+  POLL_EDIT = null;
+  $("#pollForm").hidden = true;
+  $("#pollsListActions").hidden = false;
+  renderPollsList();
+};
+$("#pollSave").onclick = async () => {
+  const poll = readPollForm();
+  if (!poll.title && !poll.question) { status.textContent = "Give the poll a product name or a question"; $("#pollTitle").focus(); return; }
+  if (POLL_EDIT === null) POLLS.polls.push(poll); else POLLS.polls[POLL_EDIT] = poll;
+  await savePollsDoc();
+  POLL_EDIT = null;
+  $("#pollForm").hidden = true;
+  $("#pollsListActions").hidden = false;
+  renderPollsList();
+  status.textContent = "Poll saved — rebuild the site to publish it";
+};
+$("#pollDelete").onclick = async () => {
+  if (POLL_EDIT === null) return;
+  POLLS.polls.splice(POLL_EDIT, 1);
+  POLL_EDIT = null;
+  await savePollsDoc();
+  $("#pollForm").hidden = true;
+  $("#pollsListActions").hidden = false;
+  renderPollsList();
+  status.textContent = "Poll deleted";
+};
 /* ---- dated news articles for the Latest page ---- */
 function openNewsDialog(){
   const now = new Date();
@@ -1888,11 +2162,13 @@ $("#evSave").onclick = async () => {
   const editIdx = EVENT_EDIT ? EVENT_EDIT.idx : null;
   $("#eventDlg").hidden = true;
   writeEvent(ev, editIdx);
+  if (EVRETURN) await openEventsDialog();
 };
 $("#evDelete").onclick = async () => {
   const ev = EVENT_EDIT;
   $("#eventDlg").hidden = true;
   if (ev) await deleteEvent(ev);
+  if (EVRETURN) await openEventsDialog();
 };
 /* clicking a day in the builder's calendar adds an event on that day */
 canvas.addEventListener("click", e => {
@@ -3507,6 +3783,7 @@ $("#toolbar").addEventListener("click", e => {
   }
   else if (c === "formedit") { openFormDialog(); return; }
   else if (c === "events") { openEventsDialog(); return; }
+  else if (c === "polls") { openPollsDialog(); return; }
   else if (c === "calendar") { openCalDialog(); return; }
   else if (c === "news") { openNewsDialog(); return; }
   else if (c === "image") { galleryMode = false; replaceTarget = null; filepick.multiple = false; filepick.click(); }
@@ -4453,6 +4730,17 @@ class Handler(BaseHTTPRequestHandler):
                 doc = self._read_json()
                 cfg = site_build.sanitize_form_config(doc.get("form") or {})
                 return self._json(200, {"form": cfg, "html": inert_form_html(cfg)})
+            if url.path == "/api/polls":
+                # The poll document as the editor sees it. Reading only.
+                return self._json(200, {"doc": site_build.load_polls(ROOT / "data")})
+            if url.path == "/api/polls/save":
+                doc = self._read_json()
+                polls = [site_build.sanitize_poll(p) for p in (doc.get("polls") or [])
+                         if isinstance(p, dict)]
+                data = {"intro": str(doc.get("intro", ""))[:2000], "polls": polls}
+                write_text_atomic(ROOT / "data" / "polls.json",
+                                  json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+                return self._json(200, {"ok": True, "doc": data})
             if url.path == "/api/events":
                 # The event list -> the events it holds and the month grid
                 # drawn from them. The same parser the site build uses.

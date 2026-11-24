@@ -20,6 +20,10 @@
       "nav": "Products"
     },
     {
+      "slug": "principles",
+      "nav": "Principles"
+    },
+    {
       "slug": "people",
       "nav": "People"
     },

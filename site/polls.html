@@ -14,7 +14,7 @@
 <meta property="og:image" content="https://flamingoandcactus.com/logo.png">
 <meta name="twitter:card" content="summary">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Flamingo and Cactus","url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/favicon.png"}</script>
-<link rel="stylesheet" href="assets/site.css?v=e64e70a762">
+<link rel="stylesheet" href="assets/site.css?v=c53c317022">
 </head>
 <body data-theme="classic" data-star-animation="comic">
 <script>try{var t=localStorage.getItem('fc-theme');if(t==='midnight'||t==='classic'||t==='parchment'||t==='ink')document.body.dataset.theme=t}catch(_){}</script>
@@ -29,6 +29,7 @@
     <a href="index.html">Home</a>
     <a href="financials.html">Financials</a>
     <a href="products.html">Products</a>
+    <a href="principles.html">Principles</a>
     <a href="people.html">People</a>
     <a href="events.html">EVENTS</a>
     <a href="contact.html">Contact</a>
@@ -40,11 +41,55 @@
   <div class="hr"></div>
 
   <div class="canvas">
-<h2>POLLING COMING VERY SOON. Come back in a few days and we should have it figured out.</h2><p><br></p><p>Here you&#x27;ll be able to vote on distinct actions and development, this will grant us a much easier and interactive feedback line with the community compared to email or other forms of communication.</p><p><br></p>
+<style>
+.poll{border:1px solid #d8d2c4;border-radius:6px;padding:18px 20px;margin:16px 0;background:#fffdf7}
+.poll h3{margin:0 0 4px;font-size:22px}
+.poll-q{margin:0 0 8px;font-size:17px}
+.poll-details{color:#4a453c;margin:0 0 8px}
+.poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 10px;letter-spacing:.3px}
+.poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 12px}
+.poll-tabs{display:flex;gap:6px;margin:0 0 12px}
+.poll-tabs button{border:1px solid #bbb2a0;background:#fff;border-radius:4px;padding:6px 14px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer;color:#3a352c}
+.poll-tabs button.on{background:#141414;color:#fff;border-color:#141414}
+.poll-pane[hidden]{display:none}
+.poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:#3a352c;margin:12px 0 0}
+.poll-counts b{font-size:15px}
+.poll-form iframe{width:100%;max-width:640px;height:520px;border:1px solid #cfc7b6;border-radius:6px;background:#fff}
+.poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
+.poll-links a{display:inline-block;margin:0 10px 6px 0}
+.pc-item{padding:8px 0;border-bottom:1px solid #ece6d8;margin:0;font-size:15px}
+.pc-vote{font:700 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:#1a7f37;margin-right:8px}
+.pc-vote.no{color:#a1261e}
+.pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin-left:8px}
+.pc-empty{color:#7a7364;font-style:italic}
+</style><p>For now the polls will be to vote on the initialization of a project or product. Anyone can vote once per browser. Signing in with Google is optional and is shown as a separate confidence count. Clearing your browser or using another device can vote again, so the result is a pulse rather than a ballot.</p><p class="pc-empty">No polls are up right now.</p><script>(function(){
+function csv(t){var r=[],row=[],f="",i=0;for(;i<t.length;i++){var c=t[i];
+if(c=='"'){if(t[i+1]=='"'){f+='"';i++;}else{var q=true;i++;while(i<t.length&&q){if(t[i]=='"'){if(t[i+1]=='"'){f+='"';i++;}else{q=false;}i++;}else{f+=t[i];i++;}}i--;}}
+else if(c==","){row.push(f);f="";}else if(c=="\n"){row.push(f);r.push(row);row=[];f="";}else if(c!="\r"){f+=c;}}
+if(f.length||row.length){row.push(f);r.push(row);}return r;}
+function pick(rows){var out=[];for(var i=1;i<rows.length;i++){var R=rows[i];if(!R||!R.length)continue;
+var vote=(R[1]||"").trim().toLowerCase();var comment=(R[2]||"").trim();out.push({vote:vote,comment:comment});}return out;}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+var secs=document.querySelectorAll("section.poll");
+secs.forEach(function(sec){
+ var counts=sec.querySelector("[data-pcounts]"),paneC=sec.querySelector('[data-ppane="comments"]');
+ var urls=[{u:sec.getAttribute("data-anon"),signed:false},{u:sec.getAttribute("data-signed"),signed:true}].filter(function(x){return x.u;});
+ if(!urls.length)return;
+ Promise.all(urls.map(function(x){return fetch(x.u,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("bad");return r.text();}).then(function(t){return pick(csv(t)).map(function(v){v.signed=x.signed;return v;});}).catch(function(){return null;});})).then(function(all){
+  if(all.some(function(a){return a===null;})){counts.textContent="Counts could not load. Open the form or sheet directly to see them.";return;}
+  var rows=[].concat.apply([],all),yes=0,no=0,signed=0;
+  rows.forEach(function(r){if(r.vote.indexOf("yes")===0)yes++;else if(r.vote.indexOf("no")===0)no++;if(r.signed)signed++;});
+  counts.innerHTML="<b>"+yes+"</b> yes · <b>"+no+"</b> no · "+rows.length+" total · "+signed+" signed in, "+(rows.length-signed)+" not signed in";
+  var withC=rows.filter(function(r){return r.comment;});
+  if(withC.length){paneC.innerHTML=withC.map(function(r){var n=r.vote.indexOf("no")===0?' class="pc-vote no"':' class="pc-vote"';var v=r.vote.indexOf("no")===0?"No":"Yes";return '<p class="pc-item"><span'+n+'>'+v+'</span>'+esc(r.comment)+(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>')+'</p>';}).join("");}
+ });
+});
+document.addEventListener("click",function(e){var b=e.target.closest("[data-ptab]");if(!b)return;var sec=b.closest("section.poll");sec.querySelectorAll("[data-ptab]").forEach(function(x){x.classList.toggle("on",x===b);});var want=b.getAttribute("data-ptab");sec.querySelectorAll("[data-ppane]").forEach(function(p){p.hidden=p.getAttribute("data-ppane")!==want;});});
+})();</script>
   </div>
   <footer>
   </footer>
 </div>
-<script src="assets/site.js?v=e64e70a762"></script>
+<script src="assets/site.js?v=c53c317022"></script>
 </body>
 </html>
