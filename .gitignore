@@ -1,2 +1,18 @@
 __pycache__/
 *.pyc
+
+# Editor / OS droppings
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.swp
+
+# Local publish scratch space and the build's own temp files
+.publish/
+
+# Backups and the build's copy of the uploads. Both stay on disk; git
+# already has the real files (assets/uploads/ and the repo history).
+.fix-form-backup/
+.flamingo-events-backup-*/
+/site/uploads/

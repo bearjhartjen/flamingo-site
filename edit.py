@@ -17,6 +17,7 @@ import argparse
 import base64
 import datetime
 import html
+import importlib
 import json
 import os
 import re
@@ -42,6 +43,33 @@ SITE = ROOT / "site"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import build as site_build  # noqa: E402
+# edit.py runs for as long as the builder window is open, so a change to
+# scripts/build.py on disk would otherwise be invisible: every save would
+# rebuild the site with the old CSS and quietly revert the new one. Remember
+# the mtime and reload the module before any request touches it.
+_BUILD_PATH = ROOT / "scripts" / "build.py"
+_BUILD_MTIME = _BUILD_PATH.stat().st_mtime if _BUILD_PATH.exists() else 0.0
+
+
+def _refresh_build_module() -> None:
+    global site_build, _BUILD_MTIME
+    try:
+        mtime = _BUILD_PATH.stat().st_mtime
+    except OSError:
+        return
+    if mtime == _BUILD_MTIME:
+        return
+    try:
+        # Execute the file rather than importlib.reload: reload can reuse a
+        # stale .pyc when two edits land inside the same second, which is
+        # exactly what happens when a fix is written and immediately saved.
+        spec = importlib.util.spec_from_file_location("build_fresh", _BUILD_PATH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        site_build = module
+        _BUILD_MTIME = mtime
+    except Exception:
+        pass  # a half-written file; the next request will try again
 
 
 # Serializes the read-modify-write mutating endpoints. The server is
@@ -92,8 +120,16 @@ def git_add(paths) -> str:
         return "git add failed: " + (e.stderr or e.stdout or "").strip()[-300:]
 
 
+_BUILD_LOCK = threading.Lock()
+
+
 def rebuild() -> None:
-    site_build.build(DATA, PAGES, LOGO, UPLOADS, SITE)
+    # Preview (/built), save and the Run-check button can all race: the
+    # server is threaded, and two builds writing site/ at once is how a
+    # preview ends up serving a half-written page.
+    with _BUILD_LOCK:
+        _refresh_build_module()
+        site_build.build(DATA, PAGES, LOGO, UPLOADS, SITE)
 
 
 def safe_upload_name(name: str, mime: str | None = None) -> str:
@@ -1002,6 +1038,10 @@ __CSS__
       <label class="dlg-field">Signed-in form URL<input id="pollSignedForm" maxlength="500" placeholder="https://docs.google.com/forms/..."></label>
       <label class="dlg-field">Anonymous sheet CSV URL<input id="pollAnonCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
       <label class="dlg-field">Signed-in sheet CSV URL<input id="pollSignedCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
+      <p class="dlg-note">Optional pool sheets. When any of these is filled in, the page draws one bar per pool plus a bar for everyone, matching the "separate bars" rule on Principles.</p>
+      <label class="dlg-field">Developers sheet CSV URL<input id="pollDevCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
+      <label class="dlg-field">Financial sheet CSV URL<input id="pollFinCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
+      <label class="dlg-field">Users sheet CSV URL<input id="pollUserCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
       <label class="dlg-field">Decision note (published when it closes)<textarea id="pollDecision" maxlength="2000"></textarea></label>
       <div class="dlg-row"><label><input type="checkbox" id="pollClosed"> Voting closed</label></div>
       <div class="dlg-actions">
@@ -2036,6 +2076,9 @@ function fillPollForm(idx){
   $("#pollSignedForm").value = p.signed_form || "";
   $("#pollAnonCsv").value = p.anon_csv || "";
   $("#pollSignedCsv").value = p.signed_csv || "";
+  $("#pollDevCsv").value = p.dev_csv || "";
+  $("#pollFinCsv").value = p.finance_csv || "";
+  $("#pollUserCsv").value = p.user_csv || "";
   $("#pollDecision").value = p.decision || "";
   $("#pollClosed").checked = !!p.closed;
   $("#pollFormTitle").textContent = (idx === null) ? "New poll" : "Edit poll";
@@ -2056,6 +2099,9 @@ function readPollForm(){
     signed_form: $("#pollSignedForm").value.trim(),
     anon_csv: $("#pollAnonCsv").value.trim(),
     signed_csv: $("#pollSignedCsv").value.trim(),
+    dev_csv: $("#pollDevCsv").value.trim(),
+    finance_csv: $("#pollFinCsv").value.trim(),
+    user_csv: $("#pollUserCsv").value.trim(),
     decision: $("#pollDecision").value.trim(),
     closed: $("#pollClosed").checked
   };
@@ -4024,7 +4070,7 @@ async function save(){
   const saveSlug = SLUG, saveRevision = editRevision;
   const sentBody = bodyForSave();
   const settings = {
-    title: SITE.title.slice(0, 300) || "Flamingo and Cactus",
+    title: SITE.title.slice(0, 300) || "Flamingo & Cactus",
     tagline: SITE.tagline.slice(0, 300),
     description: (SITE.description || "").slice(0, 300),
     custom_css: (SITE.custom_css || "").slice(0, 20000),
@@ -4472,7 +4518,20 @@ class Handler(BaseHTTPRequestHandler):
         if host not in ("127.0.0.1", "localhost"):
             return False
         origin = (self.headers.get("Origin") or "").strip()
-        if origin and not re.match(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$", origin):
+        if origin:
+            # Only this builder's own page may drive it: the origin must be
+            # the exact scheme+host+port it is served on, not any localhost
+            # port (another dev server could otherwise use it).
+            port = self.server.server_port
+            allowed = (f"http://127.0.0.1:{port}", f"http://localhost:{port}")
+            if origin.rstrip("/") not in allowed:
+                return False
+        # Browsers label how the request relates to the page that made it.
+        # A hostile page posts cross-site, so refuse that even when it sends
+        # no Origin header at all. Direct navigation and this page's own
+        # fetches are "none" and "same-origin".
+        fetch_site = (self.headers.get("Sec-Fetch-Site") or "").strip().lower()
+        if fetch_site and fetch_site not in ("same-origin", "none"):
             return False
         return True
 
@@ -4487,6 +4546,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send(code, json.dumps(obj).encode(), "application/json")
 
     def do_GET(self):
+        _refresh_build_module()
         if not self._loopback_ok():
             return self._json(403, {"error": "forbidden"})
         url = urllib.parse.urlparse(self.path)
@@ -4625,7 +4685,7 @@ class Handler(BaseHTTPRequestHandler):
         site = read_site()
         if slug not in [p["slug"] for p in site["pages"]]:
             return self._json(400, {"error": "unknown page"})
-        site["title"] = str(doc.get("title", ""))[:300] or "Flamingo and Cactus"
+        site["title"] = str(doc.get("title", ""))[:300] or "Flamingo & Cactus"
         site["tagline"] = str(doc.get("tagline", ""))[:300]
         site["description"] = str(doc.get("description", ""))[:300]
         custom_css = str(doc.get("custom_css", ""))
@@ -4695,7 +4755,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._loopback_ok():
             return self._json(403, {"error": "forbidden"})
+        _refresh_build_module()
         url = urllib.parse.urlparse(self.path)
+        # One writer at a time. Every POST (save, page settings, uploads,
+        # polls) runs under the same reentrant lock as the save handler, so
+        # two fast clicks cannot interleave a read, a write and a rebuild.
+        _MUTEX.acquire()
         try:
             if url.path == "/api/restart":
                 # swap this process for a fresh one running the on-disk
@@ -4767,7 +4832,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/settings":
                 doc = self._read_json()
                 site = read_site()
-                site["title"] = str(doc.get("title", ""))[:300] or "Flamingo and Cactus"
+                site["title"] = str(doc.get("title", ""))[:300] or "Flamingo & Cactus"
                 site["tagline"] = str(doc.get("tagline", ""))[:300]
                 site["description"] = str(doc.get("description", ""))[:300]
                 custom_css = str(doc.get("custom_css", ""))
@@ -4968,6 +5033,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(404, {"error": "not found"})
         except Exception as e:
             return self._json(500, {"error": str(e)[:300]})
+        finally:
+            _MUTEX.release()
 
 
 def main(argv=None):

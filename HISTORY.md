@@ -81,6 +81,12 @@ October 2026 build dropped the others entirely:
 
 ## The contact form
 
+> **November 2026 update.** The Web3Forms failover described in
+> this section is gone. One note now makes exactly one request, to
+> FormInit, and the page says so when the answer is unclear.
+> `data/form.json` no longer carries a Web3Forms key. The draft-save
+> behaviour below is still true.
+
 The Contact page form is the one thing that is not static. It posts to
 a third-party service that emails each message to our inbox. The email
 address on the page is plain text on purpose. We want people to reach us.
@@ -498,3 +504,101 @@ send).
   "drop to insert" veil, accepts up to three at once, selects the first
   one, and puts its alt-text box in reach, so the check list stays
   honest.
+
+## Site review pass (November 2026)
+
+An outside review looked at the live site, the DNS records and the repo at
+commit `689ef04`. It did not ask for a rewrite. It found a blank 404 page,
+sixteen pages sharing one title, a ledger build that could publish a note by
+accident, and a build that edited its own inputs. This pass fixed those and
+the theme bug waiting on the Polls page. The rest of the review (headings,
+the home-page hero, the phone menu, DNS records) is still open.
+
+- **The 404 page says what happened.** It has a "Page not found" heading,
+  a sentence, links to the home and contact pages, and the normal menu.
+  Its links are absolute (`/products.html`) because GitHub Pages serves
+  `404.html` at whatever path the visitor mistyped.
+- **Every page has its own title and description.** `data/site.json` now
+  carries a `title` and a `description` for each page, and the build uses
+  them exactly as written. "Contact | Flamingo & Cactus" is no longer
+  "Flamingo and Cactus — Flamingo & Cactus". The build check fails if two
+  pages share a title or the site name appears twice in one.
+- **A missing private flag can no longer publish a note.**
+  `scripts/encrypt_flank.py` used to fall back to a hard-coded list and
+  treat an import failure as "public". It now fails closed: an unreadable
+  list means the row is private. `build.py --check` also reads
+  `data/The Flank.md` with no passphrase and fails if any private row
+  holds readable text.
+- **Checks no longer edit the sources.** `build()` takes
+  `write_back=False`; `--check` and both workflows use it, and CI runs
+  `git diff --exit-code -- data/pages/` afterwards. A `--no-write-back`
+  flag does the same for a plain build.
+- **Deleted pages stop being published.** The build removes top-level
+  `.html` files in `site/` that are not in the page list. Before, a page
+  removed from `site.json` stayed live until someone deleted it by hand.
+- **Only pictures and PDFs are published.** `assets/uploads/` files with
+  any other extension are skipped with a warning instead of being copied
+  to the live site.
+- **Pictures carry their size.** The build reads PNG, GIF, JPEG and WebP
+  headers and adds `width` and `height` to uploaded images, so the page
+  no longer jumps while they load. The two product renders also got real
+  alt text instead of their file names.
+- **Internal links are relative.** The home page links `contact.html`,
+  not `https://flamingoandcactus.com/contact.html`, so a local preview
+  and the GitHub Pages preview stay inside themselves.
+- **Polls follow the theme.** The poll styles used fixed light colours;
+  they now use `--paper`, `--ink`, `--rule` and friends, with dark-theme
+  overrides for the yes/no bars. Before, a poll in Midnight would have
+  been light text on a white card.
+- **The ledger has a favicon and a noindex tag.** `/flank/` asked for a
+  favicon that was not there, and search engines were free to list a page
+  meant to be unlisted.
+- **The publish workflow is patient and daily.** `cancel-in-progress` is
+  `false`, so a second push cannot leave `gh-pages` half-written. A daily
+  schedule rebuilds the site, so a poll that closes or an event that
+  passes stops showing as open until the next push.
+
+### Site review pass, part two (November 2026)
+
+The first pass fixed what was broken. This one fixes what was awkward.
+
+- **Real headings.** The masthead is the site banner; on every page but
+  the home page its name is a `<p class="sitetitle">`. Each page now opens
+  with its own `<h1>` ("Contact", "Products", "Financials" ...) and the
+  old big-paragraph section titles ("Who we are", the principles list,
+  the two Issues post-mortems) are real `<h2 class="sec">` headings that
+  keep the serif look. The builder sanitizer accepts `h1` and the `sec`
+  class, and the check fails unless every page has exactly one `h1` that
+  names the page.
+- **The home page shows the product.** The Lamoka1/2 board render sits
+  at the top with one line — 12 V DC in, 120 V AC out, open hardware and
+  firmware — and links to the Products page and the GitHub repo.
+- **Badges only on the home page.** The star and the Feedback gem used to
+  eat the top 150 px of every phone screen. They now render on the home
+  page only, and are smaller there (104 px star, 118 px gem), so other
+  pages start about 100 px higher.
+- **The footer does something.** It carries News, Feedback, Polls and
+  Settings, plus a working Dark mode / Light mode button (the same
+  `fc-theme` key the Settings page writes). Polls and Settings left the
+  menu for the footer, so the menu is nine items instead of eleven.
+- **site.js is readable.** The theme, arrival flash and star burst are
+  now written as ordinary functions with comments. Only the storage
+  calls are guarded (private mode can throw); a real failure goes to the
+  console instead of vanishing into nested empty `catch` blocks.
+- **Editing a note changes its IV.** The IV now mixes a hash of the note
+  text into its derivation, so an edited note no longer shares its IV
+  with the old version in git. The 28 tokens were re-synced and the
+  roundtrip check still decrypts every note to the exact Desktop text.
+- **The editor is pickier.** It accepts only its own exact origin
+  (`http://127.0.0.1:<its port>`, not any localhost port) and refuses
+  requests a browser marks as cross-site. Every POST — save, page
+  settings, uploads, polls — now runs under the same reentrant lock, so
+  two fast clicks cannot interleave a read, a write and a rebuild.
+- **Web3Forms is gone from the config.** `data/form.json` no longer
+  carries the old access key, and the contact-form section of this file
+  says so at the top. Sending has been FormInit-only since October.
+- **`/flank/` is disallowed in robots.txt as well as noindexed**, and the
+  Invoices page says plainly that no invoice screenshots exist yet.
+- **The two backup folders are out of git.** They stay on disk; the
+  ignore file now covers them, `.publish/`, `.DS_Store`, `*.bak` and
+  `*.tmp`.

@@ -28,6 +28,7 @@ decision: what we changed and why.
 
 - `data/site.json` — the site settings (title, tagline, search description,
   footer, theme) plus the page list: each page's file name, menu name,
+  browser-tab title, search description, optional heading override,
   and flags (`hidden`, `badge`, `form`).
 - `data/pages/<name>.html` — one file per page, containing plain HTML.
 - `assets/logo.png` — the masthead picture, published once as `site/logo.png`.
@@ -52,14 +53,17 @@ carries a small Dark mode / Light mode
 button in its footer, so visitors can switch to or from Midnight themselves;
 the choice is remembered in that browser.
 
-Two floating badges appear on every page, in a black-and-white comic
+Two floating badges appear on the home page, in a black-and-white comic
 style: the star links to a hidden Latest page (clicking it fires a comic
 book ink burst - "Latest and greatest" with a small "Click me" - and both
 badges sit level, evenly spaced either side of the centred logo); the white
-FEEDBACK plate links to a hidden Feedback page. Hidden pages are
+FEEDBACK plate links to a hidden Feedback page. Other pages carry no badges,
+so their content starts higher, especially on a phone. Hidden pages are
 not in the menu but are still built, real pages. Which pages carry the
 badges (and which page, if any, shows the contact form) is controlled by
 flags in `data/site.json`, editable in the builder's Page settings. The
+footer on every page links News, Feedback, Polls and Settings, so those
+pages stay reachable without a long menu. The
 clicking-the-logo-returns-home behaviour is built in. Products carry a
 plain-English blurb on the page and link a hidden "deep explanations"
 page (slug `products-deep`) that keeps the full write-up. The Events page

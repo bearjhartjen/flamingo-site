@@ -33,8 +33,10 @@ jobs:
       - name: Build site
         run: |
           set -euo pipefail
-          python3 scripts/build.py
+          python3 scripts/build.py --no-write-back
           test -f site/index.html
+          # The build must never edit the sources it reads.
+          git diff --exit-code -- data/pages/
 
       - name: Sanitizer check
         run: |

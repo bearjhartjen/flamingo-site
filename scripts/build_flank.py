@@ -395,6 +395,8 @@ INDEX = r'''<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Flank Ledger &mdash; Flamingo &amp; Cactus</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="../favicon.png">
 <style>
 __CSS__
 </style>
@@ -997,6 +999,8 @@ ABOUT = r'''<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>About &mdash; The Flank Ledger</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="../favicon.png">
 <style>
 __CSS__
 </style>

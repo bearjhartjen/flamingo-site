@@ -63,7 +63,7 @@
 - **Deposit of:** $400.00
 - **New balance:** $404.78
 - **Private:** yes
-- **Notes:** [[FCEnc n:113 iv:JAAROqvvixuHSJx8gj2blg== ct:0MG8ujfnJjLGoTKS9EUugOz8ZbF8R2Muj0FHE1Mk1V8Zea2jAc+KrQkMF4du9TZLv9DPKkMo/1HojA+bfUIzEffp3vQ8hATZFUwYsGjpeQRGOQUzvzF9XSCrHg+fsvSTfdmhlRZmzYbVFPfqk3zb+OZ8oXQvo+RYNmV3XHA0Uz4=]]
+- **Notes:** [[FCEnc n:113 iv:9BnchK6L+WQbfw12z1BBFA== ct:M91Z5eOTCSFt2VxpMbOKcaT4is9pS7M8+ncIGskD8I1c6dx4wK4nAIEng+42jwtHkLVGJuzTmsZNH8rftIVQpMi07QDJd1rm3BH8Ps679KZLLd0yWWqkJ2xsbkCX2BMkTIB6OrTzkmrT7+aGwdkM4gqoA77uhciUNwKGBdm81kE=]]
 - **Transaction was made on:** 10/19/2025
 
 ---
@@ -202,7 +202,7 @@
 - **New balance:** $1,010.00
 - **Silver holdings:** 200g, 2.1oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:64 iv:XZn5TwtS0FYevgTj4rIFMg== ct:k77tI/lWTj7h99QSjBnQjmc3f3gpmPkIhG8vaAUCSVn5WJMkjSIw4e/Cx5dMmHIhois8mOnovciODlu9NK3Bd+XSDB6Idij2uq9qPWGacew=]]
+- **Notes:** [[FCEnc n:64 iv:7G+TK86ZVA5lHMicWJvacA== ct:oRZP0k+xIHmOmpPxa7I4TI0M1cJKl7KAV7ojPeLEuRyC58m5eWRsc9my1IMllAjHhY/pSDuJuMONLljfuFrsdW5lUwWZQqYgNjZp8uDoM7Y=]]
 - **Transaction was made on:** 01/31/2026
 
 ---
@@ -250,7 +250,7 @@
 - **New balance:** $1,561.71
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:133 iv:ZOc7TdYnpQWte/v6RtLW1w== ct:z4S4x2EpfT1AF3fI0m3IDvETED4pwY/RzhLVRgwPzpyMfhH6pRI/Q/wEm+gtcwVRnvX0mZu88k9SOXYu3UxeLCe74yww21Q+tANXb8M+NyXuuzs3HUaZ48E02xOi22zq0NAZ4He37m5AjRKknCwXkapaqs+/+gwEDvnl5E2QuoaHlX+ELWs4/HK/s2IANPTh]]
+- **Notes:** [[FCEnc n:133 iv:dFAcoeigcBBPApm3x0bx1A== ct:HnPhNjJ4sUYCyeLeiv9S+B4cWNzOCMr1cKUnkNd/Bzjfe9jErW4m1oohh2AriE3Ur7WmbcqeIGVXNK6TNtE6AH7jO9DuJu5TBU9P+Sdp8G+GzFAEg3Jo5Xufd9C6renI1pvWlfVxwow1k/QDfnRSzP3HadHINA4vDlTPYybaur34KqGOrKBvGtaOTDWe8cpz]]
 - **Transaction was made on:** 02/25/2026
 
 ---
@@ -274,7 +274,7 @@
 - **New balance:** $1,704.62
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:64 iv:rNTbpcmdXpmGVC8UuPO7pg== ct:yYXpqN2b1tginKGHOYmXyEdin7nx9dlfwnqnVgS6bBvri/QFZlV2cJdf9Kp6IM2HS0Q4yXOj6cGVtKg85jMstF45xmkSGf8Dc7+5j/hIH2s=]]
+- **Notes:** [[FCEnc n:64 iv:RmSdyOKBKHlPMAoaMf5XRQ== ct:9mckkWr5VTs2xkB8eYk6CA+rJY6VaFtKSgc6CL4MKN3kDcol5eN0QWU+DEMVGe9aSWf3pc+g0S1BhOpjWAObYlvd2xqv2Oqk1jdU1JozExE=]]
 - **Transaction was made on:** 02/25/2026
 
 ---
@@ -286,7 +286,7 @@
 - **New balance:** $1,835.62
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:52 iv:Mh2ajRnj5j9e7cgpvvimHg== ct:We+5zDVE5BLKSAc49u8EARDoZ4rt5lCwvtFOdjnsM9b6AoZ1CZwXFVAlSYQvLuGeYwMoec+JQmJoWr0sQ5hAYw==]]
+- **Notes:** [[FCEnc n:52 iv:fN6HPzrGRBB9Mz5YrpWwnA== ct:4qy/c0kfgxARi7fhSvmcVcul3n45at1vRwgFwhRiBIHOKTd/nR26AnHyQkcoJqTYklIrJjrV1pivXW7yqQXgvw==]]
 - **Transaction was made on:** 03/10/2026
 
 ---
@@ -310,7 +310,7 @@
 - **New balance:** $2,287.63
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:64 iv:jzK3haFwiltU7dNLrrpIzA== ct:HVlZHXQ8r/IvagjqOSfMF90tuf7JkM4s0jk0CFjfRKszKOzH0shr43RR5n2EB5WIolxHzRhrncTB2Cfi8WlFKFhA1Yi/pUtBpQqwxuQKV6Q=]]
+- **Notes:** [[FCEnc n:64 iv:ilMstOdEVAvOMth3uLG3ow== ct:PCDjTUAUjocN3jfs8AzrpiK3smtmgvYso60ed1sERUC5tKnT93sKWPmvOjqYvOcZ/mWRpAKsZtSZoigT0cvYCBEnhgujR7qmYnZualfUtIE=]]
 - **Transaction was made on:** 03/18/2026
 
 ---
@@ -346,7 +346,7 @@
 - **New balance:** $2,354.75
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:67 iv:3UmRAw5eBiSc2bj/Rx6KdQ== ct:2RP3dpGTRRy/R/jahr7KZXHyrZ+TyZmjku/zbX56gL0a0vDbWz37Yffw4uDpd1By+DOVm2Xpnka+if0mSjZJhaFm+h+TkoPMQXFZRbaOpWc=]]
+- **Notes:** [[FCEnc n:67 iv:JMIO7cfV2hibQSt2Lu5Itw== ct:krJzWhXvpGvJKS4C3y5w6EXidoA/t+5tgRIImJiofzRTrPDs+o3geMZFfBtCROA4EgsszzPY522MbK5LlDemqNDrGyqm3MRrDOIv5yYpIMQ=]]
 - **Transaction was made on:** 04/07/2026
 
 ---
@@ -358,7 +358,7 @@
 - **New balance:** $2,804.75
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:64 iv:XhDVkKZpbknk5RD1abbbSA== ct:CNe1p3bBLYxjZ2F8bYFC+RSs918OtonK/knVtDtt/Zbwl0ENn0rlLQe/WkcJMADxlaQr9LG0xalyxc8tdpY0bN3e4SmHMAgUdWwU8xM+wGw=]]
+- **Notes:** [[FCEnc n:64 iv:iTpZUPlq/wRwA65gSPf2Tw== ct:FoW7NFicHBcBWTws/XqJvDGJHdT63L5GeZ/bf2yYvsRCyrFOzQqtczXh3FPpRygTgQz56BGjATttMOQTDOGL4SUHRtkV0F+GHKlcDPRFFk8=]]
 - **Transaction was made on:** 04/15/2026
 
 ---
@@ -382,7 +382,7 @@
 - **New balance:** $2,832.28
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:55 iv:M7tvkzgF/5LIpQovYwjpvQ== ct:L+kBc2k/mTcXxiyXyV1NojUhaohBS65DCRndNXCcNWwul6lv5J6rJHOjncKzJJ10sNZx/PdBaXRg0wGqrDZcyQ==]]
+- **Notes:** [[FCEnc n:55 iv:6IO1q+DtiUlJrm4KS6y9QQ== ct:tI1N7Tu2fsjJBoL8jgdvoMwRpq4t3RqoTXaSmHfuneouF2pYS9uyAq1JtBn/msUnvEh80tTzVI5KwpuJa4pV5w==]]
 - **Transaction was made on:** 05/07/2026
 
 ---
@@ -394,7 +394,7 @@
 - **New balance:** $3,282.28
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:64 iv:NgkjjEtM5U0VPeP+2+mqTQ== ct:BN9XjWTlXXkxzMRBYsxbDxx216ECrOX9bnjax2WFDDiBuckWtTTpwjog5nFJjQwFZBntskuhoo3YesmS99XRzqqcUTBICB+Baenq2TAuW3U=]]
+- **Notes:** [[FCEnc n:64 iv:+ZOfHFB9qlxxOw1Fiq/6yA== ct:XGripvWHzDwGPHdELslZKiZqyX8aTiK5Ue4RHOngyfEngImDC+OwaEQBwURwJlo7X8/Yp4Cx2jsQQcYQJg6aGzNNMGnOy1knX+ivGQ/O4B4=]]
 - **Transaction was made on:** 05/25/2026
 
 ---
@@ -418,7 +418,7 @@
 - **New balance:** $3,382.28
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:84 iv:w2/6dOqNdbgnMtEPP9aqhQ== ct:JH/Zv961Jg3dLDrdcWZ03EQn0suHD3rVH/HJSzI/VHmLLC+u7VgPZI5G6aoYMRvoqsyBsujxOt84o9inBffQ5UA9y/svNnc4/iZW24OqjjfHdjTPjvw/Y4/utjCB6Mo1]]
+- **Notes:** [[FCEnc n:84 iv:6XWe7oxpn+XSactI1j7bLA== ct:IAEWXBq/CaM7jZXXnxfOVIMzTPuZLM97fQyDyPswmqvvNM7sZ4g/6zs8wn6TIzFLCmO5RNvv7AwMoJyvuzedY7/E84EizlWuNdoP4dWJy3wX+tY4VG4Jyvdo+K5J+BDo]]
 - **Transaction was made on:** 06/05/2026
 
 ---
@@ -454,7 +454,7 @@
 - **New balance:** $3,297.90
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:96 iv:1IDEcREAYnWuZf2iAQhzmg== ct:21zmyCyRcKW+5xt4BrOE6LumudwbHsylVcznU4fDOcyMDqnBLmQdqZ7AC3ZL57UV9AztUthPN+Tp4W9QkreyREhDyM69IOn32/H1SK+0nCBAEmyFm9LTDplKWBTOLhSCU5wBjR3xXPBl3aulQk6ZIg==]]
+- **Notes:** [[FCEnc n:96 iv:UqbzqpDcfzCYZQ+PfhBzkQ== ct:qjd1BwD5v0EpOAb9SFiN7hMfJqzHsZe3O0jBo+VsEPxhrGHtmJZ/xHfu9C38Q+wOVXshgt+bHSlmXax3wrvA7iawX6pF074ip0owALonoBikCOz+2n+KVT8z0euQNXmuoo95b0NOQ1wJ40Veww5aAw==]]
 - **Transaction was made on:** 06/14/2026
 
 ---
@@ -466,7 +466,7 @@
 - **New balance:** $3,747.90
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:192 iv:x0Yg0I1iPlVCOHfQOs8F7g== ct:fo498w3SW/5q7+IJAjmgd6hWVRkD4/3EgLe5aBhFVOjBpElojfsdDJRCWaxob0cK4zh8HMpTMj38G61/yuCcmdZK8rzGDJUW0/6/COwrZyVJRuvY9dxXcsa2s9AS/wdnHNtbHjxIPzLLaa90C75qkJDTCzGf3DtCvtkd7gvNBPVdgpLLyzdJ44/FjdFAVZoecTazIcsBI1pgcHTh3VkBTjahPks1S9OdubPJeDcBmGcWAnBeqgD7JMxmMiu7Fjbe42rI5c2HEZCQDpA05IZR6g==]]
+- **Notes:** [[FCEnc n:192 iv:mQEC0ktm8ruO5BAwuHYEdw== ct:iKvNXKtCdUpas7ms1fMPE/4/AUVvLADx2LDqB8NX0GZWh2iT/U8yuA0KV1+1JVbL+yFz1QapLVnikK09Xn+PpOQEnUtxE5k2i7+0y0KNOHcLB43qQz2rECH270BKPTQF+K71w5jDb0xhLD4L+nYurcjgCH/MIkkXCzq+krrlvYPvITN6KJCGbZKRZ6yufeNh6pCpNOB7MwWsxvhqNShL0HAci8ud7gmHSh/dVCglyR4IdEZiPUDhT5xOf5QXkfP6NPUY9b+CR6AmjxM2aJEiwg==]]
 - **Transaction was made on:** 06/24/2026
 
 ---
@@ -514,7 +514,7 @@
 - **New balance:** $4,188.70
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:64 iv:soZ8ep4ir7z3vCmXaYyoNA== ct:AKNGipk/jWDloG4jaA0pp4JlXlUfgA5nkpufL0bbH5CW7zNrhxYnYrnRYh+vPSWMWb3+1fO2NCzh4GMZYrhyRqzx25B1yVpLd6+ys+Ca0NE=]]
+- **Notes:** [[FCEnc n:64 iv:Cg2z5HQp/FAwo+L/rua7YA== ct:3s1JfTh3z8pnrqxF7wQ2NUI9lCWVgNrdqZmA0ULbuWCLmDI0JkqEqzf/oY9mS97mwXL3jDgEfiIivsrHAz49QmFFQeKsi5mltgHoGR86xxY=]]
 - **Transaction was made on:** 07/15/2026
 
 ---
@@ -562,7 +562,7 @@
 - **New balance:** $4,447.15
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:207 iv:HlcDF1391gzpdd/2jh/Tuw== ct:CxAr9kak2WtD1WqvB+tJkDmHJMvfhEHM/8p4B3XjguJepwX6FEBnblUT4Xm7d2yBULDxICMffbrEG42ia1WtAticMomrZiMmm8ouaRhfRcK6zVCsFyFGA6HQlv/KFhxcWRneaoPepfHxoq25HjkAOh22MRnkyO2Eo5JdfKVKXHuTQ6UBgluFNF3tR2LURSpBFQfpdD2EdwRvN359wIQXQC9TSbgJYvFupsB7EKxvQbfLts+1h6r6gGf2/3z2UgJ41rg2Oy5zP0pVI+cHTRE70Q==]]
+- **Notes:** [[FCEnc n:207 iv:xGpObIb8UkSrxAgKtJNSkw== ct:/mflVkdu7M9lEYyX0SUfHK+BPI1pBl0alxvNYW6whdk3pgpt9RY6DbsTqelJm/c4QXKdrpma6JiXlYsJjIx3rslIXfgcMzW9+MPEM3FBA9aNrVa6oDbOM/cZb5jeSU3HdVqPbmvxpYTOwggkvr3bjIxag2jIqrnV4P2s81Kdrn+MaTcXlpEesw0hJ8HB8JBabgpU76Mnb3XvaD0rMGZyk1vUWUSkbWWypyP1DcoVbJTkwCfQwR/IiqQ7k7+0AZu5ygpk+kGc5D117warl9hBgg==]]
 - **Transaction was made on:** 08/01/2026
 
 ---
@@ -622,7 +622,7 @@
 - **New balance:** $5,506.82
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:159 iv:1y1VFaLTeExi+R8EKadqFQ== ct:tmP7FAyRcKsafBOnQC/mFKjPtHxE58q4UXxf2+Zl8/xRE7oqWeGMLUFcQZzT28GN3A++RMFG+j9sBTIdYjkDzKIIc/gLJYH4jyCcnN7nSTLCGmwsDo3vlb4HbSvaGviXa1MJhdCFlyi0mUfZPmvplVOQt/ie6dlzpTwKyLRFFWaRrO3fcqvS0F1HhwIdcTSo3F5scX0lhiwo1qZn8hYUYQ==]]
+- **Notes:** [[FCEnc n:159 iv:sz9DRC86EjB0SEAflfD3Gw== ct:OrltswXJoXcxX5q31Fc5zcfUTz7unTFlq38s2UyBOEaJ47lU+pxokkY6b3mYIkCv4WxQASyPZoVrNSz6Ls2qUjoP1PlfF4GW8RPJpxyYvtIgeHbjAea0+vuo0cLlRD8RfKPG0GF51/ExemonX0vEH738pxNUhnjjkvtTdpdaSuQobnOuIJa0rTbLWb7Oc9prJd45BPnbqtywTzu4oKdgRw==]]
 - **Transaction was made on:** 10-3-2026
 
 ---
@@ -634,7 +634,7 @@
 - **New balance:** $5,556.82
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:176 iv:SllIUotl6vA7lHoP/92zhw== ct:ItEsRbRWGnxHMiBXZYcDOPLx9xHZ9hzm0xIhmY4U/IFnkvzUKzxtUbP2VuqJHxpsu3NRI+6eDVAl6MCWje9InjOUxOTAFTu5PHKLpnttDfr93/Lpngqz9jgEb4d+9LYMU2R6M05orHREU6DXX9TicDjXIa02QJzy0B1Hx5jiSm0pjUj/y+YnkAsR2slKM+92NF/x0VyZTDsTqObheUcHNSiGMQ0f9tP59Ry4Shds5MhVpNgdB1B5X/M9IrdaUO2W]]
+- **Notes:** [[FCEnc n:176 iv:pLMoM2W/MUxFGgc+yrwBPg== ct:l/R6ZlDTYg4zhu6IvzKcJsy05pwVmAKvF783nvALSLgjY2BLoZ3bSjtnRdj2BSlWivsOgIkrp6gZi35nN5Tm4atAGbuSwcO3BXbG+59nT68Z+fmCGFioMJPhtSsVBTG/zFcN5apL47g3U7D9J3wGcKeF/9S5QNR+LT4AumLIpp+yk6x15xR4xVZWAFchQssJNPq76T+K0GIO5eNQlZkdyFPVMpITPKYbLYnP5Vmi4tEIQViuKkEp/gErw/oz9ijo]]
 - **Transaction was made on:** 10-4-2026
 
 ---
@@ -646,7 +646,7 @@
 - **New balance:** $5,546.82
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:137 iv:PNxxVgIZWvgboPAs060eVQ== ct:C30ZdayWV77M5AkBgKQWEOiA1j18ESZiUkKlGgpD7yDS05CTSp9VAOE4kydCjtwXUNLY3ZIh3PwR8/tCptGAiHaTa3AM57+kgRS+K8L4h4cRWW3/RUkSyT/mxlbSP/bxdAwVG6WgvsMUQz3EWAsxuZ6fcSG/K2ACI7ibvWjp5Y8CRBfZiB2K1NxS/3p7LBCL]]
+- **Notes:** [[FCEnc n:137 iv:UwKjpovlLyUkJJCCJNU3Uw== ct:j6uF04V3N8OtUAAP1iaZfv7xAcGBYCd5bJXcP7V7dJxH/B6S/WJtl0i2Cl2toWTYEN46DzF7va8MnpvGE9nr7ykuZdpmf1KlQV6+S6QNd3madmrXDS5ECbUo97D/N9IWKyDw3YCAmMTVs3CTdc+VhYKuRphQXmrkx9NzgeytkidrGb3vxbyoHG+3qJgI84CI]]
 - **Transaction was made on:** 10-5-2026
 
 ---
@@ -658,7 +658,7 @@
 - **New balance:** $5,535.89
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:110 iv:YG9OwSW06GgCsfoEKcJ8bg== ct:cRqffxddhbtxR+x6XIJW41WFHQr82+NdyIS96dJ/+kfLZv74w0dFJ4EkW1jF4PpCZUq3J7NtbVe4uawh+P+wVhjmkVd8/2e+JlAh68FghbpTdfmCK0xIgy7ktnI4fND70fWyRFA//T5PKJUfTKkhiw==]]
+- **Notes:** [[FCEnc n:110 iv:7ebmUSZ18agjTOnl4qPkVg== ct:7mQEvC/uffZKSUwJJCMcujMwLDczLjwNG/MArY2kRljQaSUgqzbUBfmwu1ipcV2dbF316uPBGTLApmdT/CvtxoSHEpHfKQFbEKgFDCIjcBcEZfwGiGdu5G4U6JnNclCliWcxnoQNZMvILBKmDVsMLQ==]]
 - **Transaction was made on:** 10-9-2026
 
 ---
@@ -682,7 +682,7 @@
 - **New balance:** $5,553.12
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:139 iv:LSzJynZwngkERoNp7sX+pw== ct:HAqlOvHEgfE0lqHePAwqMfKX39vzgrqlnfk1J3Z6wE7oDNYSWZDPEV++sFL94eyKpeqcfNRBr5aDv764WjQaHoaH/658LDMeHBoJJbQh0fnv9iXFsjgF14TQyihh00yK2jA4NXU5kkiD+3Gw7hLCrNDleOz1PVG1/GlxRKFdno1w6mexvrWdksdUlrp9Z0Zx]]
+- **Notes:** [[FCEnc n:139 iv:VTheRaP+NAz3yn5Da6bXlQ== ct:fztpoF1eSA7NLJfw70HALqOtYIuDWFP/Dj46OMi1uE1TqYcFREMBi/QTyThuXGl233lM5sndY76kvS7DXXFA3F0P0P0snAMdx0PTrkReJXKnwAFb9qVAqJdyA9lMso21KnzjYzTXIZ+xmZ3P2DrNkRAThNh4zXK5uUwpciaoX0HsfogVE3OrzZD/ArL9tU7o]]
 - **Transaction was made on:** 10-10-2026
 
 ---
@@ -694,7 +694,7 @@
 - **New balance:** $5,528.12
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:152 iv:6XjM3JLdP8rSbmLdFzSDkA== ct:zvD1wTWZ+3Y/H9fmUe29l6LcexvJFneDGh/MtodhwS5Xe4du9fNWdI6u6QTmrjnrMAg2qdjigSBHbYvhXDYCiSan5iDaHXrG59LhN3t1p7LDbul5ksDCnKYUB6nJD/hSsoDtr8PskAlvbqwsjYGPr1uq9+pxGLhOpPS08xHNQnLr3ksek9wVH/RQ4FS4NA6vfLgC5wkuvYvpeZmeLM8Mig==]]
+- **Notes:** [[FCEnc n:152 iv:5+fj5Nbn7KnoL6jcQvxI5w== ct:vfH9qbthMZ0ic5nBqi4Xdz01vcYhsiSsQntJTGI8FVUEHmlGBQ4WlDmBevP5dbUkNMnnpmQD9yiNRLdqorj1zH1Si94cAatJ33AxAPY43t3qcUyytCGTjLQuSc5NnwhNbPv/K2uj/OeJ7eGcSTMeuEbL5m4DtyWZ1Jsmeh8Nd3VlBhf6HV022i+4Yldr2X7P8Lmc23inOqfxUbddSbWUZQ==]]
 - **Transaction was made on:** 10-11-2026
 
 ---
@@ -706,7 +706,7 @@
 - **New balance:** $5,548.14
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:90 iv:L7jee7d4N3+4G8XVlGR19g== ct:FVApBb8V/Az66z9Q8pWw16lsE4sPOWfTjGUHnqFvUe8byGWuRfkLZ6p3+F6Zr7EtH1b6Y3YI+zRydSZ16Y4puw88mmwMTwrMNmP7VT0FyrOkPqJ5kkYjEAzXr8QII7mV]]
+- **Notes:** [[FCEnc n:90 iv:hPyajaB2ApGlAi71n+0iYg== ct:1NkksRKgY1V6dEf3DGS+cHJU8C6qvOKYXpGVVYIe2VaW0eUBLn8gkkK6k24HeNio/qeXrVmTcH30MRbqYa3rD4brZFWRtiP1HqBOwvsoqQHdHgJHZEa1ac6wTnfRMODp]]
 - **Transaction was made on:** 10-13-2026 
 
 ---
@@ -718,7 +718,7 @@
 - **New balance:** $5,553.14
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:151 iv:Yij9BYY/5iHaZIc/dbAfvA== ct:r0g/sTq0seaQUJuKR2cGt1kSakjRpuIdj53KBj58TclJ2i/z7tVNhjwzSzJvM9CMJ3af/G9/yD2URFEyJH6OtnFc89VCaOgLHHANKxuTqLus5ikaPjWblPrTJxGBp4fFPrUhMjexFUDFUf2rkMqD7rudojExQm7iiUOSc0xn3rhH4L1DxApjefiKinesq+qT5oDSHYsjABBz8gH8UJm+yQ==]]
+- **Notes:** [[FCEnc n:151 iv:UBfWBgSWUA04XWQxGCHYew== ct:Ms/MXq6LZGUW46Zw0PSC3oioDe5TLErJRe+8M9K/eXJFGEXlGz0tWU1iNOZ/Ghb1hkVaMLEmypT+zg3sm1RizuDjgxG9Jld78v8ECL7hCtYd1GIE2id1X+zqbDFnQ4PXrYrHDCtJ6FlL7NyLKgl/Ov9p11LqscB2Cltv+so+OJyQ+6+PkhpiaGP0c0ay7NDBmB5HYkadlIDbWUIPwgyxNQ==]]
 - **Transaction was made on:** 10-17-2026
 
 ---
@@ -730,7 +730,7 @@
 - **New balance:** $5,563.14
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:156 iv:Oy3PPwvVvsi5ngNeEbEcQw== ct:nmjJ1+wEdJw12p9yLZwV6pbKThXWiKxjHZuXmiyiZBJitjDbSBEvboQzm7GOjYySg/DPGmEbiarkO8Ydrpp1AOTLj3O+gTga1KzP2XAEBcvkqABzzVZ+F+Fqs0dEaM8PwjaJvA3EgDazLLbedMxjmE/u2neWWUy5Z6wF0DYZxwAxY6Lpl42B1GQsFPXSYgwkJqY8Ys/KY3kC8BXQDD4eDg==]]
+- **Notes:** [[FCEnc n:156 iv:3fEGp04Z5cg9eqRtm4Bndw== ct:vl8dwM2vRgSXTM+NElfKdZUhLUgYI3JFhluED/wxzn0NhwFAcODa/FVhRu6f4KAqeUhEJL0Bb6f04IYoRf+YwjL6a8/XixAovN//6LNxAUwb8711nkSCzmr6vPxnHnHwdO7XbVY0ZL+KAn6cSjOFZ6TVMP62YmXMjPkkt3kmnuN4T99QwGqomBuQ9Wu0ERHCEulKS/4cxeZ0Ho+92Jl6Hg==]]
 - **Transaction was made on:** 10-18-2026
 
 ---
@@ -766,7 +766,7 @@
 - **New balance:** $6,024.06
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:64 iv:w9DYspiMeyHn78EScZdsRg== ct:6DgVXhcTJjaAl1oSrrbZjUAYS7LmgnEwr7HMjvqpkZl4neKNt2kEr5ewPtaitgRgm02Am+QRWS8BhKiVYiZltbjNTBl8GHqM1Yl1bdsA/G8=]]
+- **Notes:** [[FCEnc n:64 iv:YfZgh+nmmZS16Ae7RCy7cQ== ct:mFLTvyiuvrOZ/9tJrt1HqCuK6I3JDz8QrIGDVYLJkHUp4V69h5kBGc8FFpqpTtaQrzjRETlk8rS6TMIftuNkzA0pwOrAcfsegSaIeCNQgYk=]]
 - **Transaction was made on:** 10-21-2026
 
 ---
@@ -802,7 +802,7 @@
 - **New balance:** $5,917.73
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:128 iv:OtUg0ATed7ufudftd41NHQ== ct:Ud3xTAVskFZvuqH+TdIYjaIg4+A1IJHtvoHaBKYvl1VUz7Itecm/XYHZPYkDMI0PNkTyFcjG90izcRpVOvGmsZrZfDsuu7/6WLslhKNBIbn9M1PzZqtiSJEk6mYD7flUznJiXh2vm86R2ny/Suc6d9i0UEoWtePLf6wrgrPxJ7qt67Q6soZcndgAcYdyqyEE]]
+- **Notes:** [[FCEnc n:128 iv:OVqW6EfNT1IXF05be7/new== ct:sjTQApTEwQGhuVJQiQWyVQPlE6XIdYODuSZBsb80OnN0qojoQpPdsLpXqangDD8ccFFUVZbuPoh28bzkPxJoh83v8kf9sGQiRmQfUpAzeOE1KM1HGd0KSGZugAHaSEAhxGT7gzGtjTwqsqLoqDVzyxerThvUK+ltLPuoYdbzjfDuASr5k85eoMAExloAgMet]]
 - **Transaction was made on:** 10-24-2026
 
 ---
@@ -874,7 +874,7 @@
 - **New balance:** $5,766.19
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:99 iv:qNmMMcuV+qpE9TcXspzQLg== ct:aMNzHuXOijFSCWtZUoOqogfn/Ekk1UZu5WoRN5AUPikteEPHUk32a/+GZ6v2jFOsYI46mmameA+uhIqAzafKkJhyyzxIx2bLPxFc4uc1ld1WKXyMb7mrpCqSJXSJpLRP2h9WmUXWC6AL52ByYd0qzA==]]
+- **Notes:** [[FCEnc n:99 iv:ZiDPAfcP+d+7RwYOh2K68A== ct:aP0JPhJ5XwSpAuMagu1Gl94OduDjcs6tWwjdxdJ+X6aTi2Uy/RrH1zOk1lpc9NoxENPTHymEr6cro7EIHx2YQLzAanEoZd10USSi3/aAlqIgJM4QsZnSh8DgLDSjVCtc/nGpvK+qg5E5IIN/AISDWQ==]]
 - **Transaction was made on:** 11-11-2026
 
 ---
@@ -898,7 +898,7 @@
 - **New balance:** $5,650.79
 - **Silver holdings:** 200g, 2.6oz
 - **Private:** yes
-- **Notes:** [[FCEnc n:87 iv:rCJAwnMewo9YJnSDm9rXrA== ct:wQHaWxMZUoAg9i3o71+GiYFI+ulOhcfan5hfTMfrL1Bh1JrRLNw6u9dc01wHWI5EQA50he8LblHotXmrjUHKPHJVuXIRIOgFD2ZnjDSEfNC66fA8BhVdr7i8/kb4qk0Z]]
+- **Notes:** [[FCEnc n:87 iv:Vp2V7qhcvcreIXc/9jWJ5w== ct:gsrimDaAHBOFkDe+sLZBqpTay0tT9xHDAHKdwGb/BgHspAv8153U7ZndA/1ikSsID+pw7ZoEtI9X8HnbYmJts5tF2RgVN5szEc3X/SGnCzUp6n59jh6RmnuIYAIkTwXy]]
 - **Transaction was made on:** 11-18-2026
 
 ---

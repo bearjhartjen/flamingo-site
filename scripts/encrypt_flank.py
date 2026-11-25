@@ -48,12 +48,20 @@ PRIVATE_LINE = re.compile(r"^-\s+\*\*Private:\*\*\s*(.*)$", re.M)
 
 
 def _fallback_private(num: int):
-    """The built-in set, used only when a row has no Private: field at all."""
+    """The built-in set, used only when a row has no Private: field at all.
+
+    Fails CLOSED: when the list cannot be read for any reason, the row is
+    treated as private. A broken import must never publish a note."""
     try:
         import build_flank
         return num in build_flank.PRIVATE_TX
-    except Exception:
-        return False
+    except Exception as exc:  # noqa: BLE001 - any failure means "not sure"
+        print(
+            f"warning: cannot read the built-in private list ({exc}); "
+            f"treating transaction {num} as private",
+            file=sys.stderr,
+        )
+        return True
 
 
 def encrypt_ledger_text(text: str, key: bytes, source_name: str) -> str:

@@ -1,74 +1,107 @@
 {
-  "title": "Flamingo and Cactus",
-  "tagline": "Flamingo and Cactus Group",
+  "title": "Flamingo & Cactus",
+  "tagline": "Flamingo & Cactus Group",
   "footer": "",
   "theme": "classic",
   "star_animation": "comic",
-  "description": "Flamingoandcactus.com is dedicated to all things within the Flamingo & Cactus group. ",
+  "description": "Flamingo & Cactus builds open-source hardware — the Lamoka1/2 inverter and the Lamoka1-DEV-Brain — and publishes its transactions for anyone to read.",
   "custom_css": "",
   "pages": [
     {
       "slug": "index",
-      "nav": "Home"
+      "nav": "Home",
+      "title": "Flamingo & Cactus — open-source hardware, open books",
+      "description": "Open-source hardware from the Flamingo & Cactus group: the Lamoka1/2 open inverter, the Lamoka1-DEV-Brain, and every transaction published for transparency."
     },
     {
       "slug": "financials",
-      "nav": "Financials"
+      "nav": "Financials",
+      "title": "Financials | Flamingo & Cactus",
+      "description": "Every Flamingo & Cactus transaction, published in The Flank ledger. Private notes stay encrypted."
     },
     {
       "slug": "products",
-      "nav": "Products"
+      "nav": "Products",
+      "title": "Lamoka1/2 open-source inverter | Flamingo & Cactus",
+      "description": "The Lamoka1/2 open inverter (12 V DC in, 120 V AC out) and the Lamoka1-DEV-Brain development board, with open hardware and firmware."
     },
     {
       "slug": "principles",
-      "nav": "Principles"
+      "nav": "Principles",
+      "title": "Principles | Flamingo & Cactus",
+      "description": "The founding rules of Flamingo & Cactus: cost-recovery open source, who votes, and what can never be closed."
     },
     {
       "slug": "people",
-      "nav": "People"
+      "nav": "People",
+      "title": "People | Flamingo & Cactus",
+      "description": "Who is behind Flamingo & Cactus."
     },
     {
       "slug": "latest",
       "nav": "Latest",
       "hidden": true,
-      "badge": "star"
+      "badge": "star",
+      "title": "Latest and greatest | Flamingo & Cactus",
+      "description": "News and progress on the Lamoka1/2 and the rest of the Flamingo & Cactus work.",
+      "heading": ""
     },
     {
       "slug": "feedback",
       "nav": "Feedback",
       "hidden": true,
-      "badge": "gem"
+      "badge": "gem",
+      "title": "Feedback | Flamingo & Cactus",
+      "description": "Tell Flamingo & Cactus what you think, or ask for a different angle."
     },
     {
       "slug": "events",
-      "nav": "EVENTS"
+      "nav": "Events",
+      "title": "Events | Flamingo & Cactus",
+      "description": "Upcoming and past Flamingo & Cactus events, craft fairs, and demonstrations."
     },
     {
       "slug": "contact",
       "nav": "Contact",
-      "form": true
+      "form": true,
+      "title": "Contact | Flamingo & Cactus",
+      "description": "Contact Flamingo & Cactus by form, email, or phone."
     },
     {
       "slug": "issues",
-      "nav": "ISSUES"
+      "nav": "Issues",
+      "title": "Issues and cost notes | Flamingo & Cactus",
+      "description": "Cost and sourcing problems on the Lamoka1/2, written down as they happened."
     },
     {
       "slug": "settings",
-      "nav": "Settings"
+      "nav": "Settings",
+      "title": "Settings | Flamingo & Cactus",
+      "description": "Choose the site theme and appearance for this device.",
+      "heading": "",
+      "hidden": true
     },
     {
       "slug": "invoices",
       "nav": "Invoices",
       "hidden": true,
-      "badge": "none"
+      "badge": "none",
+      "title": "Invoices | Flamingo & Cactus",
+      "description": "Invoice screenshots from Flamingo & Cactus group transactions."
     },
     {
       "slug": "polls",
-      "nav": "Polls"
+      "nav": "Polls",
+      "title": "Polls | Flamingo & Cactus",
+      "description": "Open polls for Flamingo & Cactus projects and principles.",
+      "hidden": true
     },
     {
       "slug": "promotional",
-      "nav": "Promotional"
+      "nav": "Promotional",
+      "title": "Promotional materials | Flamingo & Cactus",
+      "description": "Lamoka1 flyers, spec sheets, and promotional PDFs from the Flamingo & Cactus booth.",
+      "heading": ""
     }
   ]
 }

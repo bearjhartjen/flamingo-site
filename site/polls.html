@@ -3,27 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flamingo and Cactus &mdash; Flamingo &amp; Cactus</title>
-<meta name="description" content="Flamingoandcactus.com is dedicated to all things within the Flamingo &amp; Cactus group.">
+<title>Polls | Flamingo &amp; Cactus</title>
+<meta name="description" content="Open polls for Flamingo &amp; Cactus projects and principles.">
 <link rel="canonical" href="https://flamingoandcactus.com/polls.html">
 <link rel="icon" type="image/png" href="favicon.png">
-<meta property="og:title" content="Flamingo and Cactus &mdash; Flamingo &amp; Cactus">
-<meta property="og:description" content="Flamingoandcactus.com is dedicated to all things within the Flamingo &amp; Cactus group.">
+<meta property="og:title" content="Polls | Flamingo &amp; Cactus">
+<meta property="og:description" content="Open polls for Flamingo &amp; Cactus projects and principles.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://flamingoandcactus.com/polls.html">
 <meta property="og:image" content="https://flamingoandcactus.com/logo.png">
 <meta name="twitter:card" content="summary">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Flamingo and Cactus","url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/favicon.png"}</script>
-<link rel="stylesheet" href="assets/site.css?v=c53c317022">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Flamingo & Cactus","url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/favicon.png"}</script>
+<link rel="stylesheet" href="assets/site.css?v=abf8d68000">
 </head>
 <body data-theme="classic" data-star-animation="comic">
 <script>try{var t=localStorage.getItem('fc-theme');if(t==='midnight'||t==='classic'||t==='parchment'||t==='ink')document.body.dataset.theme=t}catch(_){}</script>
 <div class="page">
-<a class="star-badge" href="latest.html" title="Latest and greatest"><span class="star-title">Latest and greatest</span><span class="star-sub">Click me</span></a><a class="gem-badge" href="feedback.html" title="Feedback"><span class="gem-title">Feedback</span></a>
+
   <div class="masthead">
     <a class="logolink" href="index.html" aria-label="Go to the main page"><img src="logo.png?v=0bd706c924" alt="Flamingo and Cactus" width="96" height="96" fetchpriority="high"></a>
-    <h1>Flamingo and Cactus</h1>
-    <p class="tagline">Flamingo and Cactus Group</p>
+    <p class="sitetitle">Flamingo &amp; Cactus</p>
+    <p class="tagline">Flamingo &amp; Cactus Group</p>
 </div>
   <nav class="sitenav">
     <a href="index.html">Home</a>
@@ -31,37 +31,51 @@
     <a href="products.html">Products</a>
     <a href="principles.html">Principles</a>
     <a href="people.html">People</a>
-    <a href="events.html">EVENTS</a>
+    <a href="events.html">Events</a>
     <a href="contact.html">Contact</a>
-    <a href="issues.html">ISSUES</a>
-    <a href="settings.html">Settings</a>
-    <span class="cur">Polls</span>
+    <a href="issues.html">Issues</a>
     <a href="promotional.html">Promotional</a>
   </nav>
   <div class="hr"></div>
 
   <div class="canvas">
+    <h1>Polls</h1>
 <style>
-.poll{border:1px solid #d8d2c4;border-radius:6px;padding:18px 20px;margin:16px 0;background:#fffdf7}
-.poll h3{margin:0 0 4px;font-size:22px}
-.poll-q{margin:0 0 8px;font-size:17px}
-.poll-details{color:#4a453c;margin:0 0 8px}
-.poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 10px;letter-spacing:.3px}
-.poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 12px}
+/* Every colour here comes from the site's theme variables, so Polls looks
+   right in Classic, Parchment, Ink and Midnight alike. */
+.poll{border:1px solid var(--rule);border-radius:6px;padding:18px 20px;margin:16px 0;background:var(--paper2);color:var(--ink2)}
+.poll h3{margin:0 0 4px;font-size:22px;color:var(--ink)}
+.poll-q{margin:0 0 8px;font-size:17px;color:var(--ink)}
+.poll-details{color:var(--ink2);margin:0 0 8px}
+.poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 10px;letter-spacing:.3px}
+.poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 12px}
 .poll-tabs{display:flex;gap:6px;margin:0 0 12px}
-.poll-tabs button{border:1px solid #bbb2a0;background:#fff;border-radius:4px;padding:6px 14px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer;color:#3a352c}
-.poll-tabs button.on{background:#141414;color:#fff;border-color:#141414}
+.poll-tabs button{border:1px solid var(--rule);background:var(--paper);border-radius:4px;padding:6px 14px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer;color:var(--ink2)}
+.poll-tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .poll-pane[hidden]{display:none}
-.poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:#3a352c;margin:12px 0 0}
+.poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);margin:12px 0 0}
+.poll-bars{margin:0 0 10px}
+.pb-row{display:flex;align-items:center;gap:10px;margin:0 0 6px}
+.pb-label{flex:0 0 96px;font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.pb-bar{flex:1;display:flex;height:15px;border-radius:3px;overflow:hidden;background:var(--rule2);min-width:80px}
+.pb-bar i{display:block;height:100%}
+.pb-yes{background:#2e8b57}
+.pb-no{background:#b0463c}
+.pb-num{flex:0 0 auto;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);white-space:nowrap}
+.poll-total{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0}
 .poll-counts b{font-size:15px}
-.poll-form iframe{width:100%;max-width:640px;height:520px;border:1px solid #cfc7b6;border-radius:6px;background:#fff}
+.poll-form iframe{width:100%;max-width:640px;height:520px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
 .poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
 .poll-links a{display:inline-block;margin:0 10px 6px 0}
-.pc-item{padding:8px 0;border-bottom:1px solid #ece6d8;margin:0;font-size:15px}
+.pc-item{padding:8px 0;border-bottom:1px solid var(--rule2);margin:0;font-size:15px}
 .pc-vote{font:700 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:#1a7f37;margin-right:8px}
 .pc-vote.no{color:#a1261e}
-.pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin-left:8px}
-.pc-empty{color:#7a7364;font-style:italic}
+.pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin-left:8px}
+.pc-empty{color:var(--muted);font-style:italic}
+body[data-theme="ink"] .pb-yes,body[data-theme="midnight"] .pb-yes{background:#4fbf82}
+body[data-theme="ink"] .pb-no,body[data-theme="midnight"] .pb-no{background:#e07a6f}
+body[data-theme="ink"] .pc-vote,body[data-theme="midnight"] .pc-vote{color:#7ee2a8}
+body[data-theme="ink"] .pc-vote.no,body[data-theme="midnight"] .pc-vote.no{color:#ff9d9d}
 </style><p>For now the polls will be to vote on the initialization of a project or product. Anyone can vote once per browser. Signing in with Google is optional and is shown as a separate confidence count. Clearing your browser or using another device can vote again, so the result is a pulse rather than a ballot.</p><p class="pc-empty">No polls are up right now.</p><script>(function(){
 function csv(t){var r=[],row=[],f="",i=0;for(;i<t.length;i++){var c=t[i];
 if(c=='"'){if(t[i+1]=='"'){f+='"';i++;}else{var q=true;i++;while(i<t.length&&q){if(t[i]=='"'){if(t[i+1]=='"'){f+='"';i++;}else{q=false;}i++;}else{f+=t[i];i++;}}i--;}}
@@ -71,25 +85,74 @@ function pick(rows){var out=[];for(var i=1;i<rows.length;i++){var R=rows[i];if(!
 var vote=(R[1]||"").trim().toLowerCase();var comment=(R[2]||"").trim();out.push({vote:vote,comment:comment});}return out;}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 var secs=document.querySelectorAll("section.poll");
+function bar(label,yes,no){
+  var total=yes+no||1,py=Math.round(yes*100/total),pn=100-py;
+  return '<div class="pb-row"><span class="pb-label">'+esc(label)+'</span>'+
+    '<span class="pb-bar"><i class="pb-yes" style="width:'+py+'%"></i>'+
+    '<i class="pb-no" style="width:'+pn+'%"></i></span>'+
+    '<span class="pb-num">'+yes+' yes · '+no+' no</span></div>';
+}
+function tally(rows){
+  var yes=0,no=0;
+  rows.forEach(function(r){
+    if(r.vote.indexOf("yes")===0)yes++;
+    else if(r.vote.indexOf("no")===0)no++;
+  });
+  return {yes:yes,no:no};
+}
 secs.forEach(function(sec){
- var counts=sec.querySelector("[data-pcounts]"),paneC=sec.querySelector('[data-ppane="comments"]');
- var urls=[{u:sec.getAttribute("data-anon"),signed:false},{u:sec.getAttribute("data-signed"),signed:true}].filter(function(x){return x.u;});
- if(!urls.length)return;
- Promise.all(urls.map(function(x){return fetch(x.u,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("bad");return r.text();}).then(function(t){return pick(csv(t)).map(function(v){v.signed=x.signed;return v;});}).catch(function(){return null;});})).then(function(all){
-  if(all.some(function(a){return a===null;})){counts.textContent="Counts could not load. Open the form or sheet directly to see them.";return;}
-  var rows=[].concat.apply([],all),yes=0,no=0,signed=0;
-  rows.forEach(function(r){if(r.vote.indexOf("yes")===0)yes++;else if(r.vote.indexOf("no")===0)no++;if(r.signed)signed++;});
-  counts.innerHTML="<b>"+yes+"</b> yes · <b>"+no+"</b> no · "+rows.length+" total · "+signed+" signed in, "+(rows.length-signed)+" not signed in";
-  var withC=rows.filter(function(r){return r.comment;});
-  if(withC.length){paneC.innerHTML=withC.map(function(r){var n=r.vote.indexOf("no")===0?' class="pc-vote no"':' class="pc-vote"';var v=r.vote.indexOf("no")===0?"No":"Yes";return '<p class="pc-item"><span'+n+'>'+v+'</span>'+esc(r.comment)+(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>')+'</p>';}).join("");}
- });
+  var counts=sec.querySelector("[data-pcounts]"),paneC=sec.querySelector('[data-ppane="comments"]');
+  var pools=[{k:"dev",label:"Developers",u:sec.getAttribute("data-dev")},
+             {k:"fin",label:"Financial",u:sec.getAttribute("data-fin")},
+             {k:"usr",label:"Users",u:sec.getAttribute("data-user")}];
+  var extra=[{k:"anon",label:"Anonymous",u:sec.getAttribute("data-anon"),signed:false},
+             {k:"signed",label:"Signed in",u:sec.getAttribute("data-signed"),signed:true}];
+  var anyPool=pools.some(function(x){return x.u;});
+  var sources=(anyPool?pools:extra).filter(function(x){return x.u;});
+  if(!sources.length)return;
+  Promise.all(sources.map(function(x){
+    return fetch(x.u,{cache:"no-store"})
+      .then(function(r){if(!r.ok)throw new Error("bad");return r.text();})
+      .then(function(t){return pick(csv(t)).map(function(v){v.pool=x.k;v.signed=!!x.signed;return v;});})
+      .catch(function(){return null;});
+  })).then(function(all){
+    if(all.some(function(a){return a===null;})){
+      counts.textContent="Counts could not load. Open the form or sheet directly to see them.";
+      return;
+    }
+    var rows=[].concat.apply([],all),t=tally(rows),signed=0;
+    rows.forEach(function(r){if(r.signed)signed++;});
+    var html="";
+    if(anyPool){
+      pools.forEach(function(p){
+        var mine=rows.filter(function(r){return r.pool===p.k;});
+        if(!mine.length)return;
+        var pt=tally(mine);
+        html+=bar(p.label,pt.yes,pt.no);
+      });
+    }
+    html+=bar(anyPool?"Everyone":"Result",t.yes,t.no);
+    counts.innerHTML='<div class="poll-bars">'+html+'</div><p class="poll-total">'+
+      t.yes+' yes · '+t.no+' no · '+rows.length+' total · '+signed+
+      ' signed in, '+(rows.length-signed)+' not signed in</p>';
+    var withC=rows.filter(function(r){return r.comment;});
+    if(withC.length){
+      paneC.innerHTML=withC.map(function(r){
+        var no=r.vote.indexOf("no")===0;
+        return '<p class="pc-item"><span class="pc-vote'+(no?' no':'')+'">'+(no?"No":"Yes")+'</span>'+
+          esc(r.comment)+(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>')+'</p>';
+      }).join("");
+    }
+  });
 });
 document.addEventListener("click",function(e){var b=e.target.closest("[data-ptab]");if(!b)return;var sec=b.closest("section.poll");sec.querySelectorAll("[data-ptab]").forEach(function(x){x.classList.toggle("on",x===b);});var want=b.getAttribute("data-ptab");sec.querySelectorAll("[data-ppane]").forEach(function(p){p.hidden=p.getAttribute("data-ppane")!==want;});});
 })();</script>
   </div>
   <footer>
+    <p class="footlinks"><a href="latest.html">News</a> &middot; <a href="feedback.html">Feedback</a> &middot; <a href="polls.html">Polls</a> &middot; <a href="settings.html">Settings</a></p>
+    <button type="button" class="themetoggle" id="theme-toggle">Dark mode</button>
   </footer>
 </div>
-<script src="assets/site.js?v=c53c317022"></script>
+<script src="assets/site.js?v=abf8d68000"></script>
 </body>
 </html>

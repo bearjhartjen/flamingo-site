@@ -52,6 +52,9 @@ THEMES = ("classic", "parchment", "ink", "midnight")
 STAR_ANIMATIONS = ("comic",)
 STAR_ANIMATION_DEFAULT = "comic"
 SLUG_RE = re.compile(r"^[a-z0-9-]{1,40}$")
+# What may be copied from assets/uploads/ to the live site. Pictures and
+# PDFs only: anything else (scripts, HTML, a stray key) stays local.
+UPLOAD_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf")
 
 
 def safe_custom_css(value: str | None) -> str:
@@ -123,6 +126,10 @@ def load_site(path: Path) -> dict:
             entry["title"] = str(p["title"]).strip()[:300]
         if str(p.get("description", "")).strip():
             entry["description"] = str(p["description"]).strip()[:300]
+        if "heading" in p:
+            # "" (or false) means the page body carries its own h1; a string
+            # overrides the page name used for the generated heading.
+            entry["heading"] = str(p.get("heading") or "")[:80]
         if p.get("hidden"):
             entry["hidden"] = True
         if p.get("badge"):
@@ -139,7 +146,7 @@ def load_site(path: Path) -> dict:
         raise ValueError(css_error)
     custom_css = safe_custom_css(raw_custom_css)
     return {
-        "title": str(doc.get("title", "Flamingo and Cactus"))[:300],
+        "title": str(doc.get("title", "Flamingo & Cactus"))[:300],
         "tagline": str(doc.get("tagline", ""))[:300],
         "footer": str(doc.get("footer", ""))[:500],
         "theme": theme if theme in THEMES else "classic",
@@ -156,7 +163,7 @@ def load_site(path: Path) -> dict:
 # ---------------------------------------------------------------------------
 # Sanitizer: page bodies are freeform editor HTML, so only an allowlist of
 # plain tags survives. editor and builder share this.
-ALLOWED_TAGS = {"p", "h2", "h3", "br", "strong", "b", "em", "i", "u", "s",
+ALLOWED_TAGS = {"p", "h1", "h2", "h3", "br", "strong", "b", "em", "i", "u", "s",
                 "ul", "ol", "li", "a", "img", "blockquote", "hr", "div", "span",
                 "table", "thead", "tbody", "tr", "th", "td"}
 DROP_WITH_CONTENT = {"script", "style", "form", "iframe", "object", "embed"}
@@ -171,8 +178,11 @@ IMG_CLASSES = {"secimg", "small", "medium", "full", "ileft", "iright", "icenter"
 SIZE_CLASSES = {"t-tiny", "t-small", "t-large", "t-huge", "t-giant"}
 COLOR_CLASSES = {"c-muted", "c-red", "c-blue", "c-green", "c-gold"}
 TEXT_CLASSES = SIZE_CLASSES | COLOR_CLASSES
+# A section heading written as a real h1/h2/h3 keeps the serif look
+# the page used when it was only a big paragraph.
+SECTION_CLASSES = {"sec"}
 # Block tags that keep the "ac"/"ar" alignment classes as well as size/colour.
-CENTERED_TAGS = ("p", "h2", "h3", "blockquote", "li")
+CENTERED_TAGS = ("p", "h1", "h2", "h3", "blockquote", "li")
 
 # A `color:` value is safe only in these shapes: hex, plain colour name, or a
 # functional rgb()/hsl() with plain numbers. Anything else (url(), var(),
@@ -642,7 +652,7 @@ class _Sanitize(HTMLParser):
                     if "ar" not in keep:
                         keep.append("ar")
                 for c in ad.get("class", "").split():
-                    if c in TEXT_CLASSES and c not in keep:
+                    if c in TEXT_CLASSES | SECTION_CLASSES and c not in keep:
                         keep.append(c)
                 big = _phone_big_class(ad.get("style", ""))
                 if big and big.strip() not in keep:
@@ -764,7 +774,7 @@ CSS = r'''  :root{
   .page{max-width:860px;margin:0 auto;padding:26px 28px 64px}
   .masthead{text-align:center;padding:6px 0 4px}
   .masthead img{display:block;margin:0 auto;width:96px;height:96px;object-fit:contain}
-  h1{
+  h1,.masthead .sitetitle{
     font-size:34px;font-weight:400;letter-spacing:2.5px;text-transform:uppercase;
     margin:14px 0 2px;
   }
@@ -804,6 +814,15 @@ CSS = r'''  :root{
   body[data-theme="midnight"] .canvas .c-blue{color:#b3a6ff}
   body[data-theme="midnight"] .canvas .c-green{color:#8fe6ae}
   body[data-theme="midnight"] .canvas .c-gold{color:#e3b83b}
+  .canvas h1{
+    font:400 30px/1.25 Georgia,"Times New Roman",Times,serif;
+    letter-spacing:.3px;text-transform:none;color:var(--ink);margin:0 0 16px;
+  }
+  .canvas h1.sec,.canvas h2.sec,.canvas h3.sec{
+    font-family:Georgia,"Times New Roman",Times,serif;font-weight:400;
+    font-size:22px;letter-spacing:0;text-transform:none;color:var(--ink);
+    margin:26px 0 8px;
+  }
   .canvas h2{
     font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;
     text-transform:uppercase;color:var(--ink2);margin:26px 0 8px;
@@ -890,7 +909,7 @@ CSS = r'''  :root{
     .star-badge .star-title{font-size:9px}
     .star-badge .star-sub{font-size:7px}
     /* pad the masthead so the badges never sit on the logo or title */
-    .masthead{padding-top:150px}
+    body.has-badges .masthead{padding-top:150px}
   }
   @media print{.star-badge,.gem-badge{display:none}}
   .star-badge{cursor:pointer}
@@ -1182,6 +1201,12 @@ CSS = r'''  :root{
     margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
     font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
   }
+  footer p{margin:0 0 2px}
+  footer .footlinks{margin:0}
+  footer .footlinks a{
+    color:var(--muted);text-decoration:none;margin:0 4px;
+  }
+  footer .footlinks a:hover{color:var(--ink);text-decoration:underline}
   footer .themetoggle{
     display:inline-block;margin:10px 0 0;padding:7px 16px;
     border:1px solid var(--rule);border-radius:2px;background:transparent;
@@ -1194,9 +1219,9 @@ CSS = r'''  :root{
   @media (max-width:700px){
     body{font-size:15px}
     .page{padding:16px 14px 48px;overflow-x:hidden}
-    .masthead{padding-top:140px}
+    body.has-badges .masthead{padding-top:112px}
     .masthead img{width:72px;height:72px}
-    h1{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
+    h1,.masthead .sitetitle{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
     .tagline{font-size:13px}
     nav.sitenav{
       display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;
@@ -1210,11 +1235,11 @@ CSS = r'''  :root{
     }
     nav.sitenav a:hover{color:var(--ink);border-color:var(--ink)}
     nav.sitenav .cur{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-    .star-badge{top:10px;left:10px;right:auto;width:140px;height:140px}
-    .star-badge .star-title{font-size:10px;max-width:70%;line-height:1.25;letter-spacing:.2px}
+    .star-badge{top:8px;left:8px;right:auto;width:104px;height:104px}
+    .star-badge .star-title{font-size:8.5px;max-width:72%;line-height:1.2;letter-spacing:.2px}
     .star-badge .star-sub{display:none}
-    .gem-badge{top:42px;left:auto;right:10px;width:140px;height:76px;border-radius:11px;border-width:2.5px;box-shadow:5px 6px 0 #111}
-    .gem-badge .gem-title{font-size:10px;letter-spacing:1.5px}
+    .gem-badge{top:30px;left:auto;right:8px;width:118px;height:64px;border-radius:10px;border-width:2.5px;box-shadow:4px 5px 0 #111}
+    .gem-badge .gem-title{font-size:9px;letter-spacing:1.2px}
     .canvas{overflow-wrap:break-word}
     .canvas *{overflow-wrap:anywhere}
     /* A dragged button keeps its desktop pixel spot on wide screens, but
@@ -1268,7 +1293,7 @@ CSS = r'''  :root{
 # f-string) so the JSON braces survive untouched.
 LD_ORG = (
     '<script type="application/ld+json">{"@context":"https://schema.org",'
-    '"@type":"Organization","name":"Flamingo and Cactus",'
+    '"@type":"Organization","name":"Flamingo & Cactus",'
     f'"url":"https://{CUSTOM_DOMAIN}/",'
     f'"logo":"https://{CUSTOM_DOMAIN}/favicon.png"}}'
     "</script>"
@@ -1277,6 +1302,11 @@ LD_ORG = (
 
 STAR_TITLE = "Latest and greatest"
 STAR_SUB = "Click me"
+
+# Links that live in the footer rather than the menu, so the menu stays
+# short on a phone. Each is rendered only when its page exists.
+FOOTER_LINKS = (("latest", "News"), ("feedback", "Feedback"),
+                ("polls", "Polls"), ("settings", "Settings"))
 
 # Inbox for the contact form. Submissions POST here and FormSubmit forwards
 # them to this address (first submission needs a one-time activation click
@@ -2152,7 +2182,8 @@ monthSel.addEventListener("change",function(){cm=+monthSel.value;renderGrid();})
 POLL_DEFAULTS = {"intro": "", "polls": []}
 POLL_TEXT_LIMITS = {"id": 64, "title": 160, "question": 400, "details": 2000,
                     "opens": 10, "closes": 10, "decision": 2000}
-POLL_URL_FIELDS = ("anon_form", "signed_form", "anon_csv", "signed_csv")
+POLL_URL_FIELDS = ("anon_form", "signed_form", "anon_csv", "signed_csv",
+                   "dev_csv", "finance_csv", "user_csv")
 
 
 def sanitize_poll(raw) -> dict:
@@ -2163,7 +2194,12 @@ def sanitize_poll(raw) -> dict:
         out[key] = str(src.get(key, "") or "").strip()[:limit]
     for key in POLL_URL_FIELDS:
         url = str(src.get(key, "") or "").strip()
-        out[key] = url if re.match(r"^https://[^\s<>\"']+$", url) else ""
+        ok = bool(re.match(r"^https://[^\s<>\"']+$", url))
+        # Local preview sheets are allowed so the bars can be tested without
+        # publishing anything; the public site only ever uses https.
+        if not ok and re.match(r"^http://(127\.0\.0\.1|localhost):\d+/[^\s<>\"']*$", url):
+            ok = True
+        out[key] = url if ok else ""
     out["closed"] = bool(src.get("closed"))
     return out
 
@@ -2214,26 +2250,41 @@ def _poll_date_text(poll: dict) -> str:
 
 
 POLLS_CSS = """<style>
-.poll{border:1px solid #d8d2c4;border-radius:6px;padding:18px 20px;margin:16px 0;background:#fffdf7}
-.poll h3{margin:0 0 4px;font-size:22px}
-.poll-q{margin:0 0 8px;font-size:17px}
-.poll-details{color:#4a453c;margin:0 0 8px}
-.poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 10px;letter-spacing:.3px}
-.poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin:0 0 12px}
+/* Every colour here comes from the site's theme variables, so Polls looks
+   right in Classic, Parchment, Ink and Midnight alike. */
+.poll{border:1px solid var(--rule);border-radius:6px;padding:18px 20px;margin:16px 0;background:var(--paper2);color:var(--ink2)}
+.poll h3{margin:0 0 4px;font-size:22px;color:var(--ink)}
+.poll-q{margin:0 0 8px;font-size:17px;color:var(--ink)}
+.poll-details{color:var(--ink2);margin:0 0 8px}
+.poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 10px;letter-spacing:.3px}
+.poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 12px}
 .poll-tabs{display:flex;gap:6px;margin:0 0 12px}
-.poll-tabs button{border:1px solid #bbb2a0;background:#fff;border-radius:4px;padding:6px 14px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer;color:#3a352c}
-.poll-tabs button.on{background:#141414;color:#fff;border-color:#141414}
+.poll-tabs button{border:1px solid var(--rule);background:var(--paper);border-radius:4px;padding:6px 14px;font:12px "Helvetica Neue",Arial,sans-serif;cursor:pointer;color:var(--ink2)}
+.poll-tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .poll-pane[hidden]{display:none}
-.poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:#3a352c;margin:12px 0 0}
+.poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);margin:12px 0 0}
+.poll-bars{margin:0 0 10px}
+.pb-row{display:flex;align-items:center;gap:10px;margin:0 0 6px}
+.pb-label{flex:0 0 96px;font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.pb-bar{flex:1;display:flex;height:15px;border-radius:3px;overflow:hidden;background:var(--rule2);min-width:80px}
+.pb-bar i{display:block;height:100%}
+.pb-yes{background:#2e8b57}
+.pb-no{background:#b0463c}
+.pb-num{flex:0 0 auto;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);white-space:nowrap}
+.poll-total{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0}
 .poll-counts b{font-size:15px}
-.poll-form iframe{width:100%;max-width:640px;height:520px;border:1px solid #cfc7b6;border-radius:6px;background:#fff}
+.poll-form iframe{width:100%;max-width:640px;height:520px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
 .poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
 .poll-links a{display:inline-block;margin:0 10px 6px 0}
-.pc-item{padding:8px 0;border-bottom:1px solid #ece6d8;margin:0;font-size:15px}
+.pc-item{padding:8px 0;border-bottom:1px solid var(--rule2);margin:0;font-size:15px}
 .pc-vote{font:700 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:#1a7f37;margin-right:8px}
 .pc-vote.no{color:#a1261e}
-.pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:#7a7364;margin-left:8px}
-.pc-empty{color:#7a7364;font-style:italic}
+.pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin-left:8px}
+.pc-empty{color:var(--muted);font-style:italic}
+body[data-theme="ink"] .pb-yes,body[data-theme="midnight"] .pb-yes{background:#4fbf82}
+body[data-theme="ink"] .pb-no,body[data-theme="midnight"] .pb-no{background:#e07a6f}
+body[data-theme="ink"] .pc-vote,body[data-theme="midnight"] .pc-vote{color:#7ee2a8}
+body[data-theme="ink"] .pc-vote.no,body[data-theme="midnight"] .pc-vote.no{color:#ff9d9d}
 </style>"""
 
 
@@ -2273,7 +2324,10 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
         decision_html = f'<p class="poll-details"><b>Decision:</b> {decision}</p>' if decision else ""
         parts.append(
             f'<section class="poll" data-poll="{pid}" data-anon="{html.escape(poll.get("anon_csv") or "", quote=True)}"'
-            f' data-signed="{html.escape(poll.get("signed_csv") or "", quote=True)}">'
+            f' data-signed="{html.escape(poll.get("signed_csv") or "", quote=True)}"'
+            f' data-dev="{html.escape(poll.get("dev_csv") or "", quote=True)}"'
+            f' data-fin="{html.escape(poll.get("finance_csv") or "", quote=True)}"'
+            f' data-user="{html.escape(poll.get("user_csv") or "", quote=True)}">'
             f'<h3>{title}</h3>'
             f'<p class="poll-q">{question}</p>'
             f'<p class="poll-details">{details}</p>'
@@ -2300,18 +2354,65 @@ function pick(rows){var out=[];for(var i=1;i<rows.length;i++){var R=rows[i];if(!
 var vote=(R[1]||"").trim().toLowerCase();var comment=(R[2]||"").trim();out.push({vote:vote,comment:comment});}return out;}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 var secs=document.querySelectorAll("section.poll");
+function bar(label,yes,no){
+  var total=yes+no||1,py=Math.round(yes*100/total),pn=100-py;
+  return '<div class="pb-row"><span class="pb-label">'+esc(label)+'</span>'+
+    '<span class="pb-bar"><i class="pb-yes" style="width:'+py+'%"></i>'+
+    '<i class="pb-no" style="width:'+pn+'%"></i></span>'+
+    '<span class="pb-num">'+yes+' yes · '+no+' no</span></div>';
+}
+function tally(rows){
+  var yes=0,no=0;
+  rows.forEach(function(r){
+    if(r.vote.indexOf("yes")===0)yes++;
+    else if(r.vote.indexOf("no")===0)no++;
+  });
+  return {yes:yes,no:no};
+}
 secs.forEach(function(sec){
- var counts=sec.querySelector("[data-pcounts]"),paneC=sec.querySelector('[data-ppane="comments"]');
- var urls=[{u:sec.getAttribute("data-anon"),signed:false},{u:sec.getAttribute("data-signed"),signed:true}].filter(function(x){return x.u;});
- if(!urls.length)return;
- Promise.all(urls.map(function(x){return fetch(x.u,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("bad");return r.text();}).then(function(t){return pick(csv(t)).map(function(v){v.signed=x.signed;return v;});}).catch(function(){return null;});})).then(function(all){
-  if(all.some(function(a){return a===null;})){counts.textContent="Counts could not load. Open the form or sheet directly to see them.";return;}
-  var rows=[].concat.apply([],all),yes=0,no=0,signed=0;
-  rows.forEach(function(r){if(r.vote.indexOf("yes")===0)yes++;else if(r.vote.indexOf("no")===0)no++;if(r.signed)signed++;});
-  counts.innerHTML="<b>"+yes+"</b> yes · <b>"+no+"</b> no · "+rows.length+" total · "+signed+" signed in, "+(rows.length-signed)+" not signed in";
-  var withC=rows.filter(function(r){return r.comment;});
-  if(withC.length){paneC.innerHTML=withC.map(function(r){var n=r.vote.indexOf("no")===0?' class="pc-vote no"':' class="pc-vote"';var v=r.vote.indexOf("no")===0?"No":"Yes";return '<p class="pc-item"><span'+n+'>'+v+'</span>'+esc(r.comment)+(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>')+'</p>';}).join("");}
- });
+  var counts=sec.querySelector("[data-pcounts]"),paneC=sec.querySelector('[data-ppane="comments"]');
+  var pools=[{k:"dev",label:"Developers",u:sec.getAttribute("data-dev")},
+             {k:"fin",label:"Financial",u:sec.getAttribute("data-fin")},
+             {k:"usr",label:"Users",u:sec.getAttribute("data-user")}];
+  var extra=[{k:"anon",label:"Anonymous",u:sec.getAttribute("data-anon"),signed:false},
+             {k:"signed",label:"Signed in",u:sec.getAttribute("data-signed"),signed:true}];
+  var anyPool=pools.some(function(x){return x.u;});
+  var sources=(anyPool?pools:extra).filter(function(x){return x.u;});
+  if(!sources.length)return;
+  Promise.all(sources.map(function(x){
+    return fetch(x.u,{cache:"no-store"})
+      .then(function(r){if(!r.ok)throw new Error("bad");return r.text();})
+      .then(function(t){return pick(csv(t)).map(function(v){v.pool=x.k;v.signed=!!x.signed;return v;});})
+      .catch(function(){return null;});
+  })).then(function(all){
+    if(all.some(function(a){return a===null;})){
+      counts.textContent="Counts could not load. Open the form or sheet directly to see them.";
+      return;
+    }
+    var rows=[].concat.apply([],all),t=tally(rows),signed=0;
+    rows.forEach(function(r){if(r.signed)signed++;});
+    var html="";
+    if(anyPool){
+      pools.forEach(function(p){
+        var mine=rows.filter(function(r){return r.pool===p.k;});
+        if(!mine.length)return;
+        var pt=tally(mine);
+        html+=bar(p.label,pt.yes,pt.no);
+      });
+    }
+    html+=bar(anyPool?"Everyone":"Result",t.yes,t.no);
+    counts.innerHTML='<div class="poll-bars">'+html+'</div><p class="poll-total">'+
+      t.yes+' yes · '+t.no+' no · '+rows.length+' total · '+signed+
+      ' signed in, '+(rows.length-signed)+' not signed in</p>';
+    var withC=rows.filter(function(r){return r.comment;});
+    if(withC.length){
+      paneC.innerHTML=withC.map(function(r){
+        var no=r.vote.indexOf("no")===0;
+        return '<p class="pc-item"><span class="pc-vote'+(no?' no':'')+'">'+(no?"No":"Yes")+'</span>'+
+          esc(r.comment)+(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>')+'</p>';
+      }).join("");
+    }
+  });
 });
 document.addEventListener("click",function(e){var b=e.target.closest("[data-ptab]");if(!b)return;var sec=b.closest("section.poll");sec.querySelectorAll("[data-ptab]").forEach(function(x){x.classList.toggle("on",x===b);});var want=b.getAttribute("data-ptab");sec.querySelectorAll("[data-ppane]").forEach(function(p){p.hidden=p.getAttribute("data-ppane")!==want;});});
 })();</script>"""
@@ -2357,7 +2458,10 @@ def gem_html(pages):
     )
 
 
-def nav_html(pages, current: str) -> str:
+def nav_html(pages, current: str, root: str = "") -> str:
+    """The menu. `root` is "" for normal pages and "/" for the 404 page,
+    which GitHub Pages serves at whatever path the visitor mistyped, so
+    its links must be absolute to reach the site root."""
     if len([p for p in pages if not p.get("hidden")]) <= 1:
         return ""
     parts = []
@@ -2366,7 +2470,8 @@ def nav_html(pages, current: str) -> str:
             parts.append(f'<span class="cur">{html.escape(p["nav"])}</span>')
         else:
             parts.append(
-                f'<a href="{html.escape(p["slug"])}.html">{html.escape(p["nav"])}</a>')
+                f'<a href="{root if root and p["slug"] == "index" else root + html.escape(p["slug"]) + ".html"}">'
+                f'{html.escape(p["nav"])}</a>')
     return '  <nav class="sitenav">\n    ' + "\n    ".join(parts) + "\n  </nav>\n"
 
 
@@ -2381,7 +2486,233 @@ def nav_html(pages, current: str) -> str:
 # ---------------------------------------------------------------------------
 import hashlib as _fc_hashlib
 
-SITE_JS = "(function(){try{try{var themeDef=document.body.dataset.theme||'classic';var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}var themeBtn=document.getElementById('theme-toggle');var themeLabel=function(){if(themeBtn)themeBtn.textContent=(document.body.dataset.theme==='midnight')?'Light mode':'Dark mode';};themeLabel();if(themeBtn)themeBtn.addEventListener('click',function(){var next=(document.body.dataset.theme==='midnight')?themeDef:'midnight';document.body.dataset.theme=next;try{localStorage.setItem('fc-theme',next);}catch(_){}themeLabel();});}catch(_){}if(sessionStorage.getItem('fcWarp')){sessionStorage.removeItem('fcWarp');var afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}}catch(_){}try{var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;var star=document.querySelector('a.star-badge, a.gem-badge');if(!star||!star.getAttribute('href'))return;star.addEventListener('click',function(e){var href=star.getAttribute('href');if(!href||href.charAt(0)==='#')return;e.preventDefault();if(instant){window.location.href=href;return;}if(star.classList.contains('warp'))return;var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem('fcWarp','1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}setTimeout(nav2,560);setTimeout(nav2,1100);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2200);try{var fx=document.createElement('div');fx.id='fx';var fl=document.createElement('div');fl.className='comicflash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var N=W<700?18:30,S=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=3+Math.random()*6;S.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4+Math.random()*7,rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.4,age:0,life:26+Math.random()*22,ink:Math.random()<.5});}var rays=W<700?12:18,seed=[],j;for(j=0;j<rays;j++)seed.push(.6+Math.random()*.5);var wax={age:0,life:24};var t0=performance.now();(function frame(){var alive=false,i,s;cx2.clearRect(0,0,W,H);if(wax.age<=wax.life){wax.age++;alive=true;var wx=Math.min(1,wax.age/wax.life),R0=Math.min(W,H)*.08+wx*44;cx2.globalAlpha=1-wx*.3;cx2.fillStyle='#fffdf7';cx2.strokeStyle='#111';cx2.lineWidth=5;cx2.beginPath();for(i=0;i<16;i++){var aa=i*Math.PI/8,rr=R0*(1+.22*Math.sin(aa*3+wax.age*.5));var px=x+Math.cos(aa)*rr,py=y+Math.sin(aa)*rr;cx2[i?'lineTo':'moveTo'](px,py);}cx2.closePath();cx2.fill();cx2.stroke();for(i=0;i<rays;i++){var aa=i*Math.PI*2/rays,ln=(0.3+0.16*seed[i])*Math.max(W,H)*wx; cx2.beginPath();cx2.moveTo(x+Math.cos(aa)*R0*.7,y+Math.sin(aa)*R0*.7);cx2.lineTo(x+Math.cos(aa)*ln,y+Math.sin(aa)*ln);cx2.strokeStyle=i%2?'#111':'#fffdf7';cx2.lineWidth=i%2?9:4;cx2.stroke();}cx2.globalAlpha=1;}for(i=0;i<S.length;i++){s=S[i];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.97;s.vy=s.vy*.97;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.save();cx2.translate(s.x,s.y);cx2.rotate(s.rot);cx2.beginPath();cx2.moveTo(0,-s.r);cx2.lineTo(s.r*.7,s.r);cx2.lineTo(-s.r*.7,s.r);cx2.closePath();if(s.ink){cx2.fillStyle='#111';cx2.fill();}else{cx2.fillStyle='#fffdf7';cx2.fill();cx2.lineWidth=2;cx2.strokeStyle='#111';cx2.stroke();}cx2.restore();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();}catch(_){}});}catch(_){}})();\n"
+SITE_JS = r'''(function () {
+  "use strict";
+
+  // ---- Theme ---------------------------------------------------------------
+  // The visitor's choice follows them across pages. Only the storage calls
+  // are guarded (private mode can throw); any real script error reaches the
+  // console instead of being swallowed.
+  var THEMES = ["classic", "parchment", "ink", "midnight"];
+  var body = document.body;
+  var defaultTheme = body.dataset.theme || "classic";
+
+  function savedTheme() {
+    try { return localStorage.getItem("fc-theme"); } catch (err) { return null; }
+  }
+  function saveTheme(name) {
+    try { localStorage.setItem("fc-theme", name); } catch (err) { /* not fatal */ }
+  }
+
+  var saved = savedTheme();
+  if (THEMES.indexOf(saved) !== -1) { body.dataset.theme = saved; }
+
+  var themeButton = document.getElementById("theme-toggle");
+  function labelThemeButton() {
+    if (themeButton) {
+      themeButton.textContent = body.dataset.theme === "midnight" ? "Light mode" : "Dark mode";
+    }
+  }
+  labelThemeButton();
+  if (themeButton) {
+    themeButton.addEventListener("click", function () {
+      var next = body.dataset.theme === "midnight" ? defaultTheme : "midnight";
+      body.dataset.theme = next;
+      saveTheme(next);
+      labelThemeButton();
+    });
+  }
+
+  // ---- Arrival flash -------------------------------------------------------
+  // The burst sets fcWarp just before it navigates; the next page plays one
+  // soft ink flash so the arrival feels joined to the click.
+  var warped = false;
+  try {
+    warped = sessionStorage.getItem("fcWarp") === "1";
+    if (warped) { sessionStorage.removeItem("fcWarp"); }
+  } catch (err) { /* storage unavailable: skip the flash */ }
+  if (warped) {
+    var arrive = document.createElement("div");
+    arrive.id = "arriveflash";
+    document.body.appendChild(arrive);
+    document.body.classList.add("arrive");
+    setTimeout(function () {
+      document.body.classList.remove("arrive");
+      if (arrive.parentNode) { arrive.parentNode.removeChild(arrive); }
+    }, 700);
+  }
+
+  // ---- Star / Feedback burst -----------------------------------------------
+  var badge = document.querySelector("a.star-badge, a.gem-badge");
+  if (!badge || !badge.getAttribute("href")) { return; }
+
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  badge.addEventListener("click", function (event) {
+    var href = badge.getAttribute("href");
+    if (!href || href.charAt(0) === "#") { return; }
+    event.preventDefault();
+    if (reduceMotion) { window.location.href = href; return; }
+    if (badge.classList.contains("warp")) { return; }
+
+    var rect = badge.getBoundingClientRect();
+    var x = rect.left + rect.width / 2;
+    var y = rect.top + rect.height / 2;
+
+    try { sessionStorage.setItem("fcWarp", "1"); } catch (err) { /* flash optional */ }
+
+    badge.classList.add("warp");
+    document.body.classList.add("warping");
+
+    var left = false;
+    function go() {
+      if (left) { return; }
+      left = true;
+      window.location.href = href;
+    }
+    setTimeout(go, 560);
+    setTimeout(go, 1100);
+    setTimeout(function () {
+      document.body.classList.remove("warping");
+      badge.classList.remove("warp");
+      var layer = document.getElementById("fx");
+      if (layer && layer.parentNode) { layer.parentNode.removeChild(layer); }
+    }, 2200);
+
+    try {
+      drawBurst(x, y);
+    } catch (err) {
+      // The burst is decoration; the navigation timers above still run.
+      console.error("star burst failed", err);
+    }
+  });
+
+  function drawBurst(x, y) {
+    var layer = document.createElement("div");
+    layer.id = "fx";
+    var flash = document.createElement("div");
+    flash.className = "comicflash";
+    layer.appendChild(flash);
+    var canvas = document.createElement("canvas");
+    layer.appendChild(canvas);
+    document.body.appendChild(layer);
+
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = window.innerWidth;
+    var H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    var ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    var count = W < 700 ? 18 : 30;
+    var shards = [];
+    for (var i = 0; i < count; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var speed = 3 + Math.random() * 6;
+      shards.push({
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r: 4 + Math.random() * 7,
+        rot: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 0.4,
+        age: 0,
+        life: 26 + Math.random() * 22,
+        ink: Math.random() < 0.5
+      });
+    }
+
+    var rayCount = W < 700 ? 12 : 18;
+    var raySeeds = [];
+    for (var j = 0; j < rayCount; j++) { raySeeds.push(0.6 + Math.random() * 0.5); }
+
+    var wax = { age: 0, life: 24 };
+    var started = performance.now();
+    requestAnimationFrame(frame);
+
+    function frame() {
+      var alive = false;
+      ctx.clearRect(0, 0, W, H);
+
+      // The sealed wax burst: a jagged white star with black-and-white rays.
+      if (wax.age <= wax.life) {
+        wax.age++;
+        alive = true;
+        var progress = Math.min(1, wax.age / wax.life);
+        var radius = Math.min(W, H) * 0.08 + progress * 44;
+        ctx.globalAlpha = 1 - progress * 0.3;
+        ctx.fillStyle = "#fffdf7";
+        ctx.strokeStyle = "#111";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        for (var k = 0; k < 16; k++) {
+          var a = k * Math.PI / 8;
+          var rr = radius * (1 + 0.22 * Math.sin(a * 3 + wax.age * 0.5));
+          var px = x + Math.cos(a) * rr;
+          var py = y + Math.sin(a) * rr;
+          if (k) { ctx.lineTo(px, py); } else { ctx.moveTo(px, py); }
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        for (var m = 0; m < rayCount; m++) {
+          var ra = m * Math.PI * 2 / rayCount;
+          var length = (0.3 + 0.16 * raySeeds[m]) * Math.max(W, H) * progress;
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(ra) * radius * 0.7, y + Math.sin(ra) * radius * 0.7);
+          ctx.lineTo(x + Math.cos(ra) * length, y + Math.sin(ra) * length);
+          ctx.strokeStyle = m % 2 ? "#111" : "#fffdf7";
+          ctx.lineWidth = m % 2 ? 9 : 4;
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Ink shards, half filled and half outlined, flying out from the click.
+      for (var s = 0; s < shards.length; s++) {
+        var shard = shards[s];
+        shard.age++;
+        if (shard.age > shard.life) { continue; }
+        alive = true;
+        shard.x += shard.vx;
+        shard.y += shard.vy;
+        shard.vx *= 0.97;
+        shard.vy *= 0.97;
+        shard.rot += shard.spin;
+        ctx.globalAlpha = Math.max(0, 1 - shard.age / shard.life);
+        ctx.save();
+        ctx.translate(shard.x, shard.y);
+        ctx.rotate(shard.rot);
+        ctx.beginPath();
+        ctx.moveTo(0, -shard.r);
+        ctx.lineTo(shard.r * 0.7, shard.r);
+        ctx.lineTo(-shard.r * 0.7, shard.r);
+        ctx.closePath();
+        if (shard.ink) {
+          ctx.fillStyle = "#111";
+          ctx.fill();
+        } else {
+          ctx.fillStyle = "#fffdf7";
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#111";
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      ctx.globalAlpha = 1;
+      if (alive && performance.now() - started < 1200) {
+        requestAnimationFrame(frame);
+      } else if (layer.parentNode) {
+        layer.parentNode.removeChild(layer);
+      }
+    }
+  }
+})();
+'''
 
 # Tiny inline snippet: applies the saved light/dark choice before the first
 # paint so Midnight visitors never see a white flash while site.js loads.
@@ -2447,6 +2778,86 @@ def lazy_images(fragment: str) -> str:
                   '<img loading="lazy" decoding="async" ', fragment)
 
 
+_IMAGE_SIZES: dict = {}
+
+
+def image_size(path: Path):
+    """(width, height) from a PNG, GIF, JPEG or WebP header, else None.
+
+    Stdlib only: the build reads the few header bytes it needs instead of
+    pulling in an imaging library."""
+    try:
+        with open(path, "rb") as fh:
+            data = fh.read(262144)
+    except OSError:
+        return None
+    if len(data) < 24:
+        return None
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        w = int.from_bytes(data[16:20], "big")
+        h = int.from_bytes(data[20:24], "big")
+        return (w, h) if w and h else None
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        w = int.from_bytes(data[6:8], "little")
+        h = int.from_bytes(data[8:10], "little")
+        return (w, h) if w and h else None
+    if data[:2] == b"\xff\xd8":  # JPEG: walk to the frame header
+        i = 2
+        while i + 9 < len(data):
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            marker = data[i + 1]
+            if marker in (0xD8, 0xD9) or 0xD0 <= marker <= 0xD7:
+                i += 2
+                continue
+            seg_len = int.from_bytes(data[i + 2:i + 4], "big")
+            if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+                h = int.from_bytes(data[i + 5:i + 7], "big")
+                w = int.from_bytes(data[i + 7:i + 9], "big")
+                return (w, h) if w and h else None
+            i += 2 + seg_len
+        return None
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        chunk = data[12:16]
+        if chunk == b"VP8X" and len(data) >= 30:
+            w = int.from_bytes(data[24:27], "little") + 1
+            h = int.from_bytes(data[27:30], "little") + 1
+            return (w, h)
+        if chunk == b"VP8L" and len(data) >= 25 and data[20] == 0x2F:
+            bits = int.from_bytes(data[21:25], "little")
+            w = (bits & 0x3FFF) + 1
+            h = ((bits >> 14) & 0x3FFF) + 1
+            return (w, h)
+        if chunk == b"VP8 " and len(data) >= 30 and data[23:26] == b"\x9d\x01\x2a":
+            w = int.from_bytes(data[26:28], "little") & 0x3FFF
+            h = int.from_bytes(data[28:30], "little") & 0x3FFF
+            return (w, h) if w and h else None
+    return None
+
+
+def size_images(fragment: str, sizes=None) -> str:
+    """Reserve each uploaded picture's space before it loads, so the page
+    does not jump while the image arrives. Only adds the attributes when
+    the author has not written them already."""
+    sizes = _IMAGE_SIZES if sizes is None else sizes
+
+    def add(m):
+        tag = m.group(0)
+        if re.search(r"\b(?:width|height)=", tag):
+            return tag
+        hit = re.search(r'\bsrc="uploads/([^"/]+)"', tag)
+        if not hit:
+            return tag
+        dim = sizes.get(hit.group(1))
+        if not dim:
+            return tag
+        w, h = dim
+        return tag[:-1].rstrip() + f' width="{w}" height="{h}">'
+
+    return re.sub(r"<img\b[^>]*>", add, fragment)
+
+
 def write_assets(out_dir: Path, logo_path: Path) -> str:
     """Write the shared assets; return the logo src for page markup."""
     (out_dir / "assets").mkdir(parents=True, exist_ok=True)
@@ -2467,6 +2878,9 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
                 cal_cfg: dict | None = None,
                 polls_doc: dict | None = None) -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
+    # The browser title and search description come from data/site.json.
+    # They are used exactly as written: each page title already ends with
+    # " | Flamingo & Cactus", so the site name never appears twice.
     page_title = page_meta.get("title", "").strip() or title
     desc = page_meta.get("description", "").strip() or description.strip() or tagline.strip() or title
     canon = f"https://{CUSTOM_DOMAIN}/" if slug == "index" else f"https://{CUSTOM_DOMAIN}/{slug}.html"
@@ -2487,22 +2901,51 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
     placed, poll_script = place_polls(placed, polls_doc)
     placed, set_script = place_settings(placed, theme)
     placed = picture_fallbacks(lazy_images(placed))
-    if placed:
-        canvas = f'  <div class="canvas">\n{placed}{cal_script}{poll_script}{set_script}\n  </div>\n'
-    footer_text = html.escape(footer) + "\n" if footer.strip() else ""
-    footer_block = ('  <footer>\n' + footer_text +
-                    "  </footer>\n")
+    placed = size_images(placed)
+    # The page's own name is the <h1>. The home page already carries the
+    # site name as its heading in the masthead; every other page gets a
+    # real page heading here, so screen readers and search engines see
+    # one <h1> per page instead of the site name repeated sixteen times.
+    if "heading" in page_meta:
+        page_heading = str(page_meta.get("heading") or "").strip()
+    else:
+        page_heading = "" if slug == "index" else next(
+            (p["nav"] for p in pages if p["slug"] == slug), "")
+    heading_html = (f'    <h1>{html.escape(page_heading)}</h1>\n'
+                    if page_heading else "")
+    if placed or heading_html:
+        canvas = (f'  <div class="canvas">\n{heading_html}{placed}'
+                  f"{cal_script}{poll_script}{set_script}\n  </div>\n")
+
+    # Badges (the star and the Feedback gem) belong to the home page. On
+    # every other page they ate the top of a phone screen before the logo.
+    badges = f"{star_html(pages)}{gem_html(pages)}" if slug == "index" else ""
+    body_attrs = (f' class="has-badges"' if badges else "")
+
+    # The footer is the small print plus the links that no longer fit in
+    # the menu: News, Feedback, Polls and Settings. The theme button is
+    # wired by site.js (the same fc-theme key the Settings page writes).
+    footer_text = html.escape(footer).strip()
+    footer_links = " &middot; ".join(
+        f'<a href="{html.escape(s)}.html">{html.escape(label)}</a>'
+        for s, label in FOOTER_LINKS
+        if any(p["slug"] == s for p in pages))
+    footer_block = ('  <footer>\n'
+                    + (f'    <p>{footer_text}</p>\n' if footer_text else "")
+                    + (f'    <p class="footlinks">{footer_links}</p>\n' if footer_links else "")
+                    + '    <button type="button" class="themetoggle" id="theme-toggle">Dark mode</button>\n'
+                    + "  </footer>\n")
     return (
         "<!DOCTYPE html>\n"
         '<html lang="en">\n'
         "<head>\n"
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        f"<title>{html.escape(page_title)} &mdash; Flamingo &amp; Cactus</title>\n"
+        f"<title>{html.escape(page_title)}</title>\n"
         f'<meta name="description" content="{html.escape(desc, quote=True)}">\n'
         f'<link rel="canonical" href="{canon}">\n'
         f'<link rel="icon" type="image/png" href="favicon.png">\n'
-        f'<meta property="og:title" content="{html.escape(page_title, quote=True)} &mdash; Flamingo &amp; Cactus">\n'
+        f'<meta property="og:title" content="{html.escape(page_title, quote=True)}">\n'
         f'<meta property="og:description" content="{html.escape(desc, quote=True)}">\n'
         f'<meta property="og:type" content="website">\n'
         f'<meta property="og:url" content="{canon}">\n'
@@ -2512,16 +2955,16 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         + css_link() + "\n"
         + custom_style_block(custom_css) +
         "</head>\n"
-        f'<body data-theme="{theme}" data-star-animation="{STAR_ANIMATION_DEFAULT}">\n'
+        f'<body{body_attrs} data-theme="{theme}" data-star-animation="{STAR_ANIMATION_DEFAULT}">\n'
         f"{THEME_BOOT_TAG}"
         '<div class="page">\n'
-        f"{star_html(pages)}"
-        f"{gem_html(pages)}"
+        f"{badges}"
         "\n"
         '  <div class="masthead">\n'
         f'    <a class="logolink" href="index.html" aria-label="Go to the main page"><img src="{logo_uri}" alt="Flamingo and Cactus" width="96" height="96" fetchpriority="high"></a>\n'
-        f"    <h1>{html.escape(title)}</h1>\n"
-        f"    <p class=\"tagline\">{html.escape(tagline)}</p>\n"
+        + (f"    <h1>{html.escape(title)}</h1>\n" if slug == "index"
+           else f'    <p class="sitetitle">{html.escape(title)}</p>\n')
+        + f"    <p class=\"tagline\">{html.escape(tagline)}</p>\n"
         "</div>\n"
         f"{nav_html(pages, slug)}"
         '  <div class="hr"></div>\n'
@@ -2548,7 +2991,9 @@ NOTFOUND = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found &mdash; Flamingo &amp; Cactus</title>
+<meta name="description" content="That page is not here. Use the menu or the link to the home page.">
 <meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/favicon.png">
 __CSSLINK__
 <style>
 __CSS__
@@ -2557,11 +3002,17 @@ __CSS__
 <body data-theme="classic">
 <div class="page">
   <div class="masthead">
-    <img src="__LOGO__" alt="Flamingo and Cactus">
+    <a class="logolink" href="/" aria-label="Go to the main page"><img src="__LOGO__" alt="Flamingo &amp; Cactus" width="96" height="96"></a>
     <h1>Flamingo &amp; Cactus</h1>
-    <p class="tagline">Flamingo &amp; Cactus Group</p>
+    <p class="tagline">__TAGLINE__</p>
   </div>
+__NAV__
   <div class="hr"></div>
+  <main class="canvas">
+    <h2>Page not found</h2>
+    <p>The page you asked for isn't here. It may have moved, or the address may have a typo.</p>
+    <p><a href="/">Go to the home page</a> &middot; <a href="/contact.html">Contact us</a></p>
+  </main>
   <footer>
   </footer>
 </div>
@@ -2750,7 +3201,13 @@ def read_body(pages_dir: Path, slug: str) -> str:
 
 
 def build(data_path: Path, pages_dir: Path, logo_path: Path,
-          uploads_dir: Path, out_dir: Path, favicon_path: Path = None):
+          uploads_dir: Path, out_dir: Path, favicon_path: Path = None,
+          write_back: bool = True):
+    """Build every page into out_dir.
+
+    write_back=True lets the sanitizer write cleaned bodies back into
+    data/pages/. A check or CI build passes False: a verification run must
+    never edit the sources it is verifying."""
     if favicon_path is None:
         favicon_path = logo_path
     site = load_site(data_path)
@@ -2759,6 +3216,7 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     out_dir.mkdir(parents=True, exist_ok=True)
     logo_uri = write_assets(out_dir, logo_path)
     _UPLOAD_NAMES.clear()
+    _IMAGE_SIZES.clear()
     if uploads_dir.is_dir():
         _UPLOAD_NAMES.update(f.name for f in uploads_dir.iterdir() if f.is_file())
         for n in sorted(_UPLOAD_NAMES):
@@ -2766,11 +3224,16 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
             if n.lower().endswith(".webp") and not any(stem + e in _UPLOAD_NAMES for e in _FALLBACK_EXTS):
                 print(f"warning: uploads/{n} has no PNG/JPG copy, so older Macs and iPads will not show it",
                       file=sys.stderr)
+        for n in _UPLOAD_NAMES:
+            if Path(n).suffix.lower() != ".pdf":
+                dim = image_size(uploads_dir / n)
+                if dim:
+                    _IMAGE_SIZES[n] = dim
 
     for p in site["pages"]:
         raw = read_body(pages_dir, p["slug"])
         clean = sanitize(raw)
-        if clean != raw:
+        if write_back and clean != raw:
             write_text_atomic(pages_dir / f"{p['slug']}.html", clean)
         write_text_atomic(out_dir / f"{p['slug']}.html",
             render_page(site["title"], site["tagline"], site["footer"],
@@ -2782,6 +3245,8 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     nf = (NOTFOUND.replace("__CSSLINK__", css_link("/"))
           .replace("__CSS__", safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", "/" + logo_uri)
+          .replace("__NAV__", nav_html(site["pages"], "", "/"))
+          .replace("__TAGLINE__", html.escape(site["tagline"]))
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "404.html", nf)
     ck = (CONTACT_ACK.replace("__CSSLINK__", css_link("/"))
@@ -2789,11 +3254,17 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
           .replace("__LOGO__", "/" + logo_uri)
           .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "contact-ack.html", ck)
+    # A page deleted from site.json must stop being published. Earlier
+    # builds never took anything down, so a removed page stayed live.
+    keep = {f"{p['slug']}.html" for p in site["pages"]} | {"404.html", "contact-ack.html"}
+    for stale in sorted(out_dir.glob("*.html")):
+        if stale.name not in keep:
+            stale.unlink()
     shutil.copyfile(favicon_path, out_dir / "favicon.png")
     write_text_atomic(out_dir / ".nojekyll", "")
     write_text_atomic(out_dir / "CNAME", CUSTOM_DOMAIN + "\n")
     write_text_atomic(out_dir / "robots.txt",
-        f"User-agent: *\nAllow: /\nSitemap: https://{CUSTOM_DOMAIN}/sitemap.xml\n")
+        f"User-agent: *\nAllow: /\nDisallow: /flank/\nSitemap: https://{CUSTOM_DOMAIN}/sitemap.xml\n")
     listed = [p["slug"] for p in site["pages"] if not p.get("hidden")]
     if "index" not in listed:
         listed.insert(0, "index")
@@ -2812,6 +3283,12 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
         site_uploads.mkdir(parents=True, exist_ok=True)
         files = [f for f in sorted(uploads_dir.iterdir()) if f.is_file()]
         for f in files:
+            # Only pictures and PDFs are publishable. Anything else dropped
+            # into assets/uploads (a script, an .html file, a key) stays local.
+            if f.suffix.lower() not in UPLOAD_EXTS:
+                print(f"warning: uploads/{f.name} is not a picture or PDF, so it is not published",
+                      file=sys.stderr)
+                continue
             shutil.copyfile(f, site_uploads / f.name)
 
     # The hidden ledger: data/The Flank.md -> site/flank/. Unlisted (not in
@@ -2837,7 +3314,8 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
 def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, favicon_path: Path = None):
     tmp = Path(tempfile.mkdtemp(prefix="flamingo-site-check-"))
     try:
-        site = build(data_path, pages_dir, logo_path, uploads_dir, tmp, favicon_path)
+        site = build(data_path, pages_dir, logo_path, uploads_dir, tmp, favicon_path,
+                     write_back=False)
         ok = True
 
         def expect(cond, msg):
@@ -2898,8 +3376,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
                "pages without the form never publish the marker text")
         expect("viewport" in idx and "width=device-width" in idx, "pages scale on phones (viewport meta)")
         expect("@media (max-width:" in idx, "pages reshape on small screens")
-        expect("left:10px" in idx and "flex-wrap:wrap" in idx,
-               "phone header: star top-left, nav wraps without touching")
+        expect("body.has-badges .masthead{padding-top:112px}" in idx and
+               "flex-wrap:wrap" in idx,
+               "phone header: badges only on home, nav wraps without touching")
         expect("overflow-wrap:anywhere" in idx,
                "unbreakable titles wrap on phones (no sideways cutoff)")
         expect("badgepop" in idx and "arrivefade" in idx and "comicko" in idx,
@@ -2907,8 +3386,10 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         warp_scripts = idx.lower().count("<script")
         expect(warp_scripts == 3 and "ld+json" in idx.lower(),
                "built pages carry only the theme, burst and structured-data scripts")
-        expect('name="description"' in idx and html.escape(site["description"])[:40] in idx,
-               "every page carries the search snippet")
+        expect('name="description"' in idx and html.escape(
+                   next((p.get("description") or site["description"])
+                        for p in site["pages"] if p["slug"] == "index"))[:40] in idx,
+               "every page carries its own search snippet")
         expect('rel="canonical" href="https://flamingoandcactus.com/"' in idx,
                "home page canonical points at the domain root")
         expect('property="og:title"' in idx and 'property="og:url"' in idx,
@@ -3046,8 +3527,25 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
                 expect((tmp / f"{p['slug']}.html").is_file(), f"{p['slug']}.html built")
                 if p["slug"] != "index" and not p.get("hidden"):
                     expect(f'href="{p["slug"]}.html"' in idx, f"nav links to {p['slug']}")
+            page_titles = {}
+            for p in site["pages"]:
+                text = (tmp / f"{p['slug']}.html").read_text(encoding="utf-8")
+                m = re.search(r"<title>(.*?)</title>", text, re.S)
+                page_titles[p["slug"]] = html.unescape(m.group(1)) if m else ""
+            expect(all(page_titles.values()) and
+                   len(set(page_titles.values())) == len(page_titles),
+                   "every page has its own browser title (no shared default)")
+            expect(all(t.count("Flamingo") == 1 for t in page_titles.values()),
+                   "the site name appears once in every browser title")
         # build artifacts
         expect((tmp / "404.html").is_file(), "404.html built")
+        nf_html = (tmp / "404.html").read_text(encoding="utf-8") if (tmp / "404.html").is_file() else ""
+        expect("Page not found" in nf_html and "isn't here" in nf_html,
+               "404 page says what happened instead of showing a blank shell")
+        expect('href="/"' in nf_html and 'href="/contact.html"' in nf_html,
+               "404 page links back to the home page and contact")
+        expect('class="sitenav"' in nf_html and 'href="/products.html"' in nf_html,
+               "404 page carries the normal menu, with absolute links (it is served at any path)")
         expect((tmp / "favicon.png").is_file(), "favicon.png built")
         expect((tmp / ".nojekyll").is_file(), ".nojekyll built")
         expect((tmp / "CNAME").is_file(), "CNAME built")
@@ -3057,6 +3555,12 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
                "WebP pictures with a PNG copy get an older-browser fallback")
         expect(picture_fallbacks('<img src="uploads/b.webp" alt="">', {"b.webp"}) == '<img src="uploads/b.webp" alt="">',
                "WebP pictures without a copy are left alone")
+        expect(size_images('<img src="uploads/a.png" alt="">', {"a.png": (640, 480)}) ==
+               '<img src="uploads/a.png" alt="" width="640" height="480">',
+               "uploaded pictures get width and height so the page does not jump while loading")
+        expect(size_images('<img src="uploads/a.png" width="10" height="20" alt="">', {"a.png": (640, 480)}) ==
+               '<img src="uploads/a.png" width="10" height="20" alt="">',
+               "image sizes written by hand are never overwritten")
 
         # FIX 1: hostile hrefs dropped, safe ones survive
         for bad_href in ("//evil.com/x", "/../../etc/passwd", "javascript:alert(1)", "data:text/html,hi"):
@@ -3478,6 +3982,25 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
             nav_block = idx.split('<nav class="sitenav">')[1].split("</nav>")[0]
             expect("flank" not in nav_block,
                    "ledger stays out of the nav (unlisted page)")
+        # Fail-safe check, no passphrase needed: a row flagged private (or
+        # in the built-in private list) must carry either no note or an
+        # encrypted token. Plain text there means the site is about to
+        # publish something it promised to hide.
+        ledger_file = data_path.parent / "The Flank.md"
+        if ledger_file.is_file():
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import build_flank as _bf
+            import flank_crypto as _fc
+            plaintext_rows = []
+            for num, fields in _fc.parse_ledger(ledger_file.read_text(encoding="utf-8")):
+                flag = _fc.private_flag(fields.get("private"))
+                if flag is None:
+                    flag = num in _bf.PRIVATE_TX
+                note = (fields.get("notes") or "").strip()
+                if flag and note and _fc.parse_token(note) is None:
+                    plaintext_rows.append(num)
+            expect(not plaintext_rows,
+                   f"no private note sits in the repo ledger in plain text (found {plaintext_rows})")
         settings_built = tmp / "settings.html"
         expect(settings_built.is_file(), "site/settings.html built")
         # the contact form's own wording (data/form.json) reaches the page
@@ -3517,8 +4040,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
             fin_html = (financials_built.read_text(encoding="utf-8")) + "\n" + _css
             expect('a.btn[href^="flank/"]::before' in fin_html,
                    "financials carries the Flank button's swirl dressing")
-        expect('>Settings</a>' in idx,
-               "nav carries the Settings link")
+        expect('href="settings.html"' in idx and 'class="footlinks"' in idx,
+               "the footer carries the Settings link (and the other small links)")
         settings_meta = next((p for p in site["pages"] if p["slug"] == "settings"), {})
         if not settings_meta.get("hidden"):
             expect('>Settings</a>' in idx,
@@ -3526,6 +4049,33 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         sitemap = (tmp / "sitemap.xml").read_text(encoding="utf-8")
         if not settings_meta.get("hidden"):
             expect("settings.html" in sitemap, "sitemap lists Settings")
+        # Real headings: one h1 per page, and it names the page (the home
+        # page's h1 is the site name, which is its name).
+        headed = {}
+        for p in site["pages"]:
+            text = (tmp / f"{p['slug']}.html").read_text(encoding="utf-8")
+            h1s = re.findall(r"<h1[ >](.*?)</h1>", text, re.S)
+            headed[p["slug"]] = [html.unescape(h) for h in h1s]
+        expect(all(len(v) == 1 for v in headed.values()),
+               "every page has exactly one h1")
+        expect(headed.get("index") == [site["title"]],
+               "the home page h1 is the site name")
+        expect(all(v[0] not in (site["title"], "Flamingo and Cactus")
+                   for s, v in headed.items() if s != "index"),
+               "every other page h1 names the page, not the site")
+        expect('class="canvas"' in (tmp / "contact.html").read_text(encoding="utf-8")
+               and "<h1>Contact</h1>" in (tmp / "contact.html").read_text(encoding="utf-8"),
+               "a page with no heading of its own gets its name as a real h1")
+        home_html = (tmp / "index.html").read_text(encoding="utf-8")
+        expect('class="star-badge"' in home_html and 'class="gem-badge"' in home_html
+               and 'class="has-badges"' in home_html,
+               "the star and gem badges live on the home page")
+        products_html = (tmp / "products.html").read_text(encoding="utf-8")
+        expect("star-badge" not in products_html and "gem-badge" not in products_html
+               and "has-badges" not in products_html,
+               "subpages carry no badges and no reserved top space for them")
+        expect('<button type="button" class="themetoggle" id="theme-toggle">' in home_html,
+               "the footer theme button is wired for site.js")
         if not ok:
             raise SystemExit("check FAILED")
         print(f"check passed in {tmp}")
@@ -3547,6 +4097,8 @@ def main(argv=None):
     ap.add_argument("--uploads", type=Path, default=DEFAULT_UPLOADS)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--no-write-back", action="store_true",
+                    help="do not clean data/pages/*.html in place (CI and checks)")
     args = ap.parse_args(argv)
     if args.check:
         check(args.data.expanduser().resolve(), args.pages.expanduser().resolve(),
@@ -3555,7 +4107,8 @@ def main(argv=None):
     else:
         build(args.data.expanduser().resolve(), args.pages.expanduser().resolve(),
               args.logo.expanduser().resolve(), args.uploads.expanduser().resolve(),
-              args.out.expanduser().resolve(), args.favicon.expanduser().resolve())
+              args.out.expanduser().resolve(), args.favicon.expanduser().resolve(),
+              write_back=not args.no_write_back)
 
 
 if __name__ == "__main__":

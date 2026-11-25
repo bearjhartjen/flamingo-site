@@ -1,20 +1,18 @@
 name: Publish to the gh-pages branch
 
-# A zero-settings fallback: this publishes the site by pushing it to a
-# `gh-pages` branch, which GitHub serves automatically at
-# https://<owner>.github.io/<repo>/ — no repository settings required.
-#
-# Use this when GitHub Pages has not been enabled for the repository and you
-# would rather not turn it on. If you do enable GitHub Pages (Settings →
-# Pages → Source → GitHub Actions), the pages.yml workflow takes over and this
-# workflow can be left alone; the two are independent.
-#
-# This uses plain git rather than a third-party action, so the only thing
-# running in CI is GitHub's own tooling.
+# This publishes the site by pushing the built site/ directory to a
+# `gh-pages` branch, which GitHub Pages serves at the custom domain in
+# site/CNAME. It uses plain git rather than a third-party action, so the
+# only thing running in CI is GitHub's own tooling.
 
 on:
   push:
     branches: [main]
+  # Rebuild once a day: the events calendar and poll open/closed states are
+  # worked out with today's date, so a static build goes stale until the
+  # next push. This keeps the live copy honest.
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -22,7 +20,9 @@ permissions:
 
 concurrency:
   group: gh-pages-publish
-  cancel-in-progress: true
+  # Never cancel a publish half-way: a stopped run can leave gh-pages
+  # without the files it just deleted. Queue instead.
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -40,7 +40,7 @@ jobs:
       - name: Build site
         run: |
           set -euo pipefail
-          python3 scripts/build.py
+          python3 scripts/build.py --no-write-back
           test -f site/index.html
 
       - name: Publish to gh-pages

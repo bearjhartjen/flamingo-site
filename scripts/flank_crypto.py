@@ -134,18 +134,21 @@ def derive_key(passphrase: str) -> bytes:
     )
 
 
-def note_iv(key: bytes, num: int) -> bytes:
-    """Deterministic per-note IV: HMAC over the salt and transaction number.
+def note_iv(key: bytes, num: int, text: str = "") -> bytes:
+    """Deterministic per-note IV: HMAC over salt, transaction number and note.
 
     Deterministic, not random, so the same ledger encrypts to the same
-    bytes on every sync (idempotent builds, no diff churn). Every note
-    gets a distinct IV because the transaction number is distinct.
+    bytes on every sync (idempotent builds, no diff churn). Every note gets
+    a distinct IV because the transaction number is distinct, and editing
+    a note changes its IV too: without the note text in the derivation, the
+    old and new ciphertexts would share an IV, and anyone reading git could
+    see how much of the start of the note stayed the same.
     """
-    return hmac.new(
-        key,
-        bytes.fromhex(SALT_HEX) + b"FCEnc-iv:" + str(num).encode("ascii"),
-        hashlib.sha256,
-    ).digest()[:16]
+    material = (bytes.fromhex(SALT_HEX) + b"FCEnc-iv:"
+                + str(num).encode("ascii"))
+    if text:
+        material += b":" + hashlib.sha256(text.encode("utf-8")).digest()
+    return hmac.new(key, material, hashlib.sha256).digest()[:16]
 
 
 # ------------------------------------------------------------------- AES
@@ -169,7 +172,7 @@ def _openssl_cbc(key: bytes, iv: bytes, data: bytes, decrypt: bool = False) -> b
 
 def encrypt_note(key: bytes, num: int, text: str):
     """Encrypt one note. Returns (nlen, iv, ct)."""
-    iv = note_iv(key, num)
+    iv = note_iv(key, num, text)
     ct = _openssl_cbc(key, iv, text.encode("utf-8"))
     return len(text), iv, ct
 

@@ -1,1 +1,226 @@
-(function(){try{try{var themeDef=document.body.dataset.theme||'classic';var themeSaved=null;try{themeSaved=localStorage.getItem('fc-theme');}catch(_){}if(themeSaved==='midnight'||themeSaved==='classic'||themeSaved==='parchment'||themeSaved==='ink'){document.body.dataset.theme=themeSaved;}var themeBtn=document.getElementById('theme-toggle');var themeLabel=function(){if(themeBtn)themeBtn.textContent=(document.body.dataset.theme==='midnight')?'Light mode':'Dark mode';};themeLabel();if(themeBtn)themeBtn.addEventListener('click',function(){var next=(document.body.dataset.theme==='midnight')?themeDef:'midnight';document.body.dataset.theme=next;try{localStorage.setItem('fc-theme',next);}catch(_){}themeLabel();});}catch(_){}if(sessionStorage.getItem('fcWarp')){sessionStorage.removeItem('fcWarp');var afl=document.createElement('div');afl.id='arriveflash';document.body.appendChild(afl);document.body.classList.add('arrive');setTimeout(function(){document.body.classList.remove('arrive');if(afl&&afl.parentNode)afl.parentNode.removeChild(afl);},700);}}catch(_){}try{var instant=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;var star=document.querySelector('a.star-badge, a.gem-badge');if(!star||!star.getAttribute('href'))return;star.addEventListener('click',function(e){var href=star.getAttribute('href');if(!href||href.charAt(0)==='#')return;e.preventDefault();if(instant){window.location.href=href;return;}if(star.classList.contains('warp'))return;var r=star.getBoundingClientRect();var x=r.left+r.width/2,y=r.top+r.height/2;try{sessionStorage.setItem('fcWarp','1')}catch(_){}star.classList.add('warp');document.body.classList.add('warping');var goc=false;function nav2(){if(goc)return;goc=true;window.location.href=href;}setTimeout(nav2,560);setTimeout(nav2,1100);setTimeout(function(){document.body.classList.remove('warping');star.classList.remove('warp');var f=document.getElementById('fx');if(f&&f.parentNode)f.parentNode.removeChild(f);},2200);try{var fx=document.createElement('div');fx.id='fx';var fl=document.createElement('div');fl.className='comicflash';fx.appendChild(fl);var cv=document.createElement('canvas');fx.appendChild(cv);document.body.appendChild(fx);var dpr=Math.min(window.devicePixelRatio||1,2);var W=window.innerWidth,H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr;var cx2=cv.getContext('2d');cx2.scale(dpr,dpr);var N=W<700?18:30,S=[],i,a,sp;for(i=0;i<N;i++){a=Math.random()*Math.PI*2;sp=3+Math.random()*6;S.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:4+Math.random()*7,rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.4,age:0,life:26+Math.random()*22,ink:Math.random()<.5});}var rays=W<700?12:18,seed=[],j;for(j=0;j<rays;j++)seed.push(.6+Math.random()*.5);var wax={age:0,life:24};var t0=performance.now();(function frame(){var alive=false,i,s;cx2.clearRect(0,0,W,H);if(wax.age<=wax.life){wax.age++;alive=true;var wx=Math.min(1,wax.age/wax.life),R0=Math.min(W,H)*.08+wx*44;cx2.globalAlpha=1-wx*.3;cx2.fillStyle='#fffdf7';cx2.strokeStyle='#111';cx2.lineWidth=5;cx2.beginPath();for(i=0;i<16;i++){var aa=i*Math.PI/8,rr=R0*(1+.22*Math.sin(aa*3+wax.age*.5));var px=x+Math.cos(aa)*rr,py=y+Math.sin(aa)*rr;cx2[i?'lineTo':'moveTo'](px,py);}cx2.closePath();cx2.fill();cx2.stroke();for(i=0;i<rays;i++){var aa=i*Math.PI*2/rays,ln=(0.3+0.16*seed[i])*Math.max(W,H)*wx; cx2.beginPath();cx2.moveTo(x+Math.cos(aa)*R0*.7,y+Math.sin(aa)*R0*.7);cx2.lineTo(x+Math.cos(aa)*ln,y+Math.sin(aa)*ln);cx2.strokeStyle=i%2?'#111':'#fffdf7';cx2.lineWidth=i%2?9:4;cx2.stroke();}cx2.globalAlpha=1;}for(i=0;i<S.length;i++){s=S[i];s.age++;if(s.age>s.life)continue;alive=true;s.x+=s.vx;s.y+=s.vy;s.vx*=.97;s.vy=s.vy*.97;s.rot+=s.vr;cx2.globalAlpha=Math.max(0,1-s.age/s.life);cx2.save();cx2.translate(s.x,s.y);cx2.rotate(s.rot);cx2.beginPath();cx2.moveTo(0,-s.r);cx2.lineTo(s.r*.7,s.r);cx2.lineTo(-s.r*.7,s.r);cx2.closePath();if(s.ink){cx2.fillStyle='#111';cx2.fill();}else{cx2.fillStyle='#fffdf7';cx2.fill();cx2.lineWidth=2;cx2.strokeStyle='#111';cx2.stroke();}cx2.restore();}cx2.globalAlpha=1;if(alive&&performance.now()-t0<1200)requestAnimationFrame(frame);else if(fx.parentNode)fx.parentNode.removeChild(fx);})();}catch(_){}});}catch(_){}})();
+(function () {
+  "use strict";
+
+  // ---- Theme ---------------------------------------------------------------
+  // The visitor's choice follows them across pages. Only the storage calls
+  // are guarded (private mode can throw); any real script error reaches the
+  // console instead of being swallowed.
+  var THEMES = ["classic", "parchment", "ink", "midnight"];
+  var body = document.body;
+  var defaultTheme = body.dataset.theme || "classic";
+
+  function savedTheme() {
+    try { return localStorage.getItem("fc-theme"); } catch (err) { return null; }
+  }
+  function saveTheme(name) {
+    try { localStorage.setItem("fc-theme", name); } catch (err) { /* not fatal */ }
+  }
+
+  var saved = savedTheme();
+  if (THEMES.indexOf(saved) !== -1) { body.dataset.theme = saved; }
+
+  var themeButton = document.getElementById("theme-toggle");
+  function labelThemeButton() {
+    if (themeButton) {
+      themeButton.textContent = body.dataset.theme === "midnight" ? "Light mode" : "Dark mode";
+    }
+  }
+  labelThemeButton();
+  if (themeButton) {
+    themeButton.addEventListener("click", function () {
+      var next = body.dataset.theme === "midnight" ? defaultTheme : "midnight";
+      body.dataset.theme = next;
+      saveTheme(next);
+      labelThemeButton();
+    });
+  }
+
+  // ---- Arrival flash -------------------------------------------------------
+  // The burst sets fcWarp just before it navigates; the next page plays one
+  // soft ink flash so the arrival feels joined to the click.
+  var warped = false;
+  try {
+    warped = sessionStorage.getItem("fcWarp") === "1";
+    if (warped) { sessionStorage.removeItem("fcWarp"); }
+  } catch (err) { /* storage unavailable: skip the flash */ }
+  if (warped) {
+    var arrive = document.createElement("div");
+    arrive.id = "arriveflash";
+    document.body.appendChild(arrive);
+    document.body.classList.add("arrive");
+    setTimeout(function () {
+      document.body.classList.remove("arrive");
+      if (arrive.parentNode) { arrive.parentNode.removeChild(arrive); }
+    }, 700);
+  }
+
+  // ---- Star / Feedback burst -----------------------------------------------
+  var badge = document.querySelector("a.star-badge, a.gem-badge");
+  if (!badge || !badge.getAttribute("href")) { return; }
+
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  badge.addEventListener("click", function (event) {
+    var href = badge.getAttribute("href");
+    if (!href || href.charAt(0) === "#") { return; }
+    event.preventDefault();
+    if (reduceMotion) { window.location.href = href; return; }
+    if (badge.classList.contains("warp")) { return; }
+
+    var rect = badge.getBoundingClientRect();
+    var x = rect.left + rect.width / 2;
+    var y = rect.top + rect.height / 2;
+
+    try { sessionStorage.setItem("fcWarp", "1"); } catch (err) { /* flash optional */ }
+
+    badge.classList.add("warp");
+    document.body.classList.add("warping");
+
+    var left = false;
+    function go() {
+      if (left) { return; }
+      left = true;
+      window.location.href = href;
+    }
+    setTimeout(go, 560);
+    setTimeout(go, 1100);
+    setTimeout(function () {
+      document.body.classList.remove("warping");
+      badge.classList.remove("warp");
+      var layer = document.getElementById("fx");
+      if (layer && layer.parentNode) { layer.parentNode.removeChild(layer); }
+    }, 2200);
+
+    try {
+      drawBurst(x, y);
+    } catch (err) {
+      // The burst is decoration; the navigation timers above still run.
+      console.error("star burst failed", err);
+    }
+  });
+
+  function drawBurst(x, y) {
+    var layer = document.createElement("div");
+    layer.id = "fx";
+    var flash = document.createElement("div");
+    flash.className = "comicflash";
+    layer.appendChild(flash);
+    var canvas = document.createElement("canvas");
+    layer.appendChild(canvas);
+    document.body.appendChild(layer);
+
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = window.innerWidth;
+    var H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    var ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    var count = W < 700 ? 18 : 30;
+    var shards = [];
+    for (var i = 0; i < count; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var speed = 3 + Math.random() * 6;
+      shards.push({
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r: 4 + Math.random() * 7,
+        rot: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 0.4,
+        age: 0,
+        life: 26 + Math.random() * 22,
+        ink: Math.random() < 0.5
+      });
+    }
+
+    var rayCount = W < 700 ? 12 : 18;
+    var raySeeds = [];
+    for (var j = 0; j < rayCount; j++) { raySeeds.push(0.6 + Math.random() * 0.5); }
+
+    var wax = { age: 0, life: 24 };
+    var started = performance.now();
+    requestAnimationFrame(frame);
+
+    function frame() {
+      var alive = false;
+      ctx.clearRect(0, 0, W, H);
+
+      // The sealed wax burst: a jagged white star with black-and-white rays.
+      if (wax.age <= wax.life) {
+        wax.age++;
+        alive = true;
+        var progress = Math.min(1, wax.age / wax.life);
+        var radius = Math.min(W, H) * 0.08 + progress * 44;
+        ctx.globalAlpha = 1 - progress * 0.3;
+        ctx.fillStyle = "#fffdf7";
+        ctx.strokeStyle = "#111";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        for (var k = 0; k < 16; k++) {
+          var a = k * Math.PI / 8;
+          var rr = radius * (1 + 0.22 * Math.sin(a * 3 + wax.age * 0.5));
+          var px = x + Math.cos(a) * rr;
+          var py = y + Math.sin(a) * rr;
+          if (k) { ctx.lineTo(px, py); } else { ctx.moveTo(px, py); }
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        for (var m = 0; m < rayCount; m++) {
+          var ra = m * Math.PI * 2 / rayCount;
+          var length = (0.3 + 0.16 * raySeeds[m]) * Math.max(W, H) * progress;
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(ra) * radius * 0.7, y + Math.sin(ra) * radius * 0.7);
+          ctx.lineTo(x + Math.cos(ra) * length, y + Math.sin(ra) * length);
+          ctx.strokeStyle = m % 2 ? "#111" : "#fffdf7";
+          ctx.lineWidth = m % 2 ? 9 : 4;
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Ink shards, half filled and half outlined, flying out from the click.
+      for (var s = 0; s < shards.length; s++) {
+        var shard = shards[s];
+        shard.age++;
+        if (shard.age > shard.life) { continue; }
+        alive = true;
+        shard.x += shard.vx;
+        shard.y += shard.vy;
+        shard.vx *= 0.97;
+        shard.vy *= 0.97;
+        shard.rot += shard.spin;
+        ctx.globalAlpha = Math.max(0, 1 - shard.age / shard.life);
+        ctx.save();
+        ctx.translate(shard.x, shard.y);
+        ctx.rotate(shard.rot);
+        ctx.beginPath();
+        ctx.moveTo(0, -shard.r);
+        ctx.lineTo(shard.r * 0.7, shard.r);
+        ctx.lineTo(-shard.r * 0.7, shard.r);
+        ctx.closePath();
+        if (shard.ink) {
+          ctx.fillStyle = "#111";
+          ctx.fill();
+        } else {
+          ctx.fillStyle = "#fffdf7";
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#111";
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      ctx.globalAlpha = 1;
+      if (alive && performance.now() - started < 1200) {
+        requestAnimationFrame(frame);
+      } else if (layer.parentNode) {
+        layer.parentNode.removeChild(layer);
+      }
+    }
+  }
+})();
