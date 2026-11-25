@@ -784,9 +784,9 @@ __CSS__
   <button data-cmd="p">Text</button>
   <button data-cmd="smaller" title="Smaller text">A-</button>
   <button data-cmd="bigger" title="Bigger text">A+</button>
-  <label class="tool-input">Size: px<input type="number" id="sizeNum" min="8" max="200" title="Font size in px" aria-label="Font size in pixels"></label>
-  <label class="tool-input">Line height<input type="number" id="leadNum" min="1" max="3" step="0.1" title="Line height (1.0–3.0)" aria-label="Line height multiplier"></label>
-  <label class="tool-input">Spacing: px<input type="number" id="trackNum" min="-5" max="30" step="0.5" title="Letter spacing in px" aria-label="Letter spacing in pixels"></label>
+  <label class="tool-input" title="Font size in px"><span>Size</span><input type="number" id="sizeNum" min="8" max="200" aria-label="Font size in pixels"><span>px</span></label>
+  <label class="tool-input" title="Line height multiplier (1.0–3.0)"><span>Line</span><input type="number" id="leadNum" min="1" max="3" step="0.1" aria-label="Line height multiplier"></label>
+  <label class="tool-input" title="Letter spacing in px"><span>Spacing</span><input type="number" id="trackNum" min="-5" max="30" step="0.5" aria-label="Letter spacing in pixels"><span>px</span></label>
   <select id="fontSel" title="Font">
     <option value="">Font: default</option>
     <option value='Georgia,Times New Roman,serif' data-first="georgia">Serif (Georgia)</option>
@@ -1629,12 +1629,17 @@ function renderAll(){
   $("#foot").style.display = SITE.footer ? "" : "none";
   const starPage = SITE.pages.find(p => p.hidden && (p.badge || "star") === "star");
   const starBadge = $("#starBadge");
-  if (starBadge) starBadge.style.display = starPage ? "" : "none";
+  if (starBadge) starBadge.style.display = (SLUG === "index" && starPage) ? "" : "none";
   const gemPage = SITE.pages.find(p => p.hidden && p.badge === "gem");
   const gemBadge = $("#gemBadge");
   if (gemBadge) {
-    gemBadge.style.display = gemPage ? "" : "none";
+    gemBadge.style.display = (SLUG === "index" && gemPage) ? "" : "none";
     if (gemPage) gemBadge.querySelector(".gem-title").textContent = gemPage.nav;
+  }
+  const titleEl = document.querySelector(".masthead [data-ed=\"title\"]");
+  if (titleEl) {
+    const rawT = SITE.title || "Flamingo & Cactus";
+    titleEl.textContent = (SLUG === "index") ? rawT.split(" & ").join(" AND ") : rawT.split(" AND ").join(" & ");
   }
   $("#link-built").href = "/built?slug=" + encodeURIComponent(SLUG);
   $("#btn-preview").href = "/built?slug=" + encodeURIComponent(SLUG);
@@ -4618,7 +4623,18 @@ class Handler(BaseHTTPRequestHandler):
                         if p.is_file():
                             return self._send(200, p.read_bytes())
                 return self._json(404, {"error": "not found"})
-            elif url.path.startswith("/assets/") or url.path in ("/logo.png", "/favicon.png"):
+            elif url.path.startswith("/assets/") or url.path in ("/logo.png", "/favicon.png", "/favicon.ico"):
+                rel = url.path.lstrip("/")
+                if rel == "favicon.ico":
+                    p = ROOT / "public" / "favicon.ico"
+                    if p.is_file():
+                        return self._send(200, p.read_bytes(), "image/x-icon")
+                    p = ROOT / "assets" / "favicon.png"
+                    if p.is_file():
+                        return self._send(200, p.read_bytes(), "image/png")
+                    p = SITE / "favicon.png"
+                    if p.is_file():
+                        return self._send(200, p.read_bytes(), "image/png")
                 # FC-OPTIMIZE v1: shared stylesheet/script/logo for Preview.
                 rel = url.path.lstrip("/")
                 if not re.fullmatch(r"(assets/[A-Za-z0-9._-]+|logo\.png|favicon\.png)", rel):
@@ -5006,6 +5022,27 @@ class Handler(BaseHTTPRequestHandler):
                     dest = UPLOADS / f"{dest.stem}-{i}{dest.suffix}"
                     i += 1
                 dest.write_bytes(raw)
+                try:
+                    from PIL import Image
+                    import io
+                    with Image.open(io.BytesIO(raw)) as im:
+                        orig_w, orig_h = im.size
+                        if orig_w > 1600 or orig_h > 1600:
+                            im.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+                            im.save(dest)
+                        stem = dest.stem
+                        if dest.suffix.lower() in (".png", ".jpg", ".jpeg"):
+                            wdest = dest.parent / f"{stem}.webp"
+                            if not wdest.exists():
+                                im.save(wdest, format="WEBP", quality=85)
+                                git_add([wdest])
+                        elif dest.suffix.lower() == ".webp":
+                            pdest = dest.parent / f"{stem}.png"
+                            if not pdest.exists():
+                                im.save(pdest, format="PNG")
+                                git_add([pdest])
+                except Exception:
+                    pass
                 rebuild()
                 staged = git_add([dest, SITE])
                 return self._json(200, {"ok": True, "path": f"uploads/{dest.name}",

@@ -2878,6 +2878,9 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
                 cal_cfg: dict | None = None,
                 polls_doc: dict | None = None) -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
+    home_title = re.sub(r"\s+&\s+", " AND ", title) if " & " in title else title
+    sub_title = re.sub(r"\s+(?:AND|and)\s+", " & ", title) if re.search(r"\b(?:AND|and)\b", title) else title
+    masthead_title = home_title if slug == "index" else sub_title
     # The browser title and search description come from data/site.json.
     # They are used exactly as written: each page title already ends with
     # " | Flamingo & Cactus", so the site name never appears twice.
@@ -2962,8 +2965,8 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "\n"
         '  <div class="masthead">\n'
         f'    <a class="logolink" href="index.html" aria-label="Go to the main page"><img src="{logo_uri}" alt="Flamingo and Cactus" width="96" height="96" fetchpriority="high"></a>\n'
-        + (f"    <h1>{html.escape(title)}</h1>\n" if slug == "index"
-           else f'    <p class="sitetitle">{html.escape(title)}</p>\n')
+        + (f"    <h1>{html.escape(masthead_title)}</h1>\n" if slug == "index"
+           else f'    <p class="sitetitle">{html.escape(masthead_title)}</p>\n')
         + f"    <p class=\"tagline\">{html.escape(tagline)}</p>\n"
         "</div>\n"
         f"{nav_html(pages, slug)}"
@@ -4058,9 +4061,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
             headed[p["slug"]] = [html.unescape(h) for h in h1s]
         expect(all(len(v) == 1 for v in headed.values()),
                "every page has exactly one h1")
-        expect(headed.get("index") == [site["title"]],
+        expect(headed.get("index") in ([site["title"]], ["Flamingo AND Cactus"], ["Flamingo and Cactus"]),
                "the home page h1 is the site name")
-        expect(all(v[0] not in (site["title"], "Flamingo and Cactus")
+        expect(all(v[0] not in (site["title"], "Flamingo and Cactus", "Flamingo AND Cactus")
                    for s, v in headed.items() if s != "index"),
                "every other page h1 names the page, not the site")
         expect('class="canvas"' in (tmp / "contact.html").read_text(encoding="utf-8")
