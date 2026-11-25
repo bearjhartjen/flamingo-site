@@ -57,7 +57,7 @@ font:16px/1.6 Georgia,"Times New Roman",Times,serif;
 .page{max-width:860px;margin:0 auto;padding:26px 28px 64px}
 .masthead{text-align:center;padding:6px 0 4px}
 .masthead img{display:block;margin:0 auto;width:96px;height:96px;object-fit:contain}
-h1{
+h1,.masthead .sitetitle{
 font-size:34px;font-weight:400;letter-spacing:2.5px;text-transform:uppercase;
 margin:14px 0 2px;
 }
@@ -97,6 +97,15 @@ body[data-theme="midnight"] .canvas .c-red{color:#ff9d9d}
 body[data-theme="midnight"] .canvas .c-blue{color:#b3a6ff}
 body[data-theme="midnight"] .canvas .c-green{color:#8fe6ae}
 body[data-theme="midnight"] .canvas .c-gold{color:#e3b83b}
+.canvas h1{
+font:400 30px/1.25 Georgia,"Times New Roman",Times,serif;
+letter-spacing:.3px;text-transform:none;color:var(--ink);margin:0 0 16px;
+}
+.canvas h1.sec,.canvas h2.sec,.canvas h3.sec{
+font-family:Georgia,"Times New Roman",Times,serif;font-weight:400;
+font-size:22px;letter-spacing:0;text-transform:none;color:var(--ink);
+margin:26px 0 8px;
+}
 .canvas h2{
 font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.6px;
 text-transform:uppercase;color:var(--ink2);margin:26px 0 8px;
@@ -169,7 +178,7 @@ transition:transform .15s ease;
 .star-badge{top:20px;left:56px;width:140px;height:140px}
 .star-badge .star-title{font-size:9px}
 .star-badge .star-sub{font-size:7px}
-.masthead{padding-top:150px}
+body.has-badges .masthead{padding-top:150px}
 }
 @media print{.star-badge,.gem-badge{display:none}}
 .star-badge{cursor:pointer}
@@ -432,6 +441,12 @@ footer{
 margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);
 font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;
 }
+footer p{margin:0 0 2px}
+footer .footlinks{margin:0}
+footer .footlinks a{
+color:var(--muted);text-decoration:none;margin:0 4px;
+}
+footer .footlinks a:hover{color:var(--ink);text-decoration:underline}
 footer .themetoggle{
 display:inline-block;margin:10px 0 0;padding:7px 16px;
 border:1px solid var(--rule);border-radius:2px;background:transparent;
@@ -443,9 +458,9 @@ img{max-width:100%;height:auto}
 @media (max-width:700px){
 body{font-size:15px}
 .page{padding:16px 14px 48px;overflow-x:hidden}
-.masthead{padding-top:140px}
+body.has-badges .masthead{padding-top:112px}
 .masthead img{width:72px;height:72px}
-h1{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
+h1,.masthead .sitetitle{font-size:22px;letter-spacing:1px;overflow-wrap:break-word}
 .tagline{font-size:13px}
 nav.sitenav{
 display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;
@@ -459,11 +474,11 @@ background:var(--paper2);color:var(--ink2);
 }
 nav.sitenav a:hover{color:var(--ink);border-color:var(--ink)}
 nav.sitenav .cur{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.star-badge{top:10px;left:10px;right:auto;width:140px;height:140px}
-.star-badge .star-title{font-size:10px;max-width:70%;line-height:1.25;letter-spacing:.2px}
+.star-badge{top:8px;left:8px;right:auto;width:104px;height:104px}
+.star-badge .star-title{font-size:8.5px;max-width:72%;line-height:1.2;letter-spacing:.2px}
 .star-badge .star-sub{display:none}
-.gem-badge{top:42px;left:auto;right:10px;width:140px;height:76px;border-radius:11px;border-width:2.5px;box-shadow:5px 6px 0 #111}
-.gem-badge .gem-title{font-size:10px;letter-spacing:1.5px}
+.gem-badge{top:30px;left:auto;right:8px;width:118px;height:64px;border-radius:10px;border-width:2.5px;box-shadow:4px 5px 0 #111}
+.gem-badge .gem-title{font-size:9px;letter-spacing:1.2px}
 .canvas{overflow-wrap:break-word}
 .canvas *{overflow-wrap:anywhere}
 .canvas a.btn[style],.canvas a.bigbtn[style]{
