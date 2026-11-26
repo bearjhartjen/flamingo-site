@@ -16,3 +16,4 @@ Thumbs.db
 .fix-form-backup/
 .flamingo-events-backup-*/
 /site/uploads/
+.flamingo-upgrade-backup-*/

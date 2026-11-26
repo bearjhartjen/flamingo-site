@@ -187,6 +187,27 @@ def unique_slug(nav: str, taken: set[str]) -> str:
 
 EDITOR_CSS = site_build.CSS + r'''
   #app{display:flex;align-items:stretch;min-height:100vh}
+  /* Native controls take their text colour from the OS colour scheme, so a
+     dark system paints white "ButtonText" on any light surface that forgot to
+     set color. Inherit instead of trusting the UA default. Deliberately the
+     weakest selector so every class/ID rule below still wins. */
+  button{color:inherit}
+  /* One visible focus ring everywhere, including keyboard-only use. */
+  #app :focus-visible{outline:2px solid #1c4fd8;outline-offset:2px}
+  #app .editbar :focus-visible{outline-color:#c9a227}
+  /* Motion: short, consistent, and skippable. */
+  .ld-back{animation:fcfade .14s ease-out}
+  .ld-back .ld-box{animation:fcrise .18s cubic-bezier(.2,.7,.3,1)}
+  .cmdk{animation:fcrise .16s cubic-bezier(.2,.7,.3,1)}
+  .toast{animation:fcslide .18s cubic-bezier(.2,.7,.3,1)}
+  @keyframes fcfade{from{opacity:0}to{opacity:1}}
+  @keyframes fcrise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes fcslide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .toolbar button,.editbar button,#side button,.dlg-actions button,.ld-btns button,
+  .cmdk-item,.media-item{transition:background .12s ease,color .12s ease,border-color .12s ease,box-shadow .12s ease}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}
+  }
   #side{
     width:280px;flex:0 0 280px;background:#141414;color:#eee;
     font:13px "Helvetica Neue",Arial,sans-serif;
@@ -316,7 +337,8 @@ EDITOR_CSS = site_build.CSS + r'''
   .toolgroup:last-child{border-right:0}
   .toolgroup .groupname{font:10px "Helvetica Neue",Arial,sans-serif;color:#666;text-transform:uppercase;letter-spacing:.8px;margin-right:2px;white-space:nowrap}
   .toolbar button{
-    background:#fff;border:1px solid #999;border-radius:2px;
+    background:#fff;color:#141414;color-scheme:light;
+    border:1px solid #999;border-radius:2px;
     padding:4px 10px;cursor:pointer;font-size:12px;
   }
   .toolbar button:hover{background:#141414;color:#fff;border-color:#141414}
@@ -1636,7 +1658,7 @@ function renderAll(){
     gemBadge.style.display = (SLUG === "index" && gemPage) ? "" : "none";
     if (gemPage) gemBadge.querySelector(".gem-title").textContent = gemPage.nav;
   }
-  const titleEl = document.querySelector(".masthead [data-ed=\"title\"]");
+  const titleEl = document.querySelector('.masthead [data-ed="title"]');
   if (titleEl) {
     const rawT = SITE.title || "Flamingo & Cactus";
     titleEl.textContent = (SLUG === "index") ? rawT.split(" & ").join(" AND ") : rawT.split(" AND ").join(" & ");

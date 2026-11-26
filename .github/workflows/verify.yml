@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: Compile check
-        run: python3 -m py_compile scripts/build.py edit.py
+        run: python3 -m py_compile scripts/*.py edit.py
 
       - name: Check site data is present
         run: |
