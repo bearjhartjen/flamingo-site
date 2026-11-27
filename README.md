@@ -62,7 +62,7 @@ so their content starts higher, especially on a phone. Hidden pages are
 not in the menu but are still built, real pages. Which pages carry the
 badges (and which page, if any, shows the contact form) is controlled by
 flags in `data/site.json`, editable in the builder's Page settings. The
-footer on every page links News, Feedback, Polls, Promotional and Settings,
+footer on every page links News, Feedback, Promotional and Settings,
 so those pages stay reachable without a long menu. The
 clicking-the-logo-returns-home behaviour is built in. Products carry a
 plain-English blurb on the page and link a hidden "deep explanations"

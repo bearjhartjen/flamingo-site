@@ -1483,14 +1483,67 @@ CSS = r'''  :root{
 '''
 
 
-# Structured data: who we are, for search engines. Plain string (not an
-# f-string) so the JSON braces survive untouched.
+# Structured data: who we are, for search engines. The facts here are the
+# ones already printed on the site (name, contact page, People page, GitHub).
+# Built with json.dumps so quotes and ampersands can never break the block.
 LD_ORG = (
-    '<script type="application/ld+json">{"@context":"https://schema.org",'
-    '"@type":"Organization","name":"Flamingo & Cactus",'
-    f'"url":"https://{CUSTOM_DOMAIN}/",'
-    f'"logo":"https://{CUSTOM_DOMAIN}/favicon.png"}}'
-    "</script>"
+    '<script type="application/ld+json">'
+    + json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "Organization",
+                    "@id": f"https://{CUSTOM_DOMAIN}/#organization",
+                    "name": "Flamingo & Cactus",
+                    "alternateName": [
+                        "Flamingo and Cactus",
+                        "Flamingo & Cactus Group",
+                    ],
+                    "url": f"https://{CUSTOM_DOMAIN}/",
+                    "logo": f"https://{CUSTOM_DOMAIN}/logo.png",
+                    "description": (
+                        "Open-source hardware from the Flamingo & Cactus "
+                        "group: the Lamoka1/2 open inverter, the "
+                        "Lamoka1-DEV-Brain, and every transaction published "
+                        "for transparency."
+                    ),
+                    "email": "flamingoncactusgroup@gmail.com",
+                    "telephone": "+1-607-205-6663",
+                    "address": {
+                        "@type": "PostalAddress",
+                        "addressLocality": "Owego",
+                        "addressRegion": "NY",
+                        "addressCountry": "US",
+                    },
+                    "knowsAbout": [
+                        "open-source hardware",
+                        "PCB design",
+                        "electrical unit construction",
+                        "inverters",
+                    ],
+                    "member": {
+                        "@type": "Person",
+                        "name": "Bear J. Hartjen",
+                        "jobTitle": "Manager",
+                        "url": f"https://{CUSTOM_DOMAIN}/people.html",
+                        "sameAs": ["https://github.com/bearjhartjen"],
+                    },
+                },
+                {
+                    "@type": "WebSite",
+                    "@id": f"https://{CUSTOM_DOMAIN}/#website",
+                    "url": f"https://{CUSTOM_DOMAIN}/",
+                    "name": "Flamingo & Cactus",
+                    "alternateName": "Flamingo and Cactus",
+                    "publisher": {"@id": f"https://{CUSTOM_DOMAIN}/#organization"},
+                },
+            ],
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    + "</script>"
 )
 
 
@@ -1500,8 +1553,7 @@ STAR_SUB = "Click me"
 # Links that live in the footer rather than the menu, so the menu stays
 # short on a phone. Each is rendered only when its page exists.
 FOOTER_LINKS = (("latest", "News"), ("feedback", "Feedback"),
-                ("polls", "Polls"), ("promotional", "Promotional"),
-                ("settings", "Settings"))
+                ("promotional", "Promotional"), ("settings", "Settings"))
 
 # Inbox for the contact form. Submissions POST here and FormSubmit forwards
 # them to this address (first submission needs a one-time activation click
@@ -2468,7 +2520,7 @@ POLLS_CSS = """<style>
 .pb-num{flex:0 0 auto;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);white-space:nowrap}
 .poll-total{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0}
 .poll-counts b{font-size:15px}
-.poll-form iframe{width:100%;max-width:640px;height:520px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+.poll-form iframe{width:100%;max-width:640px;height:620px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
 .poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
 .poll-links a{display:inline-block;margin:0 10px 6px 0}
 .pc-item{padding:8px 0;border-bottom:1px solid var(--rule2);margin:0;font-size:15px}
@@ -2505,7 +2557,7 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
         if form:
             embed = html.escape(form + ("&" if "?" in form else "?") + "embedded=true", quote=True)
             form_html = (f'<div class="poll-form"><iframe src="{embed}" '
-                         'loading="lazy" title="Vote form" allowfullscreen></iframe></div>')
+                         'title="Vote form" allowfullscreen></iframe></div>')
         else:
             form_html = '<p class="pc-empty">The voting form is not connected yet.</p>'
         links = []
@@ -2524,11 +2576,10 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
             f' data-fin="{html.escape(poll.get("finance_csv") or "", quote=True)}"'
             f' data-user="{html.escape(poll.get("user_csv") or "", quote=True)}">'
             f'<h3>{title}</h3>'
-            f'<p class="poll-q">{question}</p>'
             f'<p class="poll-details">{details}</p>'
+            f'<p class="poll-q">{question}</p>'
             f'<p class="poll-when">{html.escape(status)}{(" · " + html.escape(when)) if when else ""}</p>'
-            '<p class="poll-note">All votes and comments are public. Anyone can vote once per browser; '
-            'a Google sign-in is optional and is shown as a separate confidence count.</p>'
+            '<p class="poll-note">All votes and comments are public.</p>'
             '<div class="poll-tabs"><button type="button" class="on" data-ptab="vote">Vote</button>'
             '<button type="button" data-ptab="comments">Comments</button></div>'
             f'<div class="poll-pane" data-ppane="vote">{form_html}{links_html}</div>'
@@ -2586,6 +2637,7 @@ secs.forEach(function(sec){
     }
     var rows=[].concat.apply([],all),t=tally(rows),signed=0;
     rows.forEach(function(r){if(r.signed)signed++;});
+    var onlyAnon=!anyPool&&sources.length===1&&sources[0].k==="anon";
     var html="";
     if(anyPool){
       pools.forEach(function(p){
@@ -2595,16 +2647,17 @@ secs.forEach(function(sec){
         html+=bar(p.label,pt.yes,pt.no);
       });
     }
-    html+=bar(anyPool?"Everyone":"Result",t.yes,t.no);
+    html+=bar(onlyAnon?"Anonymous":(anyPool?"Everyone":"Result"),t.yes,t.no);
     counts.innerHTML='<div class="poll-bars">'+html+'</div><p class="poll-total">'+
-      t.yes+' yes · '+t.no+' no · '+rows.length+' total · '+signed+
-      ' signed in, '+(rows.length-signed)+' not signed in</p>';
+      (onlyAnon ? rows.length+' total'
+                : t.yes+' yes · '+t.no+' no · '+rows.length+' total'+
+                  ' · '+signed+' signed in, '+(rows.length-signed)+' not signed in')+'</p>';
     var withC=rows.filter(function(r){return r.comment;});
     if(withC.length){
       paneC.innerHTML=withC.map(function(r){
         var no=r.vote.indexOf("no")===0;
         return '<p class="pc-item"><span class="pc-vote'+(no?' no':'')+'">'+(no?"No":"Yes")+'</span>'+
-          esc(r.comment)+(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>')+'</p>';
+          esc(r.comment)+(onlyAnon?'':(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>'))+'</p>';
       }).join("");
     }
   });

@@ -1,4 +1,39 @@
 {
-  "intro": "For now the polls will be to vote on the initialization of a project or product. Anyone can vote once per browser. Signing in with Google is optional and is shown as a separate confidence count. Clearing your browser or using another device can vote again, so the result is a pulse rather than a ballot.",
-  "polls": []
+  "intro": "",
+  "polls": [
+    {
+      "id": "open-jewel",
+      "title": "Open-jewel",
+      "question": "Do you think this is a good idea for a product? Only click YES if you think Flamingo & Cactus can realistically create such a unit, and if you will in some way assist in the development, be that through feedback, financial backing, hardware design, firmware design, etc.",
+      "details": "The Open-jewel project will be an open source wearable device with RGB LEDs on the whole face. This unit will be quite small and light. It will need to have serious battery management considerations to ensure that it's not a huge inconvenience to charge it up. The firmware on this device will need to be very precise and solid as this unit will potentially be seen for extended periods of time. Ideas for LED presentation include but are certainly not limited to: Water falling down the front pixel display, rainbow spiraling around, dim pulsing screen, etc.",
+      "opens": "",
+      "closes": "",
+      "anon_form": "https://docs.google.com/forms/d/e/1FAIpQLSctg08QxHitxL3k7tgrYFVKJf2LGTX_zo4x8uCB5LBLLTdlIA/viewform",
+      "signed_form": "",
+      "anon_csv": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTvAKwCJWaGe-HSnLrTuGh4LbZUGgJJfmjkuBR4JpUAifM-HSY3HNgtYlN6cYYSlwgZLTlt9RiOkWcS/pub?gid=1840370635&single=true&output=csv",
+      "signed_csv": "",
+      "dev_csv": "",
+      "finance_csv": "",
+      "user_csv": "",
+      "decision": "",
+      "closed": false
+    },
+    {
+      "id": "u-till",
+      "title": "U-till",
+      "question": "Do you think this is a good idea for a product? Only click YES if you think Flamingo & Cactus can realistically create such a unit, and if you will in some way assist in the development, be that through feedback, financial backing, hardware design, firmware design, etc.",
+      "details": "The U-till project is a very intriguing idea, it aims to take a small footprint (similar size to an Air pod pro 3 case) and create a fully interactive and accessible device, like the flipper zero in the sense that it will have exposed GPio, Bluetooth, Wifi, and a USB-C port. The devices interface will simply be a whole array of Neopixel RGBs on the face of the unit, this is because at the time of writing this, we do not have a strong firmware ground, and a more complex screen may take longer to ship the idea out. Small form factor, and diverse usage is where this idea shines. Taking the base of the Lamoka1-DEV-Brain R1, we can create a completely open computer in the inner palm of your hand. We think this could be grounds for an amazing community project, some cool features (with connected GPio devices) could be music reactive lighting setup, to have individual frequency tracking bars in different sections on the display, all rising to the beats. Another idea is a clock/night-table display, even though the display will be quite small, we think it's possible to get some good visual. As with all other Flamingo & Cactus products, U-till we be as simple, and discrete as possible, no extra craziness. Every one of our products aims to release maximum functional capacity possible, if we can add a cool new feature in for relatively cheap, there's no reason not to.",
+      "opens": "",
+      "closes": "",
+      "anon_form": "https://docs.google.com/forms/d/e/1FAIpQLSfyZuVRFuN_K7UP4gpW2JEzBJlEkI5nAefpmOpbqOe2heawrA/viewform",
+      "signed_form": "",
+      "anon_csv": "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFj5BirEaLaBycCkbY64-MY40ibtRV3AxAqfOXlisCZAL5UizXhT5lv5G0E7SzzDtSuIEKAvduoCwl/pub?gid=699877767&single=true&output=csv",
+      "signed_csv": "",
+      "dev_csv": "",
+      "finance_csv": "",
+      "user_csv": "",
+      "decision": "",
+      "closed": false
+    }
+  ]
 }

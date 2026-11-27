@@ -22,6 +22,12 @@
       "description": "Open-source hardware from the Flamingo & Cactus group: the Lamoka1/2 open inverter, the Lamoka1-DEV-Brain, and every transaction published for transparency."
     },
     {
+      "slug": "polls",
+      "nav": "Polls",
+      "title": "Polls | Flamingo & Cactus",
+      "description": "Open polls for Flamingo & Cactus projects and principles."
+    },
+    {
       "slug": "financials",
       "nav": "Financials",
       "title": "Financials | Flamingo & Cactus",
@@ -93,21 +99,6 @@
       "title": "Settings | Flamingo & Cactus",
       "description": "Choose the site theme and appearance for this device.",
       "heading": "",
-      "hidden": true
-    },
-    {
-      "slug": "invoices",
-      "nav": "Invoices",
-      "title": "Invoices | Flamingo & Cactus",
-      "description": "Invoice screenshots from Flamingo & Cactus group transactions.",
-      "hidden": true,
-      "badge": "none"
-    },
-    {
-      "slug": "polls",
-      "nav": "Polls",
-      "title": "Polls | Flamingo & Cactus",
-      "description": "Open polls for Flamingo & Cactus projects and principles.",
       "hidden": true
     },
     {

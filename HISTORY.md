@@ -674,3 +674,20 @@ something a visitor can poke at.
   every transaction in The Flank"; that page has the balance chart,
   10-day average, every date, note and running balance. The summary no
   longer tries to replace it.
+
+### Polls are back at the top (November 2026)
+
+- **Polls left the footer and returned to the main menu**, second after
+  Home. The footer is News, Feedback, Promotional and Settings again.
+- **Two product polls are live: Open-jewel and U-till.** Their product
+  explanations are the exact text from `~/Desktop/Ideas.md`; the vote
+  question is the exact wording supplied, and each poll has a yes/no
+  question plus a Comment box.
+- **The backend is two Google Forms under
+  `flamingoncactusgroup@gmail.com`**, each linked to its own response
+  Sheet published as CSV. The page reads both CSVs for live counts and
+  public comments. The test vote used while checking the link was
+  deleted; both polls start at zero.
+- **The form loads eagerly and the explanation comes first**, then the
+  vote question, so the poll reads as a product idea before it asks for
+  a vote.
