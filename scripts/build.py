@@ -1501,13 +1501,8 @@ LD_ORG = (
                         "Flamingo & Cactus Group",
                     ],
                     "url": f"https://{CUSTOM_DOMAIN}/",
-                    "logo": f"https://{CUSTOM_DOMAIN}/logo.png",
-                    "description": (
-                        "Open-source hardware from the Flamingo & Cactus "
-                        "group: the Lamoka1/2 open inverter, the "
-                        "Lamoka1-DEV-Brain, and every transaction published "
-                        "for transparency."
-                    ),
+                    "logo": f"https://flamingoandcactus.com/favicon.png?v=3ecf65fcdabd",
+                    "description": "The website dedicated to the Flamingo and Cactus group. Everything Flamingo and Cactus can be found here.",
                     "email": "flamingoncactusgroup@gmail.com",
                     "telephone": "+1-607-205-6663",
                     "address": {
@@ -3360,13 +3355,13 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         f"<title>{html.escape(page_title)}</title>\n"
         f'<meta name="description" content="{html.escape(desc, quote=True)}">\n'
         f'<link rel="canonical" href="{canon}">\n'
-        f'<link rel="icon" type="image/png" href="favicon.png">\n'
+        f'<link rel="icon" type="image/png" href="favicon.png?v=3ecf65fcdabd">\n'
         f'<meta property="og:title" content="{html.escape(page_title, quote=True)}">\n'
         f'<meta property="og:description" content="{html.escape(desc, quote=True)}">\n'
         f'<meta property="og:type" content="website">\n'
         f'<meta property="og:url" content="{canon}">\n'
-        f'<meta property="og:image" content="https://{CUSTOM_DOMAIN}/logo.png">\n'
-        '<meta name="twitter:card" content="summary">\n'
+        f'<meta property="og:image" content="https://{CUSTOM_DOMAIN}/favicon.png">\n'
+        '<meta name="twitter:card" content="summary_large_image">\n'
         + LD_ORG + "\n"
         + css_link() + "\n"
         + custom_style_block(custom_css) +

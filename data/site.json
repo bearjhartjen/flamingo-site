@@ -4,7 +4,7 @@
   "footer": "",
   "theme": "classic",
   "star_animation": "comic",
-  "description": "Flamingo & Cactus builds open-source hardware — the Lamoka1/2 inverter and the Lamoka1-DEV-Brain — and publishes its transactions for anyone to read.",
+  "description": "The website dedicated to the Flamingo and Cactus group. Everything Flamingo and Cactus can be found here.",
   "custom_css": "",
   "giscus": {
     "repo": "bearjhartjen/flamingo-site",
@@ -18,8 +18,8 @@
     {
       "slug": "index",
       "nav": "Home",
-      "title": "Flamingo & Cactus — open-source hardware, open books",
-      "description": "Open-source hardware from the Flamingo & Cactus group: the Lamoka1/2 open inverter, the Lamoka1-DEV-Brain, and every transaction published for transparency."
+      "title": "Flamingo & Cactus — The transparent group",
+      "description": "The website dedicated to the Flamingo and Cactus group. Everything Flamingo and Cactus can be found here."
     },
     {
       "slug": "polls",
