@@ -32,6 +32,8 @@ import tempfile
 from html.parser import HTMLParser
 from pathlib import Path
 
+import page_extras
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA = ROOT / "data" / "site.json"
 DEFAULT_PAGES = ROOT / "data" / "pages"
@@ -83,6 +85,40 @@ def custom_css_error(value: str | None) -> str | None:
         if not target.startswith(("uploads/", "/uploads/")) or ".." in target or "\\" in target:
             return "Custom CSS images must come from this site's uploads/ folder."
     return None
+
+
+GISCUS_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+GISCUS_ID_RE = re.compile(r"^[A-Za-z0-9_-]{5,100}$")
+GISCUS_MAPPINGS = ("pathname", "url", "title", "og:title", "specific", "number")
+
+
+def sanitize_giscus(doc) -> dict:
+    """Keep only the public giscus settings the page can safely use.
+
+    The repository ids and category id are public values (they appear in
+    the script tag on every site that uses giscus). Anything malformed is
+    dropped; the page then falls back to a plain GitHub Discussions link
+    instead of shipping a broken embed.
+    """
+    if not isinstance(doc, dict):
+        return {}
+    repo = str(doc.get("repo", "")).strip()
+    if not GISCUS_REPO_RE.match(repo):
+        return {}
+    out = {"repo": repo}
+    for key in ("repo_id", "category_id"):
+        value = str(doc.get(key, "")).strip()
+        if GISCUS_ID_RE.match(value):
+            out[key] = value
+    category = str(doc.get("category", "General")).strip()[:80]
+    if category:
+        out["category"] = category
+    mapping = str(doc.get("mapping", "number")).strip()
+    out["mapping"] = mapping if mapping in GISCUS_MAPPINGS else "number"
+    term = str(doc.get("term", "")).strip()
+    if term.isdigit() and len(term) <= 12:
+        out["term"] = term
+    return out
 
 
 def logo_data_uri(path: Path) -> str:
@@ -156,6 +192,7 @@ def load_site(path: Path) -> dict:
         "star_animation": STAR_ANIMATION_DEFAULT,
         "description": str(doc.get("description", ""))[:300],
         "custom_css": custom_css,
+        "giscus": sanitize_giscus(doc.get("giscus")),
         "pages": clean_pages,
     }
 
@@ -882,6 +919,163 @@ CSS = r'''  :root{
   .canvas .card h2:first-child{margin-top:0}
   .canvas .card p:last-child{margin-bottom:0}
   .canvas .gallery{display:flex;gap:10px;margin:0 0 12px}
+
+  /* ---------- Live GitHub repository strip (Products + Home) ----------
+     A quiet line of metadata under a product, not a dashboard. The gold
+     left rule is the only decoration: it marks the strip as part of the
+     open-source story without competing with the board render. */
+  .canvas .gh-repo{
+    display:grid;grid-template-columns:minmax(250px,1fr) minmax(0,2.4fr) auto;
+    align-items:center;gap:10px 18px;
+    margin:16px 0 26px;padding:11px 14px;
+    border:1px solid var(--rule);border-left:3px solid var(--gold);
+    border-radius:6px;background:var(--paper2);
+    color:var(--ink2);font-family:"Helvetica Neue",Arial,sans-serif;
+  }
+  .canvas .gh-id{display:flex;align-items:center;gap:10px;min-width:0}
+  .canvas .gh-mark{flex:0 0 auto;color:var(--ink)}
+  .canvas .gh-idtext{min-width:0}
+  .canvas .gh-kicker{
+    display:block;font:600 9.5px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);
+  }
+  .canvas .gh-name{
+    display:block;font:600 13.5px "Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);text-decoration:none;overflow-wrap:anywhere;
+  }
+  .canvas .gh-name:hover{text-decoration:underline}
+  .canvas .gh-live{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;min-width:0}
+  .canvas .gh-stat{
+    display:inline-flex;align-items:baseline;gap:5px;min-width:0;
+    font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);text-decoration:none;
+  }
+  .canvas a.gh-stat:hover{color:var(--ink)}
+  .canvas .gh-stat b{
+    font:600 13px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);
+    font-variant-numeric:tabular-nums;
+  }
+  .canvas .gh-stat .gh-k{
+    display:block;font:600 9px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.1px;text-transform:uppercase;color:var(--faint);
+  }
+  .canvas .gh-stat-wide{display:flex;flex-direction:column;align-items:flex-start;gap:1px;flex:1 1 110px;min-width:100px;max-width:none}
+  .canvas .gh-commit,.canvas .gh-release{
+    display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-weight:600;color:var(--ink2);
+  }
+  .canvas .gh-release{white-space:normal;overflow-wrap:anywhere}
+  .canvas .gh-when{font:10.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint)}
+  .canvas .gh-link{
+    white-space:nowrap;font:600 10.5px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:.7px;text-transform:uppercase;text-decoration:none;
+    color:var(--ink);border-bottom:1px solid var(--gold);padding-bottom:2px;
+  }
+  .canvas .gh-link:hover{color:var(--link);border-color:var(--link)}
+  .canvas .gh-actions{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+  .canvas .gh-actions .gh-talk{color:var(--ink);border-color:var(--gold)}
+  .canvas .gh-actions .gh-talk:hover{color:var(--link);border-color:var(--link)}
+  .canvas .gh-repo[data-state="loading"] .gh-commit,
+  .canvas .gh-repo[data-state="loading"] .gh-release{color:var(--faint);font-weight:400}
+  .canvas .gh-repo[data-state="error"] .gh-commit,
+  .canvas .gh-repo[data-state="error"] .gh-release{color:var(--muted);font-weight:400}
+  @media (max-width:760px){
+    .canvas .gh-repo{grid-template-columns:1fr;gap:10px}
+    .canvas .gh-live{gap:8px 16px}
+    .canvas .gh-stat-wide{flex:1 1 100%;max-width:none}
+    .canvas .gh-actions{flex-direction:row;align-items:center;gap:14px}
+  }
+
+  /* ---------- Financials dashboard (Chart.js) ----------
+     The data is embedded by the build; this is only the frame. Keep the
+     canvases on the paper colour so the chart gridlines and tooltips can
+     follow all four themes. */
+  .canvas .fin{margin:30px 0 0}
+  .canvas .fin-head p{margin:0 0 14px;color:var(--muted);font-size:14px}
+  .canvas .fin-controls{
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;
+    margin:0 0 14px;padding:10px 12px;
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
+  }
+  .canvas .fin-controls label{
+    font:600 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:1.4px;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .canvas .fin-controls select{
+    max-width:100%;padding:6px 10px;border:1px solid var(--rule);border-radius:4px;
+    background:var(--paper);color:var(--ink);font:16px Georgia,"Times New Roman",serif;
+  }
+  .canvas .fin-range{
+    margin-left:auto;font:10.5px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:.4px;color:var(--faint);
+  }
+  .canvas .fin-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0 0 16px}
+  .canvas .fin-tile{
+    min-width:0;padding:9px 11px;border:1px solid var(--rule);border-radius:6px;
+    background:var(--paper);
+  }
+  .canvas .fin-tile .k{
+    display:block;font:600 9px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);
+  }
+  .canvas .fin-tile .v{
+    display:block;margin-top:2px;font:600 19px/1.2 Georgia,"Times New Roman",serif;
+    color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+  }
+  .canvas .fin-tile .v.up{color:#1c6b3a}
+  .canvas .fin-tile .v.down{color:#9c1f16}
+  body[data-theme="ink"] .canvas .fin-tile .v.up,
+  body[data-theme="midnight"] .canvas .fin-tile .v.up{color:#7ee2a8}
+  body[data-theme="ink"] .canvas .fin-tile .v.down,
+  body[data-theme="midnight"] .canvas .fin-tile .v.down{color:#ff9d9d}
+  .canvas .fin-chartcard{
+    margin:0 0 14px;padding:13px 15px 9px;
+    border:1px solid var(--rule);border-radius:6px;background:var(--paper2);
+  }
+  .canvas .fin-charthead{
+    display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;
+    gap:3px 12px;margin:0 0 8px;
+  }
+  .canvas .fin-charthead h3{
+    margin:0;font:600 11px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.3px;text-transform:uppercase;color:var(--ink2);
+  }
+  .canvas .fin-charthead span{font:10.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint)}
+  .canvas .fin-canvas{position:relative;height:260px}
+  .canvas .fin-note{font:12.5px/1.55 Georgia,"Times New Roman",serif;color:var(--muted)}
+  .canvas .fin-cta{margin:18px 0 4px}
+  @media (max-width:640px){
+    .canvas .fin-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .canvas .fin-canvas{height:220px}
+    .canvas .fin-range{margin-left:0;flex-basis:100%}
+    .canvas .fin-tile .v{font-size:17px}
+  }
+  @media (max-width:380px){
+    .canvas .fin-tiles{grid-template-columns:1fr}
+  }
+
+  /* ---------- Giscus-ting forum ---------- */
+  .canvas .giscus-wrap{
+    margin:18px 0 0;padding:8px;border:1px solid var(--rule);
+    border-radius:6px;background:var(--paper2);min-height:180px;
+  }
+  .canvas .giscus-wrap.is-fallback{min-height:0}
+  .canvas .giscus-wrap.is-fallback .giscus{display:none}
+  .canvas .giscus{min-height:160px}
+  .canvas .giscus-loading{
+    margin:0;padding:58px 12px;text-align:center;
+    font:italic 13px Georgia,"Times New Roman",serif;color:var(--muted);
+  }
+  .canvas .giscus-wrap.is-ready .giscus-loading,
+  .canvas .giscus-wrap.is-fallback .giscus-loading{display:none}
+  .canvas .giscus-wrap.is-ready .giscus[hidden]{display:block}
+  .canvas .giscus-frame{width:100%;border:0}
+  .canvas .giscus-fallback{
+    margin:0;padding:14px;text-align:center;
+    font:13px/1.55 Georgia,"Times New Roman",serif;color:var(--muted);
+  }
+  .canvas .giscus-fallback[hidden]{display:none}
+  .canvas .giscus-note{font-size:12.5px;color:var(--muted)}
+
   /* Header badges — comic book, black and white, level with each other,
      both kept the same distance from the centred logo (438px either side).
      The blue stays only on the feedback page's Contact us button. */
@@ -1306,7 +1500,8 @@ STAR_SUB = "Click me"
 # Links that live in the footer rather than the menu, so the menu stays
 # short on a phone. Each is rendered only when its page exists.
 FOOTER_LINKS = (("latest", "News"), ("feedback", "Feedback"),
-                ("polls", "Polls"), ("settings", "Settings"))
+                ("polls", "Polls"), ("promotional", "Promotional"),
+                ("settings", "Settings"))
 
 # Inbox for the contact form. Submissions POST here and FormSubmit forwards
 # them to this address (first submission needs a one-time activation click
@@ -2542,6 +2737,159 @@ SITE_JS = r'''(function () {
     }, 700);
   }
 
+  // ---- Live GitHub repository strips --------------------------------------
+  // The build writes a .gh-repo shell wherever a page uses the marker
+  // [github-stats:owner/repo]. The stats come from GitHub's public API here,
+  // in the browser: no token, no server, no build-time network. Responses
+  // are cached for half an hour so a reader moving between pages does not
+  // spend the anonymous rate limit. All repository text is written with
+  // textContent, never innerHTML.
+  (function () {
+    var strips = document.querySelectorAll("[data-gh-repo]");
+    if (!strips.length) { return; }
+
+    var API = "https://api.github.com";
+    var TTL = 30 * 60 * 1000;
+
+    function cacheKey(repo) { return "fc-gh:" + repo; }
+    function readCache(repo) {
+      try {
+        var raw = localStorage.getItem(cacheKey(repo));
+        if (!raw) { return null; }
+        var doc = JSON.parse(raw);
+        if (!doc || typeof doc.t !== "number" || !doc.data) { return null; }
+        return doc;
+      } catch (err) { return null; }
+    }
+    function writeCache(repo, data) {
+      try {
+        localStorage.setItem(cacheKey(repo), JSON.stringify({ t: Date.now(), data: data }));
+      } catch (err) { /* private mode: live stats still work this visit */ }
+    }
+    function getJSON(url) {
+      return fetch(url, { headers: { "Accept": "application/vnd.github+json" } })
+        .then(function (response) {
+          if (response.status === 404) { return null; }
+          if (!response.ok) { throw new Error("GitHub " + response.status); }
+          return response.json();
+        });
+    }
+    function setText(root, name, text) {
+      var el = root.querySelector('[data-gh="' + name + '"]');
+      if (el) { el.textContent = text; }
+    }
+    function setTitle(root, name, text) {
+      var el = root.querySelector('[data-gh="' + name + '"]');
+      if (el) { el.title = text || ""; }
+    }
+    function relative(iso) {
+      if (!iso) { return ""; }
+      var then = Date.parse(iso);
+      if (isNaN(then)) { return ""; }
+      var seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
+      if (seconds < 60) { return "just now"; }
+      var minutes = Math.round(seconds / 60);
+      if (minutes < 60) { return minutes + " min ago"; }
+      var hours = Math.round(minutes / 60);
+      if (hours < 24) { return hours + (hours === 1 ? " hour ago" : " hours ago"); }
+      var days = Math.round(hours / 24);
+      if (days < 30) { return days + (days === 1 ? " day ago" : " days ago"); }
+      try {
+        return new Date(then).toLocaleDateString(undefined, {
+          month: "short", day: "numeric", year: "numeric"
+        });
+      } catch (err) { return ""; }
+    }
+    function shortLine(text, limit) {
+      var line = String(text || "").split("\n")[0].trim();
+      return line.length > limit ? line.slice(0, limit - 1).trim() + "\u2026" : line;
+    }
+    function safeGithub(url) {
+      return /^https:\/\/github\.com\//.test(String(url || "")) ? url : "";
+    }
+    function paint(root, doc) {
+      var data = doc.data || {};
+      var repoData = data.repo || {};
+      var commit = data.commits && data.commits[0];
+      var release = data.release;
+      var stars = typeof repoData.stargazers_count === "number" ? repoData.stargazers_count : null;
+      var issues = typeof repoData.open_issues_count === "number" ? repoData.open_issues_count : null;
+
+      setText(root, "stars", stars === null ? "\u2014" : String(stars));
+      setText(root, "stars-unit", stars === 1 ? "star" : "stars");
+      setText(root, "issues", issues === null ? "\u2014" : String(issues));
+      setText(root, "issues-unit", issues === 1 ? "open issue" : "open issues");
+
+      if (commit) {
+        var commitData = commit.commit || {};
+        var author = commitData.author || commitData.committer || {};
+        var message = shortLine(commitData.message, 64) || "No commit message";
+        setText(root, "commit", message);
+        setTitle(root, "commit", String(commitData.message || "").split("\n")[0].trim());
+        setText(root, "commit-when", relative(author.date));
+        var commitLink = root.querySelector('[data-gh="commit-link"]');
+        if (commitLink) {
+          var commitHref = safeGithub(commit.html_url);
+          if (commitHref) { commitLink.href = commitHref; }
+        }
+      } else {
+        setText(root, "commit", "No commits yet");
+        setText(root, "commit-when", "");
+      }
+
+      if (release) {
+        var releaseName = shortLine(release.tag_name || release.name, 32) || "Latest release";
+        setText(root, "release", releaseName);
+        setTitle(root, "release", release.tag_name || release.name || "");
+        setText(root, "release-when", relative(release.published_at));
+        var releaseLink = root.querySelector('[data-gh="release-link"]');
+        if (releaseLink) {
+          var releaseHref = safeGithub(release.html_url);
+          if (releaseHref) { releaseLink.href = releaseHref; }
+        }
+      } else {
+        setText(root, "release", "No releases yet");
+        setText(root, "release-when", "");
+      }
+      root.dataset.state = "ready";
+    }
+    function fallback(root) {
+      root.dataset.state = "error";
+      setText(root, "commit", "Live stats unavailable");
+      setText(root, "commit-when", "");
+      setText(root, "release", "View on GitHub");
+      setText(root, "release-when", "");
+    }
+    function load(root) {
+      var repo = root.getAttribute("data-gh-repo") || "";
+      if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) { return; }
+      if (!window.fetch) { fallback(root); return; }
+      root.dataset.state = "loading";
+      var cached = readCache(repo);
+      if (cached) { paint(root, cached); }
+      if (cached && Date.now() - cached.t < TTL) { return; }
+
+      var base = API + "/repos/" + repo;
+      Promise.all([
+        getJSON(base),
+        getJSON(base + "/commits?per_page=1"),
+        getJSON(base + "/releases?per_page=1")
+      ]).then(function (parts) {
+        if (!parts[0]) { throw new Error("repository not found"); }
+        var next = {
+          repo: parts[0],
+          commits: parts[1] || [],
+          release: (parts[2] && parts[2][0]) || null
+        };
+        writeCache(repo, next);
+        paint(root, { t: Date.now(), data: next });
+      }).catch(function () {
+        if (!cached) { fallback(root); }
+      });
+    }
+    for (var i = 0; i < strips.length; i++) { load(strips[i]); }
+  })();
+
   // ---- Star / Feedback burst -----------------------------------------------
   var badge = document.querySelector("a.star-badge, a.gem-badge");
   if (!badge || !badge.getAttribute("href")) { return; }
@@ -2732,6 +3080,8 @@ def minify_css(css: str) -> str:
 SITE_CSS_MIN = minify_css(CSS)
 ASSET_VERSION = _fc_hashlib.sha256(
     (SITE_CSS_MIN + "\0" + SITE_JS).encode("utf-8")).hexdigest()[:10]
+FINANCE_VERSION = _fc_hashlib.sha256(
+    page_extras.FINANCE_JS.encode("utf-8")).hexdigest()[:10]
 SITE_JS_TAG = f'<script src="assets/site.js?v={ASSET_VERSION}"></script>'
 
 
@@ -2863,6 +3213,13 @@ def write_assets(out_dir: Path, logo_path: Path) -> str:
     (out_dir / "assets").mkdir(parents=True, exist_ok=True)
     write_text_atomic(out_dir / "assets" / "site.css", SITE_CSS_MIN)
     write_text_atomic(out_dir / "assets" / "site.js", SITE_JS)
+    write_text_atomic(out_dir / "assets" / "finance.js", page_extras.FINANCE_JS)
+    chart_src = ROOT / "assets" / "chart.umd.min.js"
+    if chart_src.is_file():
+        shutil.copyfile(chart_src, out_dir / "assets" / "chart.umd.min.js")
+    else:
+        print("warning: assets/chart.umd.min.js is missing; Financials charts will not draw",
+              file=sys.stderr)
     raw = logo_path.read_bytes()
     if raw[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError(f"{logo_path} is not a PNG file")
@@ -2876,7 +3233,9 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
                 star_animation: str = STAR_ANIMATION_DEFAULT,
                 form_html: str = "",
                 cal_cfg: dict | None = None,
-                polls_doc: dict | None = None) -> str:
+                polls_doc: dict | None = None,
+                finance_html: str = "",
+                giscus_html: str = "") -> str:
     page_meta = next((p for p in pages if p["slug"] == slug), {})
     home_title = re.sub(r"\s+&\s+", " AND ", title) if " & " in title else title
     sub_title = re.sub(r"\s+(?:AND|and)\s+", " & ", title) if re.search(r"\b(?:AND|and)\b", title) else title
@@ -2903,6 +3262,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
     placed, cal_script = place_calendar(placed, cal_cfg)
     placed, poll_script = place_polls(placed, polls_doc)
     placed, set_script = place_settings(placed, theme)
+    placed = page_extras.inject_blocks(placed, slug, finance_html, giscus_html)
     placed = picture_fallbacks(lazy_images(placed))
     placed = size_images(placed)
     # The page's own name is the <h1>. The home page already carries the
@@ -3218,6 +3578,19 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     cal_cfg = load_calendar_config(data_path.parent)
     out_dir.mkdir(parents=True, exist_ok=True)
     logo_uri = write_assets(out_dir, logo_path)
+
+    # The charts and the forum are generated once per build, not stored in
+    # data/pages/. The ledger stays the only source: add a transaction on
+    # the Desktop, sync it, rebuild, and both charts move.
+    ledger_path = data_path.parent / "The Flank.md"
+    finance_html = ""
+    if ledger_path.is_file():
+        try:
+            finance_html = page_extras.finance_section_html(
+                page_extras.load_finance(ledger_path), FINANCE_VERSION)
+        except Exception as exc:
+            print(f"warning: Financials charts skipped: {exc}", file=sys.stderr)
+    giscus_html = page_extras.giscus_block(site.get("giscus"))
     _UPLOAD_NAMES.clear()
     _IMAGE_SIZES.clear()
     if uploads_dir.is_dir():
@@ -3244,7 +3617,9 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
                         site.get("description", ""), site.get("custom_css", ""),
                         site.get("star_animation", "comic"),
                         form_html=form_html, cal_cfg=cal_cfg,
-                        polls_doc=load_polls(pages_dir.parent)))
+                        polls_doc=load_polls(pages_dir.parent),
+                        finance_html=finance_html,
+                        giscus_html=giscus_html))
     nf = (NOTFOUND.replace("__CSSLINK__", css_link("/"))
           .replace("__CSS__", safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", "/" + logo_uri)
@@ -3298,7 +3673,6 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     # the nav, not in site.json) — the Financials page button is the only
     # link to it. Skipped with a warning when the ledger is absent so the
     # main pages still build.
-    ledger_path = data_path.parent / "The Flank.md"
     if ledger_path.is_file():
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import build_flank
@@ -3985,6 +4359,8 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
             nav_block = idx.split('<nav class="sitenav">')[1].split("</nav>")[0]
             expect("flank" not in nav_block,
                    "ledger stays out of the nav (unlisted page)")
+            expect("promotional" not in nav_block,
+                   "Promotional moved out of the main menu")
         # Fail-safe check, no passphrase needed: a row flagged private (or
         # in the built-in private list) must carry either no note or an
         # encrypted token. Plain text there means the site is about to
@@ -4043,8 +4419,47 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
             fin_html = (financials_built.read_text(encoding="utf-8")) + "\n" + _css
             expect('a.btn[href^="flank/"]::before' in fin_html,
                    "financials carries the Flank button's swirl dressing")
+            expect("fin-monthly" in fin_html and "fin-in" in fin_html and "fin-out" in fin_html
+                   and "finance.js?v=" in fin_html and "chart.umd.min.js" in fin_html,
+                   "financials carries the money-in/out chart and the local chart runtime")
+            expect(fin_html.count('class="fin-tile"') == 2,
+                   "the glance is only money in and money out")
+            expect("fin-balance" not in fin_html,
+                   "the balance chart stays in the full ledger, not the summary")
+            expect("See every transaction in The Flank" in fin_html,
+                   "the glance pushes visitors into the actual ledger")
+            expect("[flank-finance]" not in fin_html,
+                   "the finance marker never leaks onto the public page")
+            fin_match = re.search(
+                r'<script type="application/json" id="flank-finance-data">(.*?)</script>',
+                fin_html, re.S)
+            if fin_match:
+                try:
+                    fin_data = json.loads(fin_match.group(1))
+                except ValueError:
+                    fin_data = {}
+                expect(bool(fin_data.get("months")) and "tx" not in fin_data,
+                       "the summary embeds month totals, not the whole transaction list")
+                expect("notes" not in json.dumps(fin_data),
+                       "the summary carries no note text")
+            else:
+                expect(False, "the ledger data is embedded as JSON for the chart")
+        giscus_built = tmp / "giscus.html"
+        if giscus_built.is_file():
+            giscus_html = giscus_built.read_text(encoding="utf-8")
+            expect("giscus.app/client.js" in giscus_html and
+                   "DIC_kwDOVWEZ0c4DMCDB" in giscus_html,
+                   "Giscus-ting carries the GitHub Discussions embed")
+            expect("[giscus]" not in giscus_html,
+                   "the Giscus marker never leaks onto the public page")
+            expect('href="giscus.html"' in idx and ">Giscus-ting</a>" in idx,
+                   "the Giscus-ting tab sits in the main menu, not the footer")
+            expect("giscus.html" in sm, "sitemap lists the Giscus-ting page")
         expect('href="settings.html"' in idx and 'class="footlinks"' in idx,
                "the footer carries the Settings link (and the other small links)")
+        expect('href="promotional.html"' in idx and '>Promotional</a>' in idx,
+               "Promotional sits in the footer with Settings")
+        expect("promotional" not in sm, "sitemap keeps the footer pages unlisted")
         settings_meta = next((p for p in site["pages"] if p["slug"] == "settings"), {})
         if not settings_meta.get("hidden"):
             expect('>Settings</a>' in idx,
@@ -4077,6 +4492,16 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect("star-badge" not in products_html and "gem-badge" not in products_html
                and "has-badges" not in products_html,
                "subpages carry no badges and no reserved top space for them")
+        expect(products_html.count('class="gh-repo"') == 2
+               and 'data-gh-repo="bearjhartjen/Lamoka1-half"' in products_html
+               and 'data-gh-repo="bearjhartjen/Lamoka1-DEV-Brain"' in products_html,
+               "each product carries its own live GitHub strip")
+        expect("[github-stats:" not in products_html,
+               "the GitHub strip marker never leaks onto the product page")
+        expect('data-gh-repo="bearjhartjen/flamingo-site"' in home_html,
+               "the home page ends with the website's own repository strip")
+        expect("[github-stats:" not in home_html,
+               "the GitHub strip marker never leaks onto the home page")
         expect('<button type="button" class="themetoggle" id="theme-toggle">' in home_html,
                "the footer theme button is wired for site.js")
         if not ok:

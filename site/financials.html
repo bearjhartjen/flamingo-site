@@ -14,7 +14,7 @@
 <meta property="og:image" content="https://flamingoandcactus.com/logo.png">
 <meta name="twitter:card" content="summary">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Flamingo & Cactus","url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/favicon.png"}</script>
-<link rel="stylesheet" href="assets/site.css?v=abf8d68000">
+<link rel="stylesheet" href="assets/site.css?v=9c9c8825d3">
 </head>
 <body data-theme="classic" data-star-animation="comic">
 <script>try{var t=localStorage.getItem('fc-theme');if(t==='midnight'||t==='classic'||t==='parchment'||t==='ink')document.body.dataset.theme=t}catch(_){}</script>
@@ -34,19 +34,49 @@
     <a href="events.html">Events</a>
     <a href="contact.html">Contact</a>
     <a href="issues.html">Issues</a>
-    <a href="promotional.html">Promotional</a>
+    <a href="giscus.html">Giscus-ting</a>
   </nav>
   <div class="hr"></div>
 
   <div class="canvas">
     <h1>Financials</h1>
-<p class="ac"><a href="flank/index.html" class="btn">The Flank</a></p><p>The button above will take you to the Flank ledger, which provides every transaction with Flamingo &amp; Cactus. We have this published publicly to provide complete transparency which is the defining principle Flamingo and Cactus is built on.</p><p><br></p><p>In The Flank Ledger some transaction notes columns are blurred out, this is to protect Bear J. Hartjen&#x27;s personal interactions with family and friends. To bypass this blocker on the website, entering a passcode at the bottom of the page will unlock everything. </p><p><br></p><p>Please note that all of Bear J. Hartjen&#x27;s capital is reflected in the Flank ledger, meaning all of his spending is recorded. This is because Bear operates as executor of the group and would like to provide Flamingo and Cactus group with the most he can. </p>
+<p class="ac"><a href="flank/index.html" class="btn">The Flank</a></p><p>The button above will take you to the Flank ledger, which provides every transaction with Flamingo &amp; Cactus. We have this published publicly to provide complete transparency which is the defining principle Flamingo and Cactus is built on.</p><p><br></p><p>In The Flank Ledger some transaction notes columns are blurred out, this is to protect Bear J. Hartjen&#x27;s personal interactions with family and friends. To bypass this blocker on the website, entering a passcode at the bottom of the page will unlock everything. </p><p><br></p><p>Please note that all of Bear J. Hartjen&#x27;s capital is reflected in the Flank ledger, meaning all of his spending is recorded. This is because Bear operates as executor of the group and would like to provide Flamingo and Cactus group with the most he can. </p><section class="fin" id="flank-finance" aria-labelledby="flank-finance-title">
+  <div class="fin-head">
+    <h2 class="sec" id="flank-finance-title">The ledger at a glance</h2>
+    <p>Two numbers, one month at a time. Pick a month to filter the totals; the bars stay
+    in view for comparison. Every transaction, date and note is in The Flank.</p>
+  </div>
+  <div class="fin-controls">
+    <label for="fin-month">Month</label>
+    <select id="fin-month"><option value="all">All time</option><option value="2026-11">November 2026</option><option value="2026-10">October 2026</option><option value="2026-09">September 2026</option><option value="2026-08">August 2026</option><option value="2026-07">July 2026</option><option value="2026-06">June 2026</option><option value="2026-05">May 2026</option><option value="2026-04">April 2026</option><option value="2026-03">March 2026</option><option value="2026-02">February 2026</option><option value="2026-01">January 2026</option><option value="2025-12">December 2025</option><option value="2025-11">November 2025</option><option value="2025-10">October 2025</option></select>
+    <span class="fin-range" id="fin-range">All time &middot; 81 entries</span>
+  </div>
+  <div class="fin-tiles" id="fin-tiles">
+    <div class="fin-tile"><span class="k">Money in</span><span class="v up" id="fin-in">$8,005.94</span></div>
+    <div class="fin-tile"><span class="k">Money out</span><span class="v down" id="fin-out">$2,200.53</span></div>
+  </div>
+  <div class="fin-chartcard">
+    <div class="fin-charthead">
+      <h3>Money in and out by month</h3>
+      <span>Click a month to filter</span>
+    </div>
+    <div class="fin-canvas">
+      <canvas id="fin-monthly" role="img" aria-label="Bar chart of money in and money out for every month in the ledger">Your browser cannot draw charts. The full ledger is a click away.</canvas>
+    </div>
+  </div>
+  <p class="fin-note" id="fin-note">Money in and money out, grouped by month. One undated entry is counted in the all-time totals. The full ledger has every transaction, date, note and running balance.</p>
+  <p class="ac fin-cta"><a href="flank/index.html" class="btn">See every transaction in The Flank</a></p>
+  <noscript><p class="fin-note">JavaScript is off, so the month filter and chart cannot run. The all-time totals above are still correct, and the full ledger is <a href="flank/index.html">in The Flank</a>.</p></noscript>
+  <script type="application/json" id="flank-finance-data">{"months":[{"key":"2025-10","label":"October 2025","short":"Oct 25","deposit":1017.32,"withdraw":717.21,"count":9},{"key":"2025-11","label":"November 2025","short":"Nov 25","deposit":0.0,"withdraw":0.82,"count":1},{"key":"2025-12","label":"December 2025","short":"Dec 25","deposit":463.0,"withdraw":0.0,"count":2},{"key":"2026-01","label":"January 2026","short":"Jan 26","deposit":546.0,"withdraw":0.0,"count":5},{"key":"2026-02","label":"February 2026","short":"Feb 26","deposit":726.71,"withdraw":32.09,"count":6},{"key":"2026-03","label":"March 2026","short":"Mar 26","deposit":583.01,"withdraw":0.0,"count":3},{"key":"2026-04","label":"April 2026","short":"Apr 26","deposit":517.12,"withdraw":0.0,"count":4},{"key":"2026-05","label":"May 2026","short":"May 26","deposit":477.53,"withdraw":50.0,"count":4},{"key":"2026-06","label":"June 2026","short":"Jun 26","deposit":739.58,"withdraw":228.16,"count":7},{"key":"2026-07","label":"July 2026","short":"Jul 26","deposit":454.74,"withdraw":51.29,"count":5},{"key":"2026-08","label":"August 2026","short":"Aug 26","deposit":300.0,"withdraw":7.0,"count":2},{"key":"2026-09","label":"September 2026","short":"Sep 26","deposit":1127.32,"withdraw":31.3,"count":2},{"key":"2026-10","label":"October 2026","short":"Oct 26","deposit":583.15,"withdraw":347.99,"count":21},{"key":"2026-11","label":"November 2026","short":"Nov 26","deposit":470.46,"withdraw":436.38,"count":9}],"totals":{"deposit":8005.94,"withdraw":2200.53,"count":81},"undated":{"count":1},"range":{"first":"Oct 03, 2025","last":"Nov 25, 2026"}}</script>
+  <script src="assets/chart.umd.min.js?v=4.4.7"></script>
+  <script src="assets/finance.js?v=fc146e2a8b"></script>
+</section>
   </div>
   <footer>
-    <p class="footlinks"><a href="latest.html">News</a> &middot; <a href="feedback.html">Feedback</a> &middot; <a href="polls.html">Polls</a> &middot; <a href="settings.html">Settings</a></p>
+    <p class="footlinks"><a href="latest.html">News</a> &middot; <a href="feedback.html">Feedback</a> &middot; <a href="polls.html">Polls</a> &middot; <a href="promotional.html">Promotional</a> &middot; <a href="settings.html">Settings</a></p>
     <button type="button" class="themetoggle" id="theme-toggle">Dark mode</button>
   </footer>
 </div>
-<script src="assets/site.js?v=abf8d68000"></script>
+<script src="assets/site.js?v=9c9c8825d3"></script>
 </body>
 </html>

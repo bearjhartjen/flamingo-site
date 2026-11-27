@@ -6,6 +6,14 @@
   "star_animation": "comic",
   "description": "Flamingo & Cactus builds open-source hardware — the Lamoka1/2 inverter and the Lamoka1-DEV-Brain — and publishes its transactions for anyone to read.",
   "custom_css": "",
+  "giscus": {
+    "repo": "bearjhartjen/flamingo-site",
+    "repo_id": "R_kgDOVWEZ0Q",
+    "category_id": "DIC_kwDOVWEZ0c4DMCDB",
+    "category": "General",
+    "mapping": "number",
+    "term": "3"
+  },
   "pages": [
     {
       "slug": "index",
@@ -40,19 +48,19 @@
     {
       "slug": "latest",
       "nav": "Latest",
-      "hidden": true,
-      "badge": "star",
       "title": "Latest and greatest | Flamingo & Cactus",
       "description": "News and progress on the Lamoka1/2 and the rest of the Flamingo & Cactus work.",
-      "heading": ""
+      "heading": "",
+      "hidden": true,
+      "badge": "star"
     },
     {
       "slug": "feedback",
       "nav": "Feedback",
-      "hidden": true,
-      "badge": "gem",
       "title": "Feedback | Flamingo & Cactus",
-      "description": "Tell Flamingo & Cactus what you think, or ask for a different angle."
+      "description": "Tell Flamingo & Cactus what you think, or ask for a different angle.",
+      "hidden": true,
+      "badge": "gem"
     },
     {
       "slug": "events",
@@ -63,15 +71,21 @@
     {
       "slug": "contact",
       "nav": "Contact",
-      "form": true,
       "title": "Contact | Flamingo & Cactus",
-      "description": "Contact Flamingo & Cactus by form, email, or phone."
+      "description": "Contact Flamingo & Cactus by form, email, or phone.",
+      "form": true
     },
     {
       "slug": "issues",
       "nav": "Issues",
       "title": "Issues and cost notes | Flamingo & Cactus",
       "description": "Cost and sourcing problems on the Lamoka1/2, written down as they happened."
+    },
+    {
+      "slug": "giscus",
+      "nav": "Giscus-ting",
+      "title": "Giscus-ting | Flamingo & Cactus",
+      "description": "The open Flamingo & Cactus forum, hosted by GitHub Discussions. Ask about the Lamoka1/2, the DEV-Brain, or the open books."
     },
     {
       "slug": "settings",
@@ -84,10 +98,10 @@
     {
       "slug": "invoices",
       "nav": "Invoices",
-      "hidden": true,
-      "badge": "none",
       "title": "Invoices | Flamingo & Cactus",
-      "description": "Invoice screenshots from Flamingo & Cactus group transactions."
+      "description": "Invoice screenshots from Flamingo & Cactus group transactions.",
+      "hidden": true,
+      "badge": "none"
     },
     {
       "slug": "polls",
@@ -101,7 +115,8 @@
       "nav": "Promotional",
       "title": "Promotional materials | Flamingo & Cactus",
       "description": "Lamoka1 flyers, spec sheets, and promotional PDFs from the Flamingo & Cactus booth.",
-      "heading": ""
+      "heading": "",
+      "hidden": true
     }
   ]
 }

@@ -67,5 +67,13 @@ fi
 if [ -f "$ROOT/assets/logo.png" ]; then
   git add -- assets/logo.png
 fi
+# The Financials dashboard needs these two source files in every checkout:
+# the vendored chart runtime and the generator that writes the chart data.
+if [ -f "$ROOT/assets/chart.umd.min.js" ]; then
+  git add -- assets/chart.umd.min.js
+fi
+if [ -f "$ROOT/scripts/page_extras.py" ]; then
+  git add -- scripts/page_extras.py
+fi
 
 exit 0

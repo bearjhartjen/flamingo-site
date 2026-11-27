@@ -62,8 +62,8 @@ so their content starts higher, especially on a phone. Hidden pages are
 not in the menu but are still built, real pages. Which pages carry the
 badges (and which page, if any, shows the contact form) is controlled by
 flags in `data/site.json`, editable in the builder's Page settings. The
-footer on every page links News, Feedback, Polls and Settings, so those
-pages stay reachable without a long menu. The
+footer on every page links News, Feedback, Polls, Promotional and Settings,
+so those pages stay reachable without a long menu. The
 clicking-the-logo-returns-home behaviour is built in. Products carry a
 plain-English blurb on the page and link a hidden "deep explanations"
 page (slug `products-deep`) that keeps the full write-up. The Events page
@@ -104,6 +104,32 @@ is the source of truth, and the only copy in plain text); the
 scripts/sync-ledger.sh` does the same by hand. Install the watcher with
 `sh scripts/install-watcher.sh`, remove it with `sh
 scripts/uninstall-watcher.sh`.
+
+### Financials, live repositories, and Giscus-ting
+
+The Financials page is a deliberately small teaser: money in, money out, a
+month picker, and one Chart.js bar chart of those two numbers by month. The
+full transaction list, running balance and 10-day chart live in The Flank,
+and a button in the glance sends visitors there. `scripts/page_extras.py`
+parses `data/The Flank.md` at build time and embeds month totals only — no
+note text ever reaches the chart data. Adding a transaction (or a new field
+the ledger parser already understands) and letting the watcher rebuild is
+all it takes; there is no second data file to update. The chart library is
+vendored at `assets/chart.umd.min.js` so the page does not depend on a CDN.
+
+The Products page has a live GitHub strip under each product, and the home
+page ends with the website's own strip. `site.js` asks GitHub's public API
+for stars, open issues, the latest commit and the newest release, caches the
+answer in `localStorage` for 30 minutes, and falls back to the plain repo
+link if the API is unavailable. No token is used or needed.
+
+Giscus-ting is a normal nav tab with the GitHub Discussions forum embedded
+through giscus. Its public settings (repository id, category id, discussion
+number) live in the `giscus` block in `data/site.json`; the forum's
+welcome thread is discussion #3 in `bearjhartjen/flamingo-site`. The embed
+only loads on that page. If the giscus app is not installed on the
+repository yet, the page shows a plain link to the GitHub discussion
+instead of a broken box.
 
 ### The private notes are encrypted, not just hidden
 
@@ -183,9 +209,13 @@ third-party actions):
 - `data/The Flank.md` — the ledger, synced (with private notes
   encrypted) from `~/Desktop/The Flank.md`
 - `assets/logo.png` — masthead picture (embedded into each page)
+- `assets/chart.umd.min.js` — vendored Chart.js 4.4.7 (MIT) for the
+  Financials dashboard
 - `assets/uploads/` — pictures used by pages (copied to `site/uploads/`)
 - `scripts/build.py` — builds `site/` from `data/` (stdlib only, owns the
   sanitizer and the `--check` verifier)
+- `scripts/page_extras.py` — the generated Financials dashboard, GitHub
+  strips and Giscus-ting block
 - `scripts/build_flank.py` — builds `site/flank/` from the ledger (stdlib)
 - `scripts/flank_crypto.py`, `scripts/encrypt_flank.py` — ledger note
   encryption (sync / check / decrypt)
@@ -200,6 +230,9 @@ third-party actions):
   `CNAME`, `robots.txt`, `sitemap.xml`, plus the unlisted `flank/`
   directory
 
-Nothing here phones home. The only network use is the loopback builder
-itself, plus the contact form posting to FormInit (FormSubmit with JavaScript
-off) when a visitor (not you) submits it.
+Nothing here phones home by itself. Three visitor-facing pieces do use the
+network, all of them on purpose and all of them easy to see: the contact
+form posting to FormInit (FormSubmit with JavaScript off) when a visitor
+submits it, the live GitHub strips asking `api.github.com` for public repo
+stats, and the Giscus-ting forum loading `giscus.app` / GitHub Discussions
+on that page only. The loopback builder is the only local network listener.

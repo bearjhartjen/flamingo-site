@@ -602,3 +602,75 @@ The first pass fixed what was broken. This one fixes what was awkward.
 - **The two backup folders are out of git.** They stay on disk; the
   ignore file now covers them, `.publish/`, `.DS_Store`, `*.bak` and
   `*.tmp`.
+
+### The books become interactive (November 2026)
+
+The transparency pitch was a static table and a paragraph. Now it is
+something a visitor can poke at.
+
+- **Financials has two charts.** A balance line over the ledger dates and
+  a month-by-month money-in / money-out bar chart, drawn with Chart.js
+  from data the build writes out of `data/The Flank.md`. Hovering shows
+  the transaction number, date, amounts and resulting balance. The month
+  filter narrows the line and the four totals; clicking a bar does the
+  same. Months with no activity stay on the axis as zero bars, and the
+  undated entry is counted in the totals with a plain note saying it is
+  not on the time axis.
+- **The charts cannot leak a private note.** `scripts/page_extras.py`
+  embeds only transaction number, date, amounts and running balance.
+  There is no notes field in the chart JSON, so the passcode lock is not
+  weakened by a convenience feature.
+- **Adding a ledger row is enough.** The parser, the running balances,
+  the month buckets and the table all come from the same ledger at build
+  time. The Desktop watcher already rebuilds after a sync, so a new
+  transaction appears in the charts with no second data file to edit.
+- **Chart.js is local.** `assets/chart.umd.min.js` is the pinned 4.4.7
+  MIT build, copied into `site/assets/` by the build. No CDN, no
+  third-party script on the money page.
+- **Each product has a live repository strip.** Stars, open issues, the
+  latest commit and the newest release come from GitHub's public API in
+  `site.js`, cached for 30 minutes. The strip sits under the product
+  description, links to the repo and to Giscus-ting, and falls back to
+  the plain repo link if GitHub is unreachable. The home page ends with
+  the website's own strip under "Built in the open".
+- **Giscus-ting is a real tab.** The forum is a GitHub Discussion
+  (`#3`, "Welcome to Giscus-ting") embedded with giscus. It sits in the
+  main menu after Issues.
+  Discussions is on and the giscus app is installed on
+  `bearjhartjen/flamingo-site` only. The embed waits for giscus's own
+  metadata before showing the frame, so a block, outage or missing app
+  leaves a plain GitHub link instead of a broken box.
+
+### Menu tidy and honest builder previews (November 2026)
+
+- **Promotional moved to the footer.** It is still a real page, still
+  editable, but it now sits with News, Feedback, Polls and Settings
+  instead of taking a main-menu slot. The menu is nine items again.
+- **The builder no longer shows raw generated markers.** The canvas used
+  to display `[flank-finance]`, `[github-stats:...]` and `[giscus]` as
+  literal text. It now draws a labelled, non-editable "Generated block"
+  card in the same place, and `bodyForSave()` puts the exact marker back
+  when the page is saved. The Preview tab always serves the fully built
+  page, so it shows the real charts, live repository strips and forum.
+- **The ledger preview serves its own chart runtime.** The hidden
+  `/flank/` folder is not a normal page, and the builder's static route
+  did not know about `/flank/chart.umd.min.js`; the preview loaded a
+  page whose chart script 404ed. The builder now serves that folder's
+  `.js`, `.css` and `.png` files, and its module reload watches
+  `build_flank.py`, `page_extras.py` and `flank_crypto.py` too, not just
+  `build.py`. A chart change appears in Preview without restarting it.
+  The reload path had also been failing silently because `importlib.util`
+  was never imported; that is fixed, so a helper edit really does reach
+  the next rebuild.
+
+### The summary points at the ledger (November 2026)
+
+- **Financials got out of the ledger's way.** "The ledger at a glance"
+  now shows only **money in** and **money out**, a month picker (All
+  time, or a month like November 2026) and one Chart.js bar chart of
+  those two numbers. The balance line, net, closing balance and
+  month-by-month table moved out.
+- **The full ledger is the destination.** The glance ends with "See
+  every transaction in The Flank"; that page has the balance chart,
+  10-day average, every date, note and running balance. The summary no
+  longer tries to replace it.

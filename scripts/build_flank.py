@@ -52,6 +52,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA = ROOT / "data" / "The Flank.md"
 DEFAULT_LOGO = ROOT / "assets" / "logo-flank.png"
 DEFAULT_OUT = ROOT / "site" / "flank"
+CHART_SRC = ROOT / "assets" / "chart.umd.min.js"
 
 # Fallback only: which transactions are private when a row carries no
 # "- **Private:**" field at all. The field in the ledger is the source of
@@ -249,28 +250,30 @@ CSS = r'''  :root{
   }
   .stats b{color:var(--ink2);font-weight:600}
 
-  /* ---------- chart ---------- */
-  .chartwrap{position:relative;margin:6px 0 4px;overflow-x:auto}
-  svg.chart{display:block;width:100%;min-width:640px}
-  .candle-up{fill:var(--upfill);stroke:var(--up);stroke-width:1.4}
-  .candle-dn{fill:var(--down);stroke:var(--down);stroke-width:1.4}
-  .wick{stroke:#55585c;stroke-width:1}
-  .gl{stroke:var(--rule2);stroke-width:1}
-  .avgline{stroke:#1c4fd8;stroke-width:1.6;stroke-dasharray:7 5}
-  .mavg{fill:none;stroke:#1c4fd8;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
-  .mavgdot{fill:#1c4fd8}
-  .avglbl{font:11px "Helvetica Neue",Arial,sans-serif;fill:#1c4fd8;font-weight:600;paint-order:stroke;stroke:#ffffff;stroke-width:3px}
-  .leader{stroke:var(--ink);stroke-width:1}
-  .axlbl{font:11px "Helvetica Neue",Arial,sans-serif;fill:var(--muted)}
-  .axlbl.b{font-weight:600;fill:var(--ink)}
-  .tooltip{
-    position:absolute;pointer-events:none;background:#fff;border:1px solid var(--ink);
-    padding:8px 11px;font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
-    box-shadow:2px 2px 0 rgba(0,0,0,.14);min-width:168px;opacity:0;transition:opacity .08s;
+  /* ---------- charts (Chart.js) ---------- */
+  .chartblock{margin:4px 0 18px}
+  .charthead{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    margin:0 0 7px;font:11px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);
   }
-  .tooltip .tt-t{font-weight:700;letter-spacing:.4px;text-transform:uppercase;font-size:11px;color:var(--muted);margin-bottom:4px}
-  .tooltip .tt-r{display:flex;justify-content:space-between;gap:18px}
-  .tooltip .tt-r span:last-child{font-variant-numeric:tabular-nums}
+  .charthead b{
+    font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;
+    text-transform:none;color:var(--ink2);white-space:nowrap;
+  }
+  .chartcanvas{position:relative;height:320px}
+  .chartcanvas.short{height:230px}
+  .chartfallback{
+    margin:0 0 16px;padding:10px 12px;border:1px solid var(--rule);
+    background:var(--paper2);font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;
+    color:var(--muted);text-align:center;
+  }
+  .chartfallback[hidden]{display:none}
+  @media (max-width:760px){
+    .chartcanvas{height:250px}
+    .chartcanvas.short{height:210px}
+    .charthead{font-size:10px;letter-spacing:1px}
+  }
   .caption{font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;margin:6px 0 26px}
   .note{
     font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;color:var(--muted);
@@ -382,7 +385,7 @@ CSS = r'''  :root{
   @media print{
     body{background:#fff;font-size:11pt}
     .page{max-width:none;padding:0}
-    .toolbar,.chartwrap,.caption,.btn{display:none}
+    .toolbar,.chartblock,.chartfallback,.caption,.btn{display:none}
     thead th{position:static}
     tbody tr{break-inside:avoid}
   }
@@ -431,17 +434,26 @@ __CSS__
   <div class="stats" id="stats"></div>
   <div class="hr thin"></div>
 
-  <div class="chartwrap">
-    <svg class="chart" id="chart"></svg>
-    <div class="tooltip" id="tip"></div>
+  <div class="chartblock">
+    <div class="charthead"><span>Balance over time</span><b id="ma-note">10-day avg &mdash;</b></div>
+    <div class="chartcanvas">
+      <canvas id="chart-balance" role="img" aria-label="Line chart of the Flank balance after every transaction, with the 10-day moving average">Your browser cannot draw charts. The ledger table below has every transaction.</canvas>
+    </div>
   </div>
-  <p class="note"><b>Note:</b> this graph tracks <b>US dollar holdings</b> only. The silver holdings
+  <div class="chartblock">
+    <div class="charthead"><span>Month by month</span><span>Money in vs money out</span></div>
+    <div class="chartcanvas short">
+      <canvas id="chart-monthly" role="img" aria-label="Bar chart of deposits and withdrawals for every month in the ledger">Your browser cannot draw charts. The ledger table below has every transaction.</canvas>
+    </div>
+  </div>
+  <p class="chartfallback" id="chartfallback" hidden>Charts could not load. The ledger table below has every transaction.</p>
+  <p class="note"><b>Note:</b> these charts track <b>US dollar holdings</b> only. The silver holdings
   (<span id="note-silver">200g, 2.6oz</span>) are a physical reserve held separately &mdash; not
-  included in the plotted line, the moving average, or the totals above. An approximate
+  included in the plotted lines, the moving average, or the totals above. An approximate
   dollar value at the live spot price is shown under Silver Holdings for reference.</p>
   <p class="caption">
-    One candle per transaction &mdash; hollow for a transaction that left the balance higher, solid for one that left it lower.
-    Hover a candle for detail.
+    One point per transaction &mdash; hollow when the balance rose, solid when it fell.
+    The blue line is the 10-day moving average. Hover any point for detail.
   </p>
   <div class="legend">
     <span><span class="sw" style="background:#ffffff;border:1.4px solid var(--up)"></span>Balance rose</span>
@@ -490,6 +502,7 @@ __CSS__
   </div>
 </div>
 
+<script src="chart.umd.min.js"></script>
 <script>
 const TX = __DATA__;
 
@@ -624,14 +637,14 @@ async function refreshSpot(){
   document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) refreshSpot(); });
 })();
 
-/* ------------------------------------------------------------------ candles */
-function buildCandles(){
-  /* One candle per transaction.
+/* ------------------------------------------------------------------ points */
+function buildPoints(){
+  /* One point per transaction.
      open  = the balance carried in from the previous transaction
      close = the new balance after this one
      high  = max(open, close), low = min(open, close)
      The ledger itself has two places where the running balance jumps by more
-     than the recorded deposit/withdrawal; those candles get flagged. */
+     than the recorded deposit/withdrawal; those points get flagged. */
   const out = [];
   let prevClose = null;
   for (const t of TX){
@@ -654,7 +667,7 @@ function buildCandles(){
   return out;
 }
 
-const CANDLES = buildCandles();
+const POINTS = buildPoints();
 
 /* Trailing 10-day window for the blue moving-average line.
 
@@ -663,8 +676,8 @@ const CANDLES = buildCandles();
    a single day no longer fills the whole window, and a month with nothing
    in it no longer pretends to be an average of the last few old entries.
 
-   For each candle the window is the ten calendar days ending on that
-   candle's date -- its own day plus the nine before it -- and the average
+   For each point the window is the ten calendar days ending on that
+   point's date -- its own day plus the nine before it -- and the average
    is taken over the ending balance of every transaction dated inside it.
 
    One ledger entry carries no date. It borrows the date of the entry before
@@ -681,8 +694,8 @@ function dayNumber(iso){
   return Date.UTC(+m[1], +m[2]-1, +m[3]) / 86400000;
 }
 
-/* every candle gets a day number; undated ones borrow the previous date */
-const DAYS = CANDLES.map(c => dayNumber(c.iso));
+/* every point gets a day number; undated ones borrow the previous date */
+const DAYS = POINTS.map(c => dayNumber(c.iso));
 for (let i = 0; i < DAYS.length; i++){
   if (DAYS[i] !== null) continue;
   const before = DAYS.slice(0, i).reverse().find(d => d !== null);
@@ -693,135 +706,251 @@ for (let i = 0; i < DAYS.length; i++){
 }
 
 /* the moving average, plus how many transactions fed it */
-const MA = CANDLES.map((c,i)=>{
+const MA = POINTS.map((c,i)=>{
   const d = DAYS[i];
   if (d === null) return { value: c.close, count: 1 };
   let s = 0, n = 0;
-  for (let k = 0; k < CANDLES.length; k++){
+  for (let k = 0; k < POINTS.length; k++){
     if (DAYS[k] === null) continue;
-    const age = d - DAYS[k];                 /* days before this candle's day */
-    if (age >= 0 && age < MA_WINDOW_DAYS){ s += CANDLES[k].close; n++; }
+    const age = d - DAYS[k];                 /* days before this point's day */
+    if (age >= 0 && age < MA_WINDOW_DAYS){ s += POINTS[k].close; n++; }
   }
   return { value: n ? s/n : c.close, count: n };
 });
 
+/* ------------------------------------------------------------------ charts */
 (function(){
-  const svg = document.getElementById("chart");
-  const tip = document.getElementById("tip");
-  if (!CANDLES.length){ svg.innerHTML = '<text x="10" y="30" class="axlbl">No data</text>'; return; }
+  const fallback = document.getElementById("chartfallback");
+  const balanceCanvas = document.getElementById("chart-balance");
+  const monthlyCanvas = document.getElementById("chart-monthly");
+  if (!POINTS.length) { if (fallback) fallback.hidden = false; return; }
+  if (!window.Chart || !balanceCanvas || !monthlyCanvas) {
+    if (fallback) fallback.hidden = false;
+    return;
+  }
 
-  const H = 330, PL = 74, PR = 18, PT = 26, PB = 34;
-  let lo = Infinity, hi = -Infinity;
-  CANDLES.forEach(c=>{ lo = Math.min(lo,c.low); hi = Math.max(hi,c.high); });
-  const pad = (hi-lo)*0.08 || 10;
-  lo = Math.max(0, lo-pad); hi = hi+pad;
+  const C = {
+    ink: "#141414", ink2: "#3d3d3d", muted: "#6b6b6b",
+    rule: "#c9c9c9", rule2: "#e3e1da", paper: "#ffffff",
+    gold: "#8a6a12", up: "#1c6b3a", down: "#9c1f16", blue: "#1c4fd8"
+  };
+  Chart.defaults.font.family = '"Helvetica Neue", Arial, sans-serif';
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = C.muted;
 
-  function draw(){
-    const W = Math.max(640, svg.parentElement.clientWidth);
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.setAttribute("width", W);
-    svg.setAttribute("height", H);
-    svg.style.height = H+"px";
+  const moneyTick = v => "$" + Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const signedMoney = n => n === 0 ? money(0) : (n < 0 ? "-" : "+") + money(Math.abs(n));
+  const tooltipBase = {
+    backgroundColor: C.paper, titleColor: C.ink, bodyColor: C.ink2,
+    borderColor: C.ink, borderWidth: 1, padding: 10, cornerRadius: 2,
+    titleFont: { family: '"Helvetica Neue", Arial, sans-serif', size: 11, weight: "700" },
+    bodyFont: { family: '"Helvetica Neue", Arial, sans-serif', size: 12 },
+    displayColors: false
+  };
 
-    const plotW = W - PL - PR;
-    const step  = plotW / CANDLES.length;
-    const bw    = Math.max(3, Math.min(22, step*0.6));
-    const cx    = i => PL + step*i + step/2;
-    const y     = v => PT + (1-(v-lo)/(hi-lo))*(H-PT-PB);
+  const lastMa = MA[MA.length - 1];
+  const maNote = document.getElementById("ma-note");
+  if (maNote && lastMa) maNote.textContent = "10-day avg " + money(lastMa.value);
 
-    let grid = "", labs = "";
-    for (let i=0;i<=4;i++){
-      const v = lo + (hi-lo)*i/4, yy = y(v);
-      grid += `<line class="gl" x1="${PL}" y1="${yy.toFixed(1)}" x2="${W-PR}" y2="${yy.toFixed(1)}"/>`;
-      labs += `<text class="axlbl" x="${PL-9}" y="${(yy+4).toFixed(1)}" text-anchor="end">${"$"+Math.round(v).toLocaleString()}</text>`;
-    }
+  const pointBg = POINTS.map(c => c.close >= c.open ? C.paper : C.down);
+  const pointBorder = POINTS.map(c => c.close >= c.open ? C.up : C.down);
 
-    let xlabels = "", body = "";
-    CANDLES.forEach((c,i)=>{
-      const up = c.close >= c.open;
-      const x  = cx(i);
-      const yt = y(Math.max(c.open,c.close)), yb = y(Math.min(c.open,c.close));
-      const h  = Math.max(1.5, yb-yt);
-      body += `<line class="wick" x1="${x.toFixed(1)}" y1="${y(c.high).toFixed(1)}" x2="${x.toFixed(1)}" y2="${y(c.low).toFixed(1)}"/>`;
-      body += `<rect class="${up?"candle-up":"candle-dn"}" x="${(x-bw/2).toFixed(1)}" y="${yt.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}"/>`;
-      body += `<rect class="hit" data-i="${i}" x="${(x-step/2).toFixed(1)}" y="${PT}" width="${step.toFixed(1)}" height="${H-PT-PB}" fill="transparent"/>`;
-    });
-
-    /* label every Nth candle with its transaction number */
-    const every = Math.max(1, Math.ceil(CANDLES.length/14));
-    CANDLES.forEach((c,i)=>{
-      if (i % every === 0 || i === CANDLES.length-1)
-        xlabels += `<text class="axlbl" x="${cx(i).toFixed(1)}" y="${H-10}" text-anchor="middle">${c.label}</text>`;
-    });
-
-    /* blue moving-average line following the value of the holdings */
-    const maPath = MA.map((m,i)=>({ i, x: cx(i), v: m.value }));
-    const maD = maPath.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+y(p.v).toFixed(1)).join(" ");
-    const lastMa = maPath[maPath.length-1];
-    const maLine =
-      `<path class="mavg" d="${maD}"/>` +
-      `<circle class="mavgdot" cx="${lastMa.x.toFixed(1)}" cy="${y(lastMa.v).toFixed(1)}" r="3"/>` +
-      `<text class="avglbl" x="${(lastMa.x-8).toFixed(1)}" y="${(y(lastMa.v)-12).toFixed(1)}" text-anchor="end">10-day avg ${money(lastMa.v)}</text>`;
-
-    svg.innerHTML = grid + labs + body + maLine + xlabels;
-
-    /* hover tooltips */
-    const hits = svg.querySelectorAll(".hit");
-    hits.forEach(el=>{
-      el.addEventListener("mouseenter", ()=>{
-        const c = CANDLES[+el.dataset.i];
-        const up = c.close >= c.open;
-        const ma = MA[+el.dataset.i];
-        tip.innerHTML =
-          `<div class="tt-t">Transaction ${c.n} &mdash; ${c.date}</div>` +
-          `<div class="tt-r"><span>Opened at</span><span>${money(c.open)}</span></div>` +
-          `<div class="tt-r"><span>Closed at</span><span>${money(c.close)}</span></div>` +
-          `<div class="tt-r"><span>Change</span><span style="color:${up?"var(--up)":"var(--down)"}">${(c.close-c.open>=0?"+":"")+money(c.close-c.open)}</span></div>` +
-          `<div class="tt-r"><span>10-day avg</span><span style="color:#1c4fd8">${money(ma.value)}</span></div>` +
-          `<div class="tt-r"><span>in window</span><span>${ma.count} transaction${ma.count===1?"":"s"}</span></div>` +
-          (c.deposits  ? `<div class="tt-r"><span>Deposit</span><span>${money(c.deposits)}</span></div>`  : "") +
-          (c.withdrawals?`<div class="tt-r"><span>Withdrawal</span><span>${money(c.withdrawals)}</span></div>`:"") +
-          (c.gap ? `<div class="tt-r"><span>Unrecorded</span><span>${money(c.gap)}</span></div>` : "");
-        const svgRect = svg.getBoundingClientRect();
-        const wrapRect = svg.parentElement.getBoundingClientRect();
-        const i = +el.dataset.i;
-        const px = svgRect.left - wrapRect.left + cx(i);
-        const py = svgRect.top  - wrapRect.top  + y(c.high);
-        tip.style.opacity = "1";
-        /* park the box on the roomier side of the candle so it never sits
-           on top of it, then draw a leader line from the candle to the box */
-        const tw = tip.offsetWidth, th = tip.offsetHeight;
-        const wrapW = wrapRect.width;
-        let left = (cx(i) > W/2) ? px - tw - 16 : px + 16;
-        left = Math.max(0, Math.min(wrapW - tw, left));
-        const below = py < th + 28;
-        const top = Math.max(0, below ? py + 20 : py - th - 14);
-        tip.style.left = left + "px";
-        tip.style.top  = top + "px";
-        let leader = svg.querySelector("#leader");
-        if (!leader){
-          leader = document.createElementNS("http://www.w3.org/2000/svg","line");
-          leader.setAttribute("id","leader");
-          leader.setAttribute("class","leader");
-          svg.appendChild(leader);
+  new Chart(balanceCanvas.getContext("2d"), {
+    type: "line",
+    data: {
+      labels: POINTS.map(c => c.label),
+      datasets: [
+        {
+          label: "Balance",
+          data: POINTS.map(c => c.close),
+          borderColor: C.ink,
+          backgroundColor: "rgba(201,162,39,.14)",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.18,
+          pointRadius: POINTS.length > 60 ? 2.5 : 3.2,
+          pointHoverRadius: 5,
+          pointBackgroundColor: pointBg,
+          pointBorderColor: pointBorder,
+          pointBorderWidth: 1.4,
+          spanGaps: true
+        },
+        {
+          label: "10-day average",
+          data: MA.map(m => m.value),
+          borderColor: C.blue,
+          borderWidth: 1.8,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          fill: false,
+          tension: 0.18
         }
-        const ox = svgRect.left - wrapRect.left, oy = svgRect.top - wrapRect.top;
-        leader.setAttribute("x1", cx(i).toFixed(1));
-        leader.setAttribute("y1", y(c.high).toFixed(1));
-        leader.setAttribute("x2", (left + tw/2 - ox).toFixed(1));
-        leader.setAttribute("y2", ((below ? top : top + th) - oy).toFixed(1));
-      });
-    });
-    svg.addEventListener("mouseleave", ()=>{
-      tip.style.opacity = "0";
-      const leader = svg.querySelector("#leader");
-      if (leader) leader.remove();
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: Object.assign({}, tooltipBase, {
+          filter: item => item.datasetIndex === 0,
+          callbacks: {
+            title: items => {
+              const c = POINTS[items[0].dataIndex];
+              return "#" + c.n + " \u00b7 " + c.date;
+            },
+            label: item => "Close " + money(item.parsed.y),
+            afterBody: items => {
+              const i = items[0].dataIndex;
+              const c = POINTS[i];
+              const ma = MA[i];
+              const lines = [
+                "Opened at " + money(c.open),
+                "Change " + signedMoney(+(c.close - c.open).toFixed(2)),
+                "10-day avg " + money(ma.value) + " (" + ma.count + " in window)"
+              ];
+              if (c.deposits) lines.push("Deposit " + money(c.deposits));
+              if (c.withdrawals) lines.push("Withdrawal " + money(c.withdrawals));
+              if (c.gap) lines.push("Unrecorded " + money(c.gap));
+              return lines;
+            }
+          }
+        })
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { color: C.rule },
+          ticks: { color: C.muted, maxTicksLimit: 12, maxRotation: 0, autoSkip: true }
+        },
+        y: {
+          beginAtZero: false,
+          grid: { color: C.rule2 },
+          border: { display: false },
+          ticks: { color: C.muted, maxTicksLimit: 6, callback: moneyTick }
+        }
+      }
+    }
+  });
+
+  /* Month buckets for the second chart. Undated entries borrow the date of
+     the entry before them, the same rule the moving average uses, so every
+     dollar stays in a month. */
+  const MONTH_NAMES = ["January","February","March","April","May","June","July",
+                       "August","September","October","November","December"];
+  const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const buckets = {};
+  const keys = [];
+  POINTS.forEach((c, i) => {
+    if (DAYS[i] === null) return;
+    const d = new Date(DAYS[i] * 86400000);
+    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
+    const key = y + "-" + String(m).padStart(2, "0");
+    if (!buckets[key]) {
+      buckets[key] = { key, y, m, in: 0, out: 0, close: 0, count: 0 };
+      keys.push(key);
+    }
+    const row = buckets[key];
+    row.in += c.deposits;
+    row.out += c.withdrawals;
+    row.close = c.close;
+    row.count++;
+  });
+  keys.sort();
+  const MONTHS = [];
+  if (keys.length) {
+    let y = +keys[0].slice(0, 4), m = +keys[0].slice(5, 7);
+    const endY = +keys[keys.length - 1].slice(0, 4);
+    const endM = +keys[keys.length - 1].slice(5, 7);
+    while (y < endY || (y === endY && m <= endM)) {
+      const key = y + "-" + String(m).padStart(2, "0");
+      const row = buckets[key] || { key, y, m, in: 0, out: 0, close: 0, count: 0 };
+      row.in = +row.in.toFixed(2);
+      row.out = +row.out.toFixed(2);
+      row.net = +(row.in - row.out).toFixed(2);
+      row.label = MONTH_NAMES[m - 1] + " " + y;
+      row.short = MONTH_SHORT[m - 1] + " " + String(y).slice(2);
+      MONTHS.push(row);
+      m++;
+      if (m === 13) { m = 1; y++; }
+    }
+    let prevClose = 0;
+    MONTHS.forEach(row => {
+      if (!row.count) row.close = prevClose;
+      else prevClose = row.close;
     });
   }
 
-  draw();
-  let t;
-  window.addEventListener("resize", ()=>{ tip.style.opacity = "0"; clearTimeout(t); t = setTimeout(draw,120); });
+  const monthBlock = monthlyCanvas.closest(".chartblock");
+  if (!MONTHS.length) {
+    if (monthBlock) monthBlock.hidden = true;
+    return;
+  }
+
+  new Chart(monthlyCanvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: MONTHS.map(row => row.short),
+      datasets: [
+        {
+          label: "Money in",
+          data: MONTHS.map(row => row.in),
+          backgroundColor: C.gold,
+          borderRadius: 2,
+          maxBarThickness: 18
+        },
+        {
+          label: "Money out",
+          data: MONTHS.map(row => row.out),
+          backgroundColor: C.down,
+          borderRadius: 2,
+          maxBarThickness: 18
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            color: C.muted, usePointStyle: true, boxWidth: 8, boxHeight: 8,
+            padding: 14
+          }
+        },
+        tooltip: Object.assign({}, tooltipBase, {
+          displayColors: true,
+          callbacks: {
+            title: items => MONTHS[items[0].dataIndex].label,
+            label: item => item.dataset.label + " " + money(item.parsed.y),
+            afterBody: items => {
+              const row = MONTHS[items[0].dataIndex];
+              return "Net " + money(row.net) + " \u00b7 ending " + money(row.close);
+            }
+          }
+        })
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { color: C.rule },
+          ticks: { color: C.muted, maxTicksLimit: 10, maxRotation: 0, autoSkip: true }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: C.rule2 },
+          border: { display: false },
+          ticks: { color: C.muted, maxTicksLimit: 6, callback: moneyTick }
+        }
+      }
+    }
+  });
 })();
 
 /* ------------------------------------------------------------------ table */
@@ -1036,17 +1165,18 @@ __CSS__
     the ledger changes, the markdown is edited and the build is re-run. It is
     plain, dependency-free Python &mdash; no packages to install.</p>
 
-    <h2>What the graph plots</h2>
+    <h2>What the charts plot</h2>
     <p>The plotted figures are <b>US dollar holdings only</b>. There is one
-    candlestick per transaction &mdash; hollow when the balance rose, solid
-    when it fell &mdash; and the blue line is a moving average of the running
+    point per transaction &mdash; hollow when the balance rose, solid when it
+    fell &mdash; and the blue line is a moving average of the running
     balance over the <b>ten calendar days</b> ending on each transaction&rsquo;s
     date. The window is counted in days rather than in transactions, so a busy
-    week and a quiet one weigh the same. Silver is a physical reserve, tracked
+    week and a quiet one weigh the same. A second chart groups the same ledger
+    by month and shows money in and money out. Silver is a physical reserve, tracked
     separately in grams and ounces in the ledger; it is not included in the
-    plotted line, the moving average, or the headline totals. The ledger page
+    plotted lines, the moving average, or the headline totals. The ledger page
     shows an approximate dollar value for it under Silver Holdings, figured
-    at the live spot price (troy ounces at XAG/USD) for reference. Where a candle jumps by more than the recorded deposit or
+    at the live spot price (troy ounces at XAG/USD) for reference. Where a point jumps by more than the recorded deposit or
     withdrawal, its tooltip flags the difference as <b>Unrecorded</b>.</p>
 
     <h2>Where the live silver price comes from</h2>
@@ -1059,7 +1189,7 @@ __CSS__
     page shows the last price it saw and says so.</p>
 
     <h2>The rest of the page</h2>
-    <p>Beneath the chart is the full ledger as a table, newest first. The
+    <p>Beneath the charts is the full ledger as a table, newest first. The
     search box filters by date, amount, or note text, and the dropdown
     narrows the list to deposits, withdrawals, or a single year. Everything
     on the site is plain static HTML &mdash; the logo and the ledger data are
@@ -1119,6 +1249,11 @@ def build(data_path: Path, logo_path: Path, out_dir: Path):
     print(f"logo embedded ({len(logo_uri) // 1024} KiB data URI)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    if CHART_SRC.is_file():
+        shutil.copyfile(CHART_SRC, out_dir / "chart.umd.min.js")
+    else:
+        print(f"warning: {CHART_SRC} is missing; the ledger charts will fall back to the table",
+              file=sys.stderr)
 
     privcount = sum(1 for r in filled if r["private"])
     print(f"private transactions: {privcount} of {len(filled)}")
@@ -1183,7 +1318,11 @@ def check(data_path: Path, logo_path: Path):
         expect("h-silver-val" in index_html, "index.html has the holdings value line")
         expect("api.gold-api.com/price/XAG" in index_html, "index.html fetches the live XAG feed")
         expect("HOLDINGS_OZT" in index_html, "index.html converts holdings to troy oz")
-        expect('"leader"' in index_html, "index.html draws a leader line to the tooltip")
+        expect("chart.umd.min.js" in index_html and (tmp / "chart.umd.min.js").is_file(),
+               "the ledger ships its own Chart.js runtime")
+        expect("chart-balance" in index_html and "chart-monthly" in index_html
+               and "new Chart" in index_html,
+               "the ledger draws its balance and monthly charts with Chart.js")
         expect("table.locked tr.priv td.notes" in index_html, "index.html blurs private rows' notes when locked")
         expect("table.locked td.notes{" not in index_html, "index.html no longer blurs the whole notes column")
         expect("t.private" in index_html, "index.html flags private rows for the blur")

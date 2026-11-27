@@ -924,3 +924,39 @@
 - **Private:** no
 - **Notes:** This was a $5 credit back to the account for using direct bank linking with open code.
 - **Transaction was made on:** 11-20-2026
+
+---
+
+## Transaction 79
+
+- **Withdraw of:** $3.99
+- **Deposit of:** $0.00
+- **New balance:** $6,101.80
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This withdrawal was for three months of Apple Music, to keep the music subscription going. Approved by Bear J. Hartjen.
+- **Transaction was made on:** 11-23-2026
+
+---
+
+## Transaction 80
+
+- **Withdraw of:** $10.00
+- **Deposit of:** $0.00
+- **New balance:** $6,091.80
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This withdrawal was for one month of OpenCode Go, for continued work on the website and specific intricate Lamoka1/2 work. Approved by Bear J. Hartjen.
+- **Transaction was made on:** 11-24-2026
+
+---
+
+## Transaction 81
+
+- **Withdraw of:** $286.36
+- **Deposit of:** $0.00
+- **New balance:** $5,805.44
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** no
+- **Notes:** This withdrawal was for the purchase of gold and silver as an investment for the Flamingo and Cactus group. The metals are still in shipping, so their amounts are not added to the holdings yet. Approved by Bear J. Hartjen.
+- **Transaction was made on:** 11-25-2026

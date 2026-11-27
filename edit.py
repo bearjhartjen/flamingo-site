@@ -18,6 +18,7 @@ import base64
 import datetime
 import html
 import importlib
+import importlib.util
 import json
 import os
 import re
@@ -48,17 +49,35 @@ import build as site_build  # noqa: E402
 # rebuild the site with the old CSS and quietly revert the new one. Remember
 # the mtime and reload the module before any request touches it.
 _BUILD_PATH = ROOT / "scripts" / "build.py"
-_BUILD_MTIME = _BUILD_PATH.stat().st_mtime if _BUILD_PATH.exists() else 0.0
+_HELPER_PATHS = (
+    ROOT / "scripts" / "page_extras.py",
+    ROOT / "scripts" / "build_flank.py",
+    ROOT / "scripts" / "flank_crypto.py",
+)
+
+
+def _build_stamp() -> float:
+    """Newest mtime across the build and the modules it imports."""
+    paths = (_BUILD_PATH,) + _HELPER_PATHS
+    try:
+        return max(p.stat().st_mtime for p in paths if p.exists())
+    except OSError:
+        return 0.0
+
+
+_BUILD_MTIME = _build_stamp()
 
 
 def _refresh_build_module() -> None:
     global site_build, _BUILD_MTIME
-    try:
-        mtime = _BUILD_PATH.stat().st_mtime
-    except OSError:
-        return
+    mtime = _build_stamp()
     if mtime == _BUILD_MTIME:
         return
+    # build.py imports page_extras, and build_flank imports flank_crypto.
+    # Dropping them from sys.modules is what makes a change to any of those
+    # files visible without restarting the builder.
+    for name in ("page_extras", "build_flank", "flank_crypto"):
+        sys.modules.pop(name, None)
     try:
         # Execute the file rather than importlib.reload: reload can reuse a
         # stale .pyc when two edits land inside the same second, which is
@@ -68,8 +87,10 @@ def _refresh_build_module() -> None:
         spec.loader.exec_module(module)
         site_build = module
         _BUILD_MTIME = mtime
-    except Exception:
-        pass  # a half-written file; the next request will try again
+    except Exception as exc:
+        # A half-written file is the normal case; say why so a real import
+        # failure is not mistaken for "the edit did nothing".
+        print(f"builder: build reload failed: {exc}", file=sys.stderr)
 
 
 # Serializes the read-modify-write mutating endpoints. The server is
@@ -542,6 +563,27 @@ EDITOR_CSS = site_build.CSS + r'''
     text-transform:uppercase;color:#29447a}
   /* Keep the editable source markup out of the visual canvas. */
   #canvas .evsrc{display:none}
+  /* Generated blocks: the editor draws a labelled stand-in instead of the
+     raw [marker] text, and bodyForSave() puts the marker back. */
+  #canvas .gen-preview{
+    border:1px solid var(--rule);border-left:3px solid var(--gold);
+    border-radius:6px;background:var(--paper2);color:var(--ink2);
+    padding:10px 12px;margin:14px 0;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+  }
+  #canvas .gen-preview .gen-kicker{
+    display:block;font:600 9px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);
+  }
+  #canvas .gen-preview strong{
+    display:block;margin:2px 0 3px;color:var(--ink);
+    font:600 13.5px "Helvetica Neue",Arial,sans-serif;
+  }
+  #canvas .gen-preview .gen-note{
+    display:block;color:var(--muted);
+    font:12.5px/1.5 Georgia,"Times New Roman",serif;
+  }
+  .editing #canvas .gen-preview{outline:2px dashed #1c4fd8;outline-offset:4px}
   .evcal-label{font:600 15px "Helvetica Neue",Arial,sans-serif;color:var(--ink)}
   .editing .evcal .ev-day{cursor:pointer}
   .editing .evcal .ev-day:hover{transform:scale(1.06);z-index:2}
@@ -1578,6 +1620,7 @@ async function restoreDraft(){
   if (choice === "later") return false;
   if (choice === "discard") { clearDraft(SLUG); return false; }
   canvas.innerHTML = draft.body; selImg = null; replaceTarget = null;
+  renderGeneratedMarkers();
   if (draft.form && typeof draft.form === "object") FORM = Object.assign({}, FORM, draft.form);
   const siteSettingsCurrent = !!draft.siteBase && draft.siteBase === serverSiteSnapshot;
   if (draft.site && siteSettingsCurrent) SITE = Object.assign({}, SITE, draft.site);
@@ -2288,15 +2331,68 @@ function decorateFormMarker(){
   if (!current || !current.form) return;
   renderFormBlock();
 }
+/* Generated blocks (Financials charts, live GitHub strips, Giscus-ting).
+   The raw markers are for scripts/build.py, not for the person editing.
+   Draw a clear stand-in here; bodyForSave() swaps the marker back. */
+function generatedMarkerInfo(node){
+  if (!node || node.children.length) return null;
+  const text = (node.textContent || "").trim();
+  if (text === "[flank-finance]") return {kind: "finance", marker: text};
+  if (text === "[giscus]") return {kind: "giscus", marker: text};
+  const repoPrefix = "[github-stats:";
+  if (text.indexOf(repoPrefix) === 0 && text.slice(-1) === "]") {
+    const pieces = text.slice(repoPrefix.length, -1).split("|");
+    const repo = pieces.shift().trim();
+    if (repo && repo.split("/").length === 2) {
+      const label = (pieces.join("|") || "Open source").trim().slice(0, 60);
+      return {kind: "repo", repo: repo, label: label || "Open source", marker: text};
+    }
+  }
+  return null;
+}
+function generatedPreview(info){
+  const box = document.createElement("div");
+  box.className = "gen-preview gen-" + info.kind;
+  box.setAttribute("data-generated-marker", info.marker);
+  box.contentEditable = "false";
+  const kicker = document.createElement("span");
+  kicker.className = "gen-kicker";
+  kicker.textContent = "Generated block";
+  const title = document.createElement("strong");
+  const note = document.createElement("span");
+  note.className = "gen-note";
+  if (info.kind === "finance") {
+    title.textContent = "The ledger at a glance";
+    note.textContent = "Balance and monthly charts, the month filter and the running totals are generated from The Flank ledger when the site is built. Use Preview for the exact published view.";
+  } else if (info.kind === "giscus") {
+    title.textContent = "Giscus-ting forum";
+    note.textContent = "The GitHub Discussions conversation loads here on the published page. Use Preview for the live forum.";
+  } else {
+    title.textContent = "Live GitHub repository: " + info.repo;
+    note.textContent = (info.label ? info.label + " — " : "") +
+      "stars, open issues, latest commit and newest release load from GitHub on the published page. Use Preview for the live strip.";
+  }
+  box.appendChild(kicker);
+  box.appendChild(title);
+  box.appendChild(note);
+  return box;
+}
+function renderGeneratedMarkers(){
+  Array.from(canvas.querySelectorAll("p")).forEach(node => {
+    const info = generatedMarkerInfo(node);
+    if (info) node.replaceWith(generatedPreview(info));
+  });
+}
 function syncFormMarker(){
   const current = SITE.pages.find(p => p.slug === SLUG);
-  if (current && current.form) { decorateFormMarker(); return; }
+  if (current && current.form) { decorateFormMarker(); renderGeneratedMarkers(); return; }
   const existing = canvas.querySelector('[data-form-marker="contact"]');
   const marker = existing || Array.from(canvas.querySelectorAll("p")).find(el => el.textContent.trim() === "[contact form]");
   if (marker) {
     marker.dataset.formMarker = "contact"; marker.classList.add("form-placeholder");
     marker.contentEditable = "false"; marker.textContent = "Contact form is off — enable it in Page settings to publish it";
   }
+  renderGeneratedMarkers();
 }
 function bodyForSave(){
   const copy = canvas.cloneNode(true);
@@ -2308,6 +2404,11 @@ function bodyForSave(){
   });
   Array.from(copy.querySelectorAll("[data-form-block]")).forEach(node => {
     if (page && page.form) node.replaceWith(markerPara("[contact form]"));
+    else node.remove();
+  });
+  Array.from(copy.querySelectorAll("[data-generated-marker]")).forEach(node => {
+    const marker = node.getAttribute("data-generated-marker") || "";
+    if (marker) node.replaceWith(markerPara(marker));
     else node.remove();
   });
   // any marker paragraph that is still lying around
@@ -4489,6 +4590,7 @@ ensureExitBlock();
 histReset();
 renderCalBlock();
 renderFormBlock();
+renderGeneratedMarkers();
 async function initEditor(){
   let last = null;
   try { last = localStorage.getItem(LAST_PAGE_KEY); } catch (e) {}
@@ -4645,6 +4747,26 @@ class Handler(BaseHTTPRequestHandler):
                         if p.is_file():
                             return self._send(200, p.read_bytes())
                 return self._json(404, {"error": "not found"})
+            elif url.path.startswith("/flank/"):
+                # Static files owned by the hidden ledger, chiefly the
+                # vendored Chart.js runtime. The .html pages are handled
+                # above; this keeps the ledger's chart working in Preview.
+                rel = url.path.lstrip("/")
+                if not re.fullmatch(r"flank/[A-Za-z0-9._-]+", rel):
+                    return self._json(404, {"error": "not found"})
+                p = SITE / rel
+                if not p.is_file():
+                    try:
+                        rebuild()
+                    except Exception as e:
+                        return self._json(500, {"error": str(e)[:300]})
+                if not p.is_file():
+                    return self._json(404, {"error": "not found"})
+                ctype = {".js": "text/javascript; charset=utf-8",
+                         ".css": "text/css; charset=utf-8",
+                         ".png": "image/png"}.get(p.suffix.lower(),
+                                                  "application/octet-stream")
+                return self._send(200, p.read_bytes(), ctype)
             elif url.path.startswith("/assets/") or url.path in ("/logo.png", "/favicon.png", "/favicon.ico"):
                 rel = url.path.lstrip("/")
                 if rel == "favicon.ico":
