@@ -39,6 +39,7 @@ DEFAULT_DATA = ROOT / "data" / "site.json"
 DEFAULT_PAGES = ROOT / "data" / "pages"
 DEFAULT_LOGO = ROOT / "assets" / "logo.png"
 DEFAULT_FAVICON = ROOT / "assets" / "favicon.png"
+DEFAULT_TOUCH_ICON = ROOT / "assets" / "apple-touch-icon.png"
 DEFAULT_UPLOADS = ROOT / "assets" / "uploads"
 DEFAULT_OUT = ROOT / "site"
 
@@ -1501,7 +1502,7 @@ LD_ORG = (
                         "Flamingo & Cactus Group",
                     ],
                     "url": f"https://{CUSTOM_DOMAIN}/",
-                    "logo": f"https://flamingoandcactus.com/favicon.png?v=3ecf65fcdabd",
+                    "logo": "https://flamingoandcactus.com/apple-touch-icon.png",
                     "description": "The website dedicated to the Flamingo and Cactus group. Everything Flamingo and Cactus can be found here.",
                     "email": "flamingoncactusgroup@gmail.com",
                     "telephone": "+1-607-205-6663",
@@ -2515,7 +2516,8 @@ POLLS_CSS = """<style>
 .pb-num{flex:0 0 auto;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);white-space:nowrap}
 .poll-total{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0}
 .poll-counts b{font-size:15px}
-.poll-form iframe{width:100%;max-width:640px;height:620px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+.poll-form iframe{width:100%;max-width:640px;height:840px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+@media (max-width:640px){.poll-form iframe{height:980px}}
 .poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
 .poll-links a{display:inline-block;margin:0 10px 6px 0}
 .pc-item{padding:8px 0;border-bottom:1px solid var(--rule2);margin:0;font-size:15px}
@@ -3133,6 +3135,18 @@ FINANCE_VERSION = _fc_hashlib.sha256(
 SITE_JS_TAG = f'<script src="assets/site.js?v={ASSET_VERSION}"></script>'
 
 
+def asset_uri(name: str, path: Path) -> str:
+    """A local asset name with a content stamp, so a changed icon is not cached."""
+    try:
+        return f"{name}?v={_fc_hashlib.sha256(path.read_bytes()).hexdigest()[:10]}"
+    except OSError:
+        return name
+
+
+FAVICON_URI = asset_uri("favicon.png", DEFAULT_FAVICON)
+TOUCH_URI = asset_uri("apple-touch-icon.png", DEFAULT_TOUCH_ICON)
+
+
 def css_link(prefix: str = "") -> str:
     return f'<link rel="stylesheet" href="{prefix}assets/site.css?v={ASSET_VERSION}">'
 
@@ -3169,11 +3183,22 @@ def picture_fallbacks(fragment: str, names=None) -> str:
     return re.sub(r"<img\b[^>]*>", wrap, fragment)
 
 
-def lazy_images(fragment: str) -> str:
+def lazy_images(fragment: str, eager_first: bool = False) -> str:
     """Page pictures load only when scrolled near and decode off the main
-    thread. The logo is outside the page body, so it still loads at once."""
-    return re.sub(r"<img (?![^>]*\bloading=)",
-                  '<img loading="lazy" decoding="async" ', fragment)
+    thread. The first image on a page is the one most likely to be the LCP,
+    so it loads eagerly with high priority instead of waiting for layout."""
+    seen = [False]
+
+    def sub(match):
+        tag = match.group(0)
+        if "loading=" in tag:
+            return tag
+        if eager_first and not seen[0]:
+            seen[0] = True
+            return tag.replace("<img ", '<img fetchpriority="high" decoding="async" ', 1)
+        return tag.replace("<img ", '<img loading="lazy" decoding="async" ', 1)
+
+    return re.sub(r"<img\b[^>]*>", sub, fragment)
 
 
 _IMAGE_SIZES: dict = {}
@@ -3268,6 +3293,11 @@ def write_assets(out_dir: Path, logo_path: Path) -> str:
     else:
         print("warning: assets/chart.umd.min.js is missing; Financials charts will not draw",
               file=sys.stderr)
+    if DEFAULT_TOUCH_ICON.is_file():
+        shutil.copyfile(DEFAULT_TOUCH_ICON, out_dir / "apple-touch-icon.png")
+    else:
+        print("warning: assets/apple-touch-icon.png is missing; link previews fall back",
+              file=sys.stderr)
     raw = logo_path.read_bytes()
     if raw[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError(f"{logo_path} is not a PNG file")
@@ -3283,7 +3313,11 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
                 cal_cfg: dict | None = None,
                 polls_doc: dict | None = None,
                 finance_html: str = "",
-                giscus_html: str = "") -> str:
+                giscus_html: str = "",
+                favicon_uri: str = "",
+                touch_icon_uri: str = "") -> str:
+    favicon_uri = favicon_uri or FAVICON_URI
+    touch_icon_uri = touch_icon_uri or TOUCH_URI
     page_meta = next((p for p in pages if p["slug"] == slug), {})
     home_title = re.sub(r"\s+&\s+", " AND ", title) if " & " in title else title
     sub_title = re.sub(r"\s+(?:AND|and)\s+", " & ", title) if re.search(r"\b(?:AND|and)\b", title) else title
@@ -3311,7 +3345,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
     placed, poll_script = place_polls(placed, polls_doc)
     placed, set_script = place_settings(placed, theme)
     placed = page_extras.inject_blocks(placed, slug, finance_html, giscus_html)
-    placed = picture_fallbacks(lazy_images(placed))
+    placed = picture_fallbacks(lazy_images(placed, eager_first=True))
     placed = size_images(placed)
     # The page's own name is the <h1>. The home page already carries the
     # site name as its heading in the masthead; every other page gets a
@@ -3355,12 +3389,13 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         f"<title>{html.escape(page_title)}</title>\n"
         f'<meta name="description" content="{html.escape(desc, quote=True)}">\n'
         f'<link rel="canonical" href="{canon}">\n'
-        f'<link rel="icon" type="image/png" href="favicon.png?v=3ecf65fcdabd">\n'
+        f'<link rel="icon" type="image/png" href="{favicon_uri}">\n'
+        f'<link rel="apple-touch-icon" sizes="512x512" href="{touch_icon_uri}">\n'
         f'<meta property="og:title" content="{html.escape(page_title, quote=True)}">\n'
         f'<meta property="og:description" content="{html.escape(desc, quote=True)}">\n'
         f'<meta property="og:type" content="website">\n'
         f'<meta property="og:url" content="{canon}">\n'
-        f'<meta property="og:image" content="https://{CUSTOM_DOMAIN}/favicon.png">\n'
+        f'<meta property="og:image" content="https://{CUSTOM_DOMAIN}/{touch_icon_uri}">\n'
         '<meta name="twitter:card" content="summary_large_image">\n'
         + LD_ORG + "\n"
         + css_link() + "\n"
@@ -3626,6 +3661,8 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
     cal_cfg = load_calendar_config(data_path.parent)
     out_dir.mkdir(parents=True, exist_ok=True)
     logo_uri = write_assets(out_dir, logo_path)
+    favicon_uri = asset_uri("favicon.png", favicon_path)
+    touch_uri = asset_uri("apple-touch-icon.png", DEFAULT_TOUCH_ICON)
 
     # The charts and the forum are generated once per build, not stored in
     # data/pages/. The ledger stays the only source: add a transaction on
@@ -3667,7 +3704,9 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
                         form_html=form_html, cal_cfg=cal_cfg,
                         polls_doc=load_polls(pages_dir.parent),
                         finance_html=finance_html,
-                        giscus_html=giscus_html))
+                        giscus_html=giscus_html,
+                        favicon_uri=favicon_uri,
+                        touch_icon_uri=touch_uri))
     nf = (NOTFOUND.replace("__CSSLINK__", css_link("/"))
           .replace("__CSS__", safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", "/" + logo_uri)
@@ -3972,6 +4011,12 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect('class="sitenav"' in nf_html and 'href="/products.html"' in nf_html,
                "404 page carries the normal menu, with absolute links (it is served at any path)")
         expect((tmp / "favicon.png").is_file(), "favicon.png built")
+        expect((tmp / "apple-touch-icon.png").is_file(), "apple-touch-icon.png built")
+        expect(f'rel="icon" type="image/png" href="{FAVICON_URI}"' in idx,
+               "pages use the transparent favicon")
+        expect('rel="apple-touch-icon"' in idx and
+               f'property="og:image" content="https://flamingoandcactus.com/{TOUCH_URI}"' in idx,
+               "link previews use the orange apple-touch icon, not the tab favicon")
         expect((tmp / ".nojekyll").is_file(), ".nojekyll built")
         expect((tmp / "CNAME").is_file(), "CNAME built")
         expect((tmp / "uploads").is_dir(), "site/uploads/ exists in build")

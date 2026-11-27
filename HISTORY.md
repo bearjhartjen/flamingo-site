@@ -691,3 +691,20 @@ something a visitor can poke at.
 - **The form loads eagerly and the explanation comes first**, then the
   vote question, so the poll reads as a product idea before it asks for
   a vote.
+- **The forms no longer scroll inside their own boxes.** At 640px the
+  Google Form content is 760px tall; at phone width it is 916px. The
+  iframe is now 840px on desktop and 980px on phones, so Yes, No, the
+  Comment box and Submit are all visible without an inner scrollbar.
+
+### Favicon vs link preview (November 2026)
+
+- **The browser-tab favicon is transparent again.** The 1254×1254
+  orange image had replaced it and made every tab look like a solid
+  orange tile. The transparent 180×180 logo is back at
+  `assets/favicon.png`.
+- **The orange/yellow version is still the link preview.** It is now
+  `assets/apple-touch-icon.png` (512×512), and pages point both
+  `og:image` and `rel="apple-touch-icon"` at it. iMessage gets the
+  orange artwork; the tab stays clean.
+- **Both icons are content-stamped** in the page head, so a browser or
+  iMessage cache cannot keep serving the old icon after a change.

@@ -67,6 +67,12 @@ fi
 if [ -f "$ROOT/assets/logo.png" ]; then
   git add -- assets/logo.png
 fi
+if [ -f "$ROOT/assets/favicon.png" ]; then
+  git add -- assets/favicon.png
+fi
+if [ -f "$ROOT/assets/apple-touch-icon.png" ]; then
+  git add -- assets/apple-touch-icon.png
+fi
 # The Financials dashboard needs these two source files in every checkout:
 # the vendored chart runtime and the generator that writes the chart data.
 if [ -f "$ROOT/assets/chart.umd.min.js" ]; then

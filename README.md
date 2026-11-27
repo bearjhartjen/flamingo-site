@@ -32,10 +32,14 @@ decision: what we changed and why.
   and flags (`hidden`, `badge`, `form`).
 - `data/pages/<name>.html` — one file per page, containing plain HTML.
 - `assets/logo.png` — the masthead picture, published once as `site/logo.png`.
+- `assets/favicon.png` — the transparent browser-tab icon.
+- `assets/apple-touch-icon.png` — the orange link-preview / home-screen icon;
+  `og:image` and `rel="apple-touch-icon"` use this, never the tab favicon.
 - `assets/uploads/` — pictures used by pages, copied to `site/uploads/`.
 - `site/` — the finished website: one `.html` file per page, `404.html`,
-  `favicon.png`, `logo.png`, `assets/site.css`, `assets/site.js`
-  (shared by every page), `CNAME`, `robots.txt`, and `sitemap.xml`.
+  `favicon.png`, `apple-touch-icon.png`, `logo.png`, `assets/site.css`,
+  `assets/site.js` (shared by every page), `CNAME`, `robots.txt`, and
+  `sitemap.xml`.
 
 Every build runs the page bodies through an HTML sanitizer. Only a fixed
 allowlist of tags survives (paragraphs, headings, lists, links, images,
