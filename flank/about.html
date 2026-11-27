@@ -80,28 +80,30 @@
   }
   .stats b{color:var(--ink2);font-weight:600}
 
-  /* ---------- chart ---------- */
-  .chartwrap{position:relative;margin:6px 0 4px;overflow-x:auto}
-  svg.chart{display:block;width:100%;min-width:640px}
-  .candle-up{fill:var(--upfill);stroke:var(--up);stroke-width:1.4}
-  .candle-dn{fill:var(--down);stroke:var(--down);stroke-width:1.4}
-  .wick{stroke:#55585c;stroke-width:1}
-  .gl{stroke:var(--rule2);stroke-width:1}
-  .avgline{stroke:#1c4fd8;stroke-width:1.6;stroke-dasharray:7 5}
-  .mavg{fill:none;stroke:#1c4fd8;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
-  .mavgdot{fill:#1c4fd8}
-  .avglbl{font:11px "Helvetica Neue",Arial,sans-serif;fill:#1c4fd8;font-weight:600;paint-order:stroke;stroke:#ffffff;stroke-width:3px}
-  .leader{stroke:var(--ink);stroke-width:1}
-  .axlbl{font:11px "Helvetica Neue",Arial,sans-serif;fill:var(--muted)}
-  .axlbl.b{font-weight:600;fill:var(--ink)}
-  .tooltip{
-    position:absolute;pointer-events:none;background:#fff;border:1px solid var(--ink);
-    padding:8px 11px;font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
-    box-shadow:2px 2px 0 rgba(0,0,0,.14);min-width:168px;opacity:0;transition:opacity .08s;
+  /* ---------- charts (Chart.js) ---------- */
+  .chartblock{margin:4px 0 18px}
+  .charthead{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    margin:0 0 7px;font:11px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);
   }
-  .tooltip .tt-t{font-weight:700;letter-spacing:.4px;text-transform:uppercase;font-size:11px;color:var(--muted);margin-bottom:4px}
-  .tooltip .tt-r{display:flex;justify-content:space-between;gap:18px}
-  .tooltip .tt-r span:last-child{font-variant-numeric:tabular-nums}
+  .charthead b{
+    font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;
+    text-transform:none;color:var(--ink2);white-space:nowrap;
+  }
+  .chartcanvas{position:relative;height:320px}
+  .chartcanvas.short{height:230px}
+  .chartfallback{
+    margin:0 0 16px;padding:10px 12px;border:1px solid var(--rule);
+    background:var(--paper2);font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;
+    color:var(--muted);text-align:center;
+  }
+  .chartfallback[hidden]{display:none}
+  @media (max-width:760px){
+    .chartcanvas{height:250px}
+    .chartcanvas.short{height:210px}
+    .charthead{font-size:10px;letter-spacing:1px}
+  }
   .caption{font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;margin:6px 0 26px}
   .note{
     font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;color:var(--muted);
@@ -213,7 +215,7 @@
   @media print{
     body{background:#fff;font-size:11pt}
     .page{max-width:none;padding:0}
-    .toolbar,.chartwrap,.caption,.btn{display:none}
+    .toolbar,.chartblock,.chartfallback,.caption,.btn{display:none}
     thead th{position:static}
     tbody tr{break-inside:avoid}
   }
@@ -252,17 +254,18 @@
     the ledger changes, the markdown is edited and the build is re-run. It is
     plain, dependency-free Python &mdash; no packages to install.</p>
 
-    <h2>What the graph plots</h2>
+    <h2>What the charts plot</h2>
     <p>The plotted figures are <b>US dollar holdings only</b>. There is one
-    candlestick per transaction &mdash; hollow when the balance rose, solid
-    when it fell &mdash; and the blue line is a moving average of the running
+    point per transaction &mdash; hollow when the balance rose, solid when it
+    fell &mdash; and the blue line is a moving average of the running
     balance over the <b>ten calendar days</b> ending on each transaction&rsquo;s
     date. The window is counted in days rather than in transactions, so a busy
-    week and a quiet one weigh the same. Silver is a physical reserve, tracked
+    week and a quiet one weigh the same. A second chart groups the same ledger
+    by month and shows money in and money out. Silver is a physical reserve, tracked
     separately in grams and ounces in the ledger; it is not included in the
-    plotted line, the moving average, or the headline totals. The ledger page
+    plotted lines, the moving average, or the headline totals. The ledger page
     shows an approximate dollar value for it under Silver Holdings, figured
-    at the live spot price (troy ounces at XAG/USD) for reference. Where a candle jumps by more than the recorded deposit or
+    at the live spot price (troy ounces at XAG/USD) for reference. Where a point jumps by more than the recorded deposit or
     withdrawal, its tooltip flags the difference as <b>Unrecorded</b>.</p>
 
     <h2>Where the live silver price comes from</h2>
@@ -275,7 +278,7 @@
     page shows the last price it saw and says so.</p>
 
     <h2>The rest of the page</h2>
-    <p>Beneath the chart is the full ledger as a table, newest first. The
+    <p>Beneath the charts is the full ledger as a table, newest first. The
     search box filters by date, amount, or note text, and the dropdown
     narrows the list to deposits, withdrawals, or a single year. Everything
     on the site is plain static HTML &mdash; the logo and the ledger data are

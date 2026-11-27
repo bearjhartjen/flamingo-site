@@ -80,28 +80,30 @@
   }
   .stats b{color:var(--ink2);font-weight:600}
 
-  /* ---------- chart ---------- */
-  .chartwrap{position:relative;margin:6px 0 4px;overflow-x:auto}
-  svg.chart{display:block;width:100%;min-width:640px}
-  .candle-up{fill:var(--upfill);stroke:var(--up);stroke-width:1.4}
-  .candle-dn{fill:var(--down);stroke:var(--down);stroke-width:1.4}
-  .wick{stroke:#55585c;stroke-width:1}
-  .gl{stroke:var(--rule2);stroke-width:1}
-  .avgline{stroke:#1c4fd8;stroke-width:1.6;stroke-dasharray:7 5}
-  .mavg{fill:none;stroke:#1c4fd8;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
-  .mavgdot{fill:#1c4fd8}
-  .avglbl{font:11px "Helvetica Neue",Arial,sans-serif;fill:#1c4fd8;font-weight:600;paint-order:stroke;stroke:#ffffff;stroke-width:3px}
-  .leader{stroke:var(--ink);stroke-width:1}
-  .axlbl{font:11px "Helvetica Neue",Arial,sans-serif;fill:var(--muted)}
-  .axlbl.b{font-weight:600;fill:var(--ink)}
-  .tooltip{
-    position:absolute;pointer-events:none;background:#fff;border:1px solid var(--ink);
-    padding:8px 11px;font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;color:var(--ink);
-    box-shadow:2px 2px 0 rgba(0,0,0,.14);min-width:168px;opacity:0;transition:opacity .08s;
+  /* ---------- charts (Chart.js) ---------- */
+  .chartblock{margin:4px 0 18px}
+  .charthead{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    margin:0 0 7px;font:11px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);
   }
-  .tooltip .tt-t{font-weight:700;letter-spacing:.4px;text-transform:uppercase;font-size:11px;color:var(--muted);margin-bottom:4px}
-  .tooltip .tt-r{display:flex;justify-content:space-between;gap:18px}
-  .tooltip .tt-r span:last-child{font-variant-numeric:tabular-nums}
+  .charthead b{
+    font:600 12px "Helvetica Neue",Arial,sans-serif;letter-spacing:.4px;
+    text-transform:none;color:var(--ink2);white-space:nowrap;
+  }
+  .chartcanvas{position:relative;height:320px}
+  .chartcanvas.short{height:230px}
+  .chartfallback{
+    margin:0 0 16px;padding:10px 12px;border:1px solid var(--rule);
+    background:var(--paper2);font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;
+    color:var(--muted);text-align:center;
+  }
+  .chartfallback[hidden]{display:none}
+  @media (max-width:760px){
+    .chartcanvas{height:250px}
+    .chartcanvas.short{height:210px}
+    .charthead{font-size:10px;letter-spacing:1px}
+  }
   .caption{font:12.5px "Helvetica Neue",Arial,sans-serif;color:var(--faint);text-align:center;margin:6px 0 26px}
   .note{
     font:12.5px/1.5 "Helvetica Neue",Arial,sans-serif;color:var(--muted);
@@ -213,7 +215,7 @@
   @media print{
     body{background:#fff;font-size:11pt}
     .page{max-width:none;padding:0}
-    .toolbar,.chartwrap,.caption,.btn{display:none}
+    .toolbar,.chartblock,.chartfallback,.caption,.btn{display:none}
     thead th{position:static}
     tbody tr{break-inside:avoid}
   }
@@ -251,17 +253,26 @@
   <div class="stats" id="stats"></div>
   <div class="hr thin"></div>
 
-  <div class="chartwrap">
-    <svg class="chart" id="chart"></svg>
-    <div class="tooltip" id="tip"></div>
+  <div class="chartblock">
+    <div class="charthead"><span>Balance over time</span><b id="ma-note">10-day avg &mdash;</b></div>
+    <div class="chartcanvas">
+      <canvas id="chart-balance" role="img" aria-label="Line chart of the Flank balance after every transaction, with the 10-day moving average">Your browser cannot draw charts. The ledger table below has every transaction.</canvas>
+    </div>
   </div>
-  <p class="note"><b>Note:</b> this graph tracks <b>US dollar holdings</b> only. The silver holdings
+  <div class="chartblock">
+    <div class="charthead"><span>Month by month</span><span>Money in vs money out</span></div>
+    <div class="chartcanvas short">
+      <canvas id="chart-monthly" role="img" aria-label="Bar chart of deposits and withdrawals for every month in the ledger">Your browser cannot draw charts. The ledger table below has every transaction.</canvas>
+    </div>
+  </div>
+  <p class="chartfallback" id="chartfallback" hidden>Charts could not load. The ledger table below has every transaction.</p>
+  <p class="note"><b>Note:</b> these charts track <b>US dollar holdings</b> only. The silver holdings
   (<span id="note-silver">200g, 2.6oz</span>) are a physical reserve held separately &mdash; not
-  included in the plotted line, the moving average, or the totals above. An approximate
+  included in the plotted lines, the moving average, or the totals above. An approximate
   dollar value at the live spot price is shown under Silver Holdings for reference.</p>
   <p class="caption">
-    One candle per transaction &mdash; hollow for a transaction that left the balance higher, solid for one that left it lower.
-    Hover a candle for detail.
+    One point per transaction &mdash; hollow when the balance rose, solid when it fell.
+    The blue line is the 10-day moving average. Hover any point for detail.
   </p>
   <div class="legend">
     <span><span class="sw" style="background:#ffffff;border:1.4px solid var(--up)"></span>Balance rose</span>
@@ -282,7 +293,7 @@
       <option value="2025">Year 2025</option>
     </select>
     <button class="btn" id="print">Print</button>
-    <span class="count" id="count">78 shown of 78</span>
+    <span class="count" id="count">81 shown of 81</span>
   </div>
 
   <div class="tablewrap">
@@ -310,8 +321,9 @@
   </div>
 </div>
 
+<script src="chart.umd.min.js"></script>
 <script>
-const TX = [{"n":1,"withdraw":166.3,"withdrawText":"$166.30","deposit":0.0,"depositText":"$0.00","balance":4.78,"balanceText":"$4.78","silver":"","notes":"This withdrawal was from EBay to work on unit 1 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-03","dateText":"Oct 03, 2025","empty":false,"private":false},{"n":2,"withdraw":0.0,"withdrawText":"$0.00","deposit":578.4,"depositText":"$578.40","balance":578.4,"balanceText":"$578.40","silver":"","notes":"This deposit was a donation by Bear J. Hartjen, and was authorized by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":3,"withdraw":323.5,"withdrawText":"$323.50","deposit":0.0,"depositText":"$0.00","balance":254.9,"balanceText":"$254.90","silver":"","notes":"This withdrawal was from Amazon to work on Unit 1 and 2 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":4,"withdraw":50.14,"withdrawText":"$50.14","deposit":0.0,"depositText":"$0.00","balance":204.76,"balanceText":"$204.76","silver":"","notes":"This withdrawal was from Amazon to work on Unit 1 and 2 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":5,"withdraw":33.68,"withdrawText":"$33.68","deposit":0.0,"depositText":"$0.00","balance":171.08,"balanceText":"$171.08","silver":"","notes":"This withdrawal was from Amazon to work on Unit 1 and 2 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":6,"withdraw":0.0,"withdrawText":"$0.00","deposit":400.0,"depositText":"$400.00","balance":404.78,"balanceText":"$404.78","silver":"","notes":"","enc":{"i":"9BnchK6L+WQbfw12z1BBFA==","c":"M91Z5eOTCSFt2VxpMbOKcaT4is9pS7M8+ncIGskD8I1c6dx4wK4nAIEng+42jwtHkLVGJuzTmsZNH8rftIVQpMi07QDJd1rm3BH8Ps679KZLLd0yWWqkJ2xsbkCX2BMkTIB6OrTzkmrT7+aGwdkM4gqoA77uhciUNwKGBdm81kE="},"nlen":113,"date":"2025-10-19","dateText":"Oct 19, 2025","empty":false,"private":true},{"n":7,"withdraw":71.99,"withdrawText":"$71.99","deposit":0.0,"depositText":"$0.00","balance":332.79,"balanceText":"$332.79","silver":"","notes":"This withdrawal was made from Amazon purchasing the finishing components to unit two. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-24","dateText":"Oct 24, 2025","empty":false,"private":false},{"n":8,"withdraw":71.6,"withdrawText":"$71.60","deposit":0.0,"depositText":"$0.00","balance":261.19,"balanceText":"$261.19","silver":"","notes":"This purchase from EBay was made for energy storage on unit 2. This withdrawal was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-24","dateText":"Oct 24, 2025","empty":false,"private":false},{"n":9,"withdraw":0.0,"withdrawText":"$0.00","deposit":38.92,"depositText":"$38.92","balance":300.11,"balanceText":"$300.11","silver":"","notes":"This transaction was made as a donation by Bear J. Hartjen. This deposit was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-24","dateText":"Oct 24, 2025","empty":false,"private":false},{"n":10,"withdraw":298.29,"withdrawText":"$298.29","deposit":0.0,"depositText":"$0.00","balance":1.82,"balanceText":"$1.82","silver":"","notes":"This transaction was made due to an \u201coff track mindset\u201d on the part of Bear J. Hartjen... spent all this money on random things he didn\u2019t need. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":null,"dateText":"Unknown","empty":false,"private":false},{"n":11,"withdraw":0.82,"withdrawText":"$0.82","deposit":0.0,"depositText":"$0.00","balance":1.0,"balanceText":"$1.00","silver":"","notes":"The 82 cent balance was making accounting difficult as all assets were physical. This transaction was made and approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-11-27","dateText":"Nov 27, 2025","empty":false,"private":false},{"n":12,"withdraw":0.0,"withdrawText":"$0.00","deposit":453.0,"depositText":"$453.00","balance":454.0,"balanceText":"$454.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by dearest Bear J. Hartjen, some silver was included as an investment fund for the Flamingo and Cactus group.","enc":null,"nlen":0,"date":"2025-12-22","dateText":"Dec 22, 2025","empty":false,"private":false},{"n":13,"withdraw":0.0,"withdrawText":"$0.00","deposit":10.0,"depositText":"$10.00","balance":464.0,"balanceText":"$464.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-12-24","dateText":"Dec 24, 2025","empty":false,"private":false},{"n":14,"withdraw":0.0,"withdrawText":"$0.00","deposit":50.0,"depositText":"$50.00","balance":514.0,"balanceText":"$514.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-01-04","dateText":"Jan 04, 2026","empty":false,"private":false},{"n":15,"withdraw":0.0,"withdrawText":"$0.00","deposit":5.0,"depositText":"$5.00","balance":519.0,"balanceText":"$519.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-01-14","dateText":"Jan 14, 2026","empty":false,"private":false},{"n":16,"withdraw":0.0,"withdrawText":"$0.00","deposit":1.0,"depositText":"$1.00","balance":520.0,"balanceText":"$520.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-01-21","dateText":"Jan 21, 2026","empty":false,"private":false},{"n":17,"withdraw":0.0,"withdrawText":"$0.00","deposit":40.0,"depositText":"$40.00","balance":560.0,"balanceText":"$560.00","silver":"200g, 2.1oz","notes":"Deposit.","enc":null,"nlen":0,"date":"2026-01-25","dateText":"Jan 25, 2026","empty":false,"private":false},{"n":18,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":1010.0,"balanceText":"$1,010.00","silver":"200g, 2.1oz","notes":"","enc":{"i":"7G+TK86ZVA5lHMicWJvacA==","c":"oRZP0k+xIHmOmpPxa7I4TI0M1cJKl7KAV7ojPeLEuRyC58m5eWRsc9my1IMllAjHhY/pSDuJuMONLljfuFrsdW5lUwWZQqYgNjZp8uDoM7Y="},"nlen":64,"date":"2026-01-31","dateText":"Jan 31, 2026","empty":false,"private":true},{"n":19,"withdraw":0.0,"withdrawText":"$0.00","deposit":451.71,"depositText":"$451.71","balance":1461.71,"balanceText":"$1,461.71","silver":"200g, 2.1oz","notes":"Transaction was made and approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-02-21","dateText":"Feb 21, 2026","empty":false,"private":false},{"n":20,"withdraw":0.0,"withdrawText":"$0.00","deposit":null,"depositText":"0.5oz silver","balance":1461.71,"balanceText":"$1,461.71","silver":"200g, 2.6oz","notes":"Deposit of half an ounce of silver.","enc":null,"nlen":0,"date":"2026-02-22","dateText":"Feb 22, 2026","empty":false,"private":false},{"n":21,"withdraw":0.0,"withdrawText":"$0.00","deposit":40.0,"depositText":"$40.00","balance":1501.71,"balanceText":"$1,501.71","silver":"200g, 2.6oz","notes":"Deposit.","enc":null,"nlen":0,"date":"2026-02-23","dateText":"Feb 23, 2026","empty":false,"private":false},{"n":22,"withdraw":0.0,"withdrawText":"$0.00","deposit":60.0,"depositText":"$60.00","balance":1561.71,"balanceText":"$1,561.71","silver":"200g, 2.6oz","notes":"","enc":{"i":"dFAcoeigcBBPApm3x0bx1A==","c":"HnPhNjJ4sUYCyeLeiv9S+B4cWNzOCMr1cKUnkNd/Bzjfe9jErW4m1oohh2AriE3Ur7WmbcqeIGVXNK6TNtE6AH7jO9DuJu5TBU9P+Sdp8G+GzFAEg3Jo5Xufd9C6renI1pvWlfVxwow1k/QDfnRSzP3HadHINA4vDlTPYybaur34KqGOrKBvGtaOTDWe8cpz"},"nlen":133,"date":"2026-02-25","dateText":"Feb 25, 2026","empty":false,"private":true},{"n":23,"withdraw":32.09,"withdrawText":"$32.09","deposit":0.0,"depositText":"$0.00","balance":1529.62,"balanceText":"$1,529.62","silver":"200g, 2.6oz","notes":"Lowe's: Paint and caulk for Units 2 and 3. Approved by BJH.","enc":null,"nlen":0,"date":"2026-02-25","dateText":"Feb 25, 2026","empty":false,"private":false},{"n":24,"withdraw":0.0,"withdrawText":"$0.00","deposit":175.0,"depositText":"$175.00","balance":1704.62,"balanceText":"$1,704.62","silver":"200g, 2.6oz","notes":"","enc":{"i":"RmSdyOKBKHlPMAoaMf5XRQ==","c":"9mckkWr5VTs2xkB8eYk6CA+rJY6VaFtKSgc6CL4MKN3kDcol5eN0QWU+DEMVGe9aSWf3pc+g0S1BhOpjWAObYlvd2xqv2Oqk1jdU1JozExE="},"nlen":64,"date":"2026-02-25","dateText":"Feb 25, 2026","empty":false,"private":true},{"n":25,"withdraw":0.0,"withdrawText":"$0.00","deposit":131.0,"depositText":"$131.00","balance":1835.62,"balanceText":"$1,835.62","silver":"200g, 2.6oz","notes":"","enc":{"i":"fN6HPzrGRBB9Mz5YrpWwnA==","c":"4qy/c0kfgxARi7fhSvmcVcul3n45at1vRwgFwhRiBIHOKTd/nR26AnHyQkcoJqTYklIrJjrV1pivXW7yqQXgvw=="},"nlen":52,"date":"2026-03-10","dateText":"Mar 10, 2026","empty":false,"private":true},{"n":26,"withdraw":0.0,"withdrawText":"$0.00","deposit":2.01,"depositText":"$2.01","balance":1837.63,"balanceText":"$1,837.63","silver":"200g, 2.6oz","notes":"Stabilization of the balance to represent Visions FCU certificate.","enc":null,"nlen":0,"date":"2026-03-13","dateText":"Mar 13, 2026","empty":false,"private":false},{"n":27,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":2287.63,"balanceText":"$2,287.63","silver":"200g, 2.6oz","notes":"","enc":{"i":"ilMstOdEVAvOMth3uLG3ow==","c":"PCDjTUAUjocN3jfs8AzrpiK3smtmgvYso60ed1sERUC5tKnT93sKWPmvOjqYvOcZ/mWRpAKsZtSZoigT0cvYCBEnhgujR7qmYnZualfUtIE="},"nlen":64,"date":"2026-03-18","dateText":"Mar 18, 2026","empty":false,"private":true},{"n":28,"withdraw":0.0,"withdrawText":"$0.00","deposit":1.0,"depositText":"$1.00","balance":2288.63,"balanceText":"$2,288.63","silver":"200g, 2.6oz","notes":"Deposit by BJH approved by BJH.","enc":null,"nlen":0,"date":"2026-04-01","dateText":"Apr 01, 2026","empty":false,"private":false},{"n":29,"withdraw":0.0,"withdrawText":"$0.00","deposit":6.12,"depositText":"$6.12","balance":2294.75,"balanceText":"$2,294.75","silver":"200g, 2.6oz","notes":"Monthly interest deposit from Visions FCU. Approved by BJH.","enc":null,"nlen":0,"date":"2026-04-01","dateText":"Apr 01, 2026","empty":false,"private":false},{"n":30,"withdraw":0.0,"withdrawText":"$0.00","deposit":60.0,"depositText":"$60.00","balance":2354.75,"balanceText":"$2,354.75","silver":"200g, 2.6oz","notes":"","enc":{"i":"JMIO7cfV2hibQSt2Lu5Itw==","c":"krJzWhXvpGvJKS4C3y5w6EXidoA/t+5tgRIImJiofzRTrPDs+o3geMZFfBtCROA4EgsszzPY522MbK5LlDemqNDrGyqm3MRrDOIv5yYpIMQ="},"nlen":67,"date":"2026-04-07","dateText":"Apr 07, 2026","empty":false,"private":true},{"n":31,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":2804.75,"balanceText":"$2,804.75","silver":"200g, 2.6oz","notes":"","enc":{"i":"iTpZUPlq/wRwA65gSPf2Tw==","c":"FoW7NFicHBcBWTws/XqJvDGJHdT63L5GeZ/bf2yYvsRCyrFOzQqtczXh3FPpRygTgQz56BGjATttMOQTDOGL4SUHRtkV0F+GHKlcDPRFFk8="},"nlen":64,"date":"2026-04-15","dateText":"Apr 15, 2026","empty":false,"private":true},{"n":32,"withdraw":0.0,"withdrawText":"$0.00","deposit":7.53,"depositText":"$7.53","balance":2812.28,"balanceText":"$2,812.28","silver":"200g, 2.6oz","notes":"Interest payment from Visions FCU. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-05-01","dateText":"May 01, 2026","empty":false,"private":false},{"n":33,"withdraw":0.0,"withdrawText":"$0.00","deposit":20.0,"depositText":"$20.00","balance":2832.28,"balanceText":"$2,832.28","silver":"200g, 2.6oz","notes":"","enc":{"i":"6IO1q+DtiUlJrm4KS6y9QQ==","c":"tI1N7Tu2fsjJBoL8jgdvoMwRpq4t3RqoTXaSmHfuneouF2pYS9uyAq1JtBn/msUnvEh80tTzVI5KwpuJa4pV5w=="},"nlen":55,"date":"2026-05-07","dateText":"May 07, 2026","empty":false,"private":true},{"n":34,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":3282.28,"balanceText":"$3,282.28","silver":"200g, 2.6oz","notes":"","enc":{"i":"+ZOfHFB9qlxxOw1Fiq/6yA==","c":"XGripvWHzDwGPHdELslZKiZqyX8aTiK5Ue4RHOngyfEngImDC+OwaEQBwURwJlo7X8/Yp4Cx2jsQQcYQJg6aGzNNMGnOy1knX+ivGQ/O4B4="},"nlen":64,"date":"2026-05-25","dateText":"May 25, 2026","empty":false,"private":true},{"n":35,"withdraw":50.0,"withdrawText":"$50.00","deposit":0.0,"depositText":"$0.00","balance":3232.28,"balanceText":"$3,232.28","silver":"200g, 2.6oz","notes":"This was a payment for the Owego craft fair Bear is attending.","enc":null,"nlen":0,"date":"2026-05-25","dateText":"May 25, 2026","empty":false,"private":false},{"n":36,"withdraw":0.0,"withdrawText":"$0.00","deposit":150.0,"depositText":"$150.00","balance":3382.28,"balanceText":"$3,382.28","silver":"200g, 2.6oz","notes":"","enc":{"i":"6XWe7oxpn+XSactI1j7bLA==","c":"IAEWXBq/CaM7jZXXnxfOVIMzTPuZLM97fQyDyPswmqvvNM7sZ4g/6zs8wn6TIzFLCmO5RNvv7AwMoJyvuzedY7/E84EizlWuNdoP4dWJy3wX+tY4VG4Jyvdo+K5J+BDo"},"nlen":84,"date":"2026-06-05","dateText":"Jun 05, 2026","empty":false,"private":true},{"n":37,"withdraw":0.0,"withdrawText":"$0.00","deposit":80.0,"depositText":"$80.00","balance":3462.28,"balanceText":"$3,462.28","silver":"200g, 2.6oz","notes":"Bear got this money from selling a Honda (engine) pressure washer.","enc":null,"nlen":0,"date":"2026-06-06","dateText":"Jun 06, 2026","empty":false,"private":false},{"n":38,"withdraw":214.38,"withdrawText":"$214.38","deposit":0.0,"depositText":"$0.00","balance":3247.9,"balanceText":"$3,247.90","silver":"200g, 2.6oz","notes":"Bear spent this money on a new Lenovo Thinkpad T14 Gen2, this is for Bear's work on the Lamoka project and other misc tasks.","enc":null,"nlen":0,"date":"2026-06-06","dateText":"Jun 06, 2026","empty":false,"private":false},{"n":39,"withdraw":0.0,"withdrawText":"$0.00","deposit":50.0,"depositText":"$50.00","balance":3297.9,"balanceText":"$3,297.90","silver":"200g, 2.6oz","notes":"","enc":{"i":"UqbzqpDcfzCYZQ+PfhBzkQ==","c":"qjd1BwD5v0EpOAb9SFiN7hMfJqzHsZe3O0jBo+VsEPxhrGHtmJZ/xHfu9C38Q+wOVXshgt+bHSlmXax3wrvA7iawX6pF074ip0owALonoBikCOz+2n+KVT8z0euQNXmuoo95b0NOQ1wJ40Veww5aAw=="},"nlen":96,"date":"2026-06-14","dateText":"Jun 14, 2026","empty":false,"private":true},{"n":40,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":3747.9,"balanceText":"$3,747.90","silver":"200g, 2.6oz","notes":"","enc":{"i":"mQEC0ktm8ruO5BAwuHYEdw==","c":"iKvNXKtCdUpas7ms1fMPE/4/AUVvLADx2LDqB8NX0GZWh2iT/U8yuA0KV1+1JVbL+yFz1QapLVnikK09Xn+PpOQEnUtxE5k2i7+0y0KNOHcLB43qQz2rECH270BKPTQF+K71w5jDb0xhLD4L+nYurcjgCH/MIkkXCzq+krrlvYPvITN6KJCGbZKRZ6yufeNh6pCpNOB7MwWsxvhqNShL0HAci8ud7gmHSh/dVCglyR4IdEZiPUDhT5xOf5QXkfP6NPUY9b+CR6AmjxM2aJEiwg=="},"nlen":192,"date":"2026-06-24","dateText":"Jun 24, 2026","empty":false,"private":true},{"n":41,"withdraw":13.78,"withdrawText":"$13.78","deposit":0.0,"depositText":"$0.00","balance":3734.12,"balanceText":"$3,734.12","silver":"200g, 2.6oz","notes":"This was a purchase of a wireless mouse for Bear's laptop as the trackpad on the top was having issues. Bear thought of it as a cheap simple fix. The mouse (and trackpad) were bought at Walmart Supercenter in Cobleskill NY. The mouse was really needed to keep making progress on the Lamoka1.","enc":null,"nlen":0,"date":"2026-06-28","dateText":"Jun 28, 2026","empty":false,"private":false},{"n":42,"withdraw":0.0,"withdrawText":"$0.00","deposit":9.58,"depositText":"$9.58","balance":3743.7,"balanceText":"$3,743.70","silver":"200g, 2.6oz","notes":"This was an interest payment from Visions FCU for the month.","enc":null,"nlen":0,"date":"2026-06-30","dateText":"Jun 30, 2026","empty":false,"private":false},{"n":43,"withdraw":5.0,"withdrawText":"$5.00","deposit":0.0,"depositText":"$0.00","balance":3738.7,"balanceText":"$3,738.70","silver":"200g, 2.6oz","notes":"This was a donation from BJH to the Wikimedia Foundation.","enc":null,"nlen":0,"date":"2026-07-12","dateText":"Jul 12, 2026","empty":false,"private":false},{"n":44,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":4188.7,"balanceText":"$4,188.70","silver":"200g, 2.6oz","notes":"","enc":{"i":"Cg2z5HQp/FAwo+L/rua7YA==","c":"3s1JfTh3z8pnrqxF7wQ2NUI9lCWVgNrdqZmA0ULbuWCLmDI0JkqEqzf/oY9mS97mwXL3jDgEfiIivsrHAz49QmFFQeKsi5mltgHoGR86xxY="},"nlen":64,"date":"2026-07-15","dateText":"Jul 15, 2026","empty":false,"private":true},{"n":45,"withdraw":45.92,"withdrawText":"$45.92","deposit":0.0,"depositText":"$0.00","balance":4142.78,"balanceText":"$4,142.78","silver":"200g, 2.6oz","notes":"This went to PCBWay to order the Lamoka1-DEV-Brain.","enc":null,"nlen":0,"date":"2026-07-16","dateText":"Jul 16, 2026","empty":false,"private":false},{"n":46,"withdraw":0.37,"withdrawText":"$0.37","deposit":0.0,"depositText":"$0.00","balance":4142.41,"balanceText":"$4,142.41","silver":"200g, 2.6oz","notes":"This was an international routing fee from PCBWay.","enc":null,"nlen":0,"date":"2026-07-16","dateText":"Jul 16, 2026","empty":false,"private":false},{"n":47,"withdraw":0.0,"withdrawText":"$0.00","deposit":4.74,"depositText":"$4.74","balance":4147.15,"balanceText":"$4,147.15","silver":"200g, 2.6oz","notes":"This was a deposit from BJH, had some coins laying around.","enc":null,"nlen":0,"date":"2026-07-30","dateText":"Jul 30, 2026","empty":false,"private":false},{"n":48,"withdraw":0.0,"withdrawText":"$0.00","deposit":300.0,"depositText":"$300.00","balance":4447.15,"balanceText":"$4,447.15","silver":"200g, 2.6oz","notes":"","enc":{"i":"xGpObIb8UkSrxAgKtJNSkw==","c":"/mflVkdu7M9lEYyX0SUfHK+BPI1pBl0alxvNYW6whdk3pgpt9RY6DbsTqelJm/c4QXKdrpma6JiXlYsJjIx3rslIXfgcMzW9+MPEM3FBA9aNrVa6oDbOM/cZb5jeSU3HdVqPbmvxpYTOwggkvr3bjIxag2jIqrnV4P2s81Kdrn+MaTcXlpEesw0hJ8HB8JBabgpU76Mnb3XvaD0rMGZyk1vUWUSkbWWypyP1DcoVbJTkwCfQwR/IiqQ7k7+0AZu5ygpk+kGc5D117warl9hBgg=="},"nlen":207,"date":"2026-08-01","dateText":"Aug 01, 2026","empty":false,"private":true},{"n":49,"withdraw":7.0,"withdrawText":"$7.00","deposit":0.0,"depositText":"$0.00","balance":4440.15,"balanceText":"$4,440.15","silver":"200g, 2.6oz","notes":"Bear wanted some bubble tea so he bought it from Confection Connection.","enc":null,"nlen":0,"date":"2026-08-01","dateText":"Aug 01, 2026","empty":false,"private":false},{"n":50,"withdraw":null,"withdrawText":"","deposit":627.32,"depositText":"$627.32","balance":5067.47,"balanceText":"$5,067.47","silver":"200g, 2.6oz","notes":"This was an adjustment to increase the amount to the actual total. Bear was not feeling well and thus didnt report things for a little bit, this value however is acurate.  approved by BJH. Bear is currently working on the Lamoka1 inverter section, and getting ready to present it at the rotary craft fair, some business cards and similar will unfortuantly need to be purchased for the fair.","enc":null,"nlen":0,"date":"2026-09-15","dateText":"Sep 15, 2026","empty":false,"private":false},{"n":51,"withdraw":31.3,"withdrawText":"$31.30","deposit":500.0,"depositText":"$500.00","balance":5536.17,"balanceText":"$5,536.17","silver":"200g, 2.6oz","notes":"This was the purchase for the PWM Noctua fan for the Lamoka1/2, the opencode go subscription ($10) and then a normal monthly deposit.","enc":null,"nlen":0,"date":"2026-09-28","dateText":"Sep 28, 2026","empty":false,"private":false},{"n":52,"withdraw":0.0,"withdrawText":"$0","deposit":14.91,"depositText":"$14.91","balance":5551.08,"balanceText":"$5,551.08","silver":"200g, 2.6oz","notes":"This was a monthly interest payment by Visions FCU on the deep savings account.","enc":null,"nlen":0,"date":"2026-10-01","dateText":"Oct 01, 2026","empty":false,"private":false},{"n":53,"withdraw":44.26,"withdrawText":"$44.26","deposit":null,"depositText":"","balance":5506.82,"balanceText":"$5,506.82","silver":"200g, 2.6oz","notes":"","enc":{"i":"sz9DRC86EjB0SEAflfD3Gw==","c":"OrltswXJoXcxX5q31Fc5zcfUTz7unTFlq38s2UyBOEaJ47lU+pxokkY6b3mYIkCv4WxQASyPZoVrNSz6Ls2qUjoP1PlfF4GW8RPJpxyYvtIgeHbjAea0+vuo0cLlRD8RfKPG0GF51/ExemonX0vEH738pxNUhnjjkvtTdpdaSuQobnOuIJa0rTbLWb7Oc9prJd45BPnbqtywTzu4oKdgRw=="},"nlen":159,"date":"2026-10-03","dateText":"Oct 03, 2026","empty":false,"private":true},{"n":54,"withdraw":0.0,"withdrawText":"$0.00","deposit":50.0,"depositText":"$50.00","balance":5556.82,"balanceText":"$5,556.82","silver":"200g, 2.6oz","notes":"","enc":{"i":"pLMoM2W/MUxFGgc+yrwBPg==","c":"l/R6ZlDTYg4zhu6IvzKcJsy05pwVmAKvF783nvALSLgjY2BLoZ3bSjtnRdj2BSlWivsOgIkrp6gZi35nN5Tm4atAGbuSwcO3BXbG+59nT68Z+fmCGFioMJPhtSsVBTG/zFcN5apL47g3U7D9J3wGcKeF/9S5QNR+LT4AumLIpp+yk6x15xR4xVZWAFchQssJNPq76T+K0GIO5eNQlZkdyFPVMpITPKYbLYnP5Vmi4tEIQViuKkEp/gErw/oz9ijo"},"nlen":176,"date":"2026-10-04","dateText":"Oct 04, 2026","empty":false,"private":true},{"n":55,"withdraw":10.0,"withdrawText":"$10.00","deposit":0.0,"depositText":"$0.00","balance":5546.82,"balanceText":"$5,546.82","silver":"200g, 2.6oz","notes":"","enc":{"i":"UwKjpovlLyUkJJCCJNU3Uw==","c":"j6uF04V3N8OtUAAP1iaZfv7xAcGBYCd5bJXcP7V7dJxH/B6S/WJtl0i2Cl2toWTYEN46DzF7va8MnpvGE9nr7ykuZdpmf1KlQV6+S6QNd3madmrXDS5ECbUo97D/N9IWKyDw3YCAmMTVs3CTdc+VhYKuRphQXmrkx9NzgeytkidrGb3vxbyoHG+3qJgI84CI"},"nlen":137,"date":"2026-10-05","dateText":"Oct 05, 2026","empty":false,"private":true},{"n":56,"withdraw":10.93,"withdrawText":"$10.93","deposit":0.0,"depositText":"$0.00","balance":5535.89,"balanceText":"$5,535.89","silver":"200g, 2.6oz","notes":"","enc":{"i":"7ebmUSZ18agjTOnl4qPkVg==","c":"7mQEvC/uffZKSUwJJCMcujMwLDczLjwNG/MArY2kRljQaSUgqzbUBfmwu1ipcV2dbF316uPBGTLApmdT/CvtxoSHEpHfKQFbEKgFDCIjcBcEZfwGiGdu5G4U6JnNclCliWcxnoQNZMvILBKmDVsMLQ=="},"nlen":110,"date":"2026-10-09","dateText":"Oct 09, 2026","empty":false,"private":true},{"n":57,"withdraw":0.0,"withdrawText":"$0.00","deposit":21.3,"depositText":"$21.30","balance":5557.19,"balanceText":"$5,557.19","silver":"200g, 2.6oz","notes":"This was a refunded amount from eBay for the purchase of a Noctua fan that was not as shown in listing. This deposit was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-07","dateText":"Oct 07, 2026","empty":false,"private":false},{"n":58,"withdraw":4.07,"withdrawText":"$4.07","deposit":0.0,"depositText":"$0.00","balance":5553.12,"balanceText":"$5,553.12","silver":"200g, 2.6oz","notes":"","enc":{"i":"VTheRaP+NAz3yn5Da6bXlQ==","c":"fztpoF1eSA7NLJfw70HALqOtYIuDWFP/Dj46OMi1uE1TqYcFREMBi/QTyThuXGl233lM5sndY76kvS7DXXFA3F0P0P0snAMdx0PTrkReJXKnwAFb9qVAqJdyA9lMso21KnzjYzTXIZ+xmZ3P2DrNkRAThNh4zXK5uUwpciaoX0HsfogVE3OrzZD/ArL9tU7o"},"nlen":139,"date":"2026-10-10","dateText":"Oct 10, 2026","empty":false,"private":true},{"n":59,"withdraw":25.0,"withdrawText":"$25.00","deposit":0.0,"depositText":"$0.00","balance":5528.12,"balanceText":"$5,528.12","silver":"200g, 2.6oz","notes":"","enc":{"i":"5+fj5Nbn7KnoL6jcQvxI5w==","c":"vfH9qbthMZ0ic5nBqi4Xdz01vcYhsiSsQntJTGI8FVUEHmlGBQ4WlDmBevP5dbUkNMnnpmQD9yiNRLdqorj1zH1Si94cAatJ33AxAPY43t3qcUyytCGTjLQuSc5NnwhNbPv/K2uj/OeJ7eGcSTMeuEbL5m4DtyWZ1Jsmeh8Nd3VlBhf6HV022i+4Yldr2X7P8Lmc23inOqfxUbddSbWUZQ=="},"nlen":152,"date":"2026-10-11","dateText":"Oct 11, 2026","empty":false,"private":true},{"n":60,"withdraw":0.0,"withdrawText":"$0.00","deposit":20.02,"depositText":"$20.02","balance":5548.14,"balanceText":"$5,548.14","silver":"200g, 2.6oz","notes":"","enc":{"i":"hPyajaB2ApGlAi71n+0iYg==","c":"1NkksRKgY1V6dEf3DGS+cHJU8C6qvOKYXpGVVYIe2VaW0eUBLn8gkkK6k24HeNio/qeXrVmTcH30MRbqYa3rD4brZFWRtiP1HqBOwvsoqQHdHgJHZEa1ac6wTnfRMODp"},"nlen":90,"date":"2026-10-13","dateText":"Oct 13, 2026","empty":false,"private":true},{"n":61,"withdraw":0.0,"withdrawText":"$0.00","deposit":5.0,"depositText":"$5.00","balance":5553.14,"balanceText":"$5,553.14","silver":"200g, 2.6oz","notes":"","enc":{"i":"UBfWBgSWUA04XWQxGCHYew==","c":"Ms/MXq6LZGUW46Zw0PSC3oioDe5TLErJRe+8M9K/eXJFGEXlGz0tWU1iNOZ/Ghb1hkVaMLEmypT+zg3sm1RizuDjgxG9Jld78v8ECL7hCtYd1GIE2id1X+zqbDFnQ4PXrYrHDCtJ6FlL7NyLKgl/Ov9p11LqscB2Cltv+so+OJyQ+6+PkhpiaGP0c0ay7NDBmB5HYkadlIDbWUIPwgyxNQ=="},"nlen":151,"date":"2026-10-17","dateText":"Oct 17, 2026","empty":false,"private":true},{"n":62,"withdraw":0.0,"withdrawText":"$0.00","deposit":10.0,"depositText":"$10.00","balance":5563.14,"balanceText":"$5,563.14","silver":"200g, 2.6oz","notes":"","enc":{"i":"3fEGp04Z5cg9eqRtm4Bndw==","c":"vl8dwM2vRgSXTM+NElfKdZUhLUgYI3JFhluED/wxzn0NhwFAcODa/FVhRu6f4KAqeUhEJL0Bb6f04IYoRf+YwjL6a8/XixAovN//6LNxAUwb8711nkSCzmr6vPxnHnHwdO7XbVY0ZL+KAn6cSjOFZ6TVMP62YmXMjPkkt3kmnuN4T99QwGqomBuQ9Wu0ERHCEulKS/4cxeZ0Ho+92Jl6Hg=="},"nlen":156,"date":"2026-10-18","dateText":"Oct 18, 2026","empty":false,"private":true},{"n":63,"withdraw":1.0,"withdrawText":"$1.00","deposit":0.0,"depositText":"$0.00","balance":5562.14,"balanceText":"$5,562.14","silver":"200g, 2.6oz","notes":"This withdrawal was for one month of Spotify Premium, bought at the $1 promotional rate. This withdrawal was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-19","dateText":"Oct 19, 2026","empty":false,"private":false},{"n":64,"withdraw":0.0,"withdrawText":"$0.00","deposit":11.92,"depositText":"$11.92","balance":5574.06,"balanceText":"$5,574.06","silver":"200g, 2.6oz","notes":"This deposit was coins on hand: $0.92 in coins plus $11.00 in additional coins. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-20","dateText":"Oct 20, 2026","empty":false,"private":false},{"n":65,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":6024.06,"balanceText":"$6,024.06","silver":"200g, 2.6oz","notes":"","enc":{"i":"YfZgh+nmmZS16Ae7RCy7cQ==","c":"mFLTvyiuvrOZ/9tJrt1HqCuK6I3JDz8QrIGDVYLJkHUp4V69h5kBGc8FFpqpTtaQrzjRETlk8rS6TMIftuNkzA0pwOrAcfsegSaIeCNQgYk="},"nlen":64,"date":"2026-10-21","dateText":"Oct 21, 2026","empty":false,"private":true},{"n":66,"withdraw":69.44,"withdrawText":"$69.44","deposit":0.0,"depositText":"$0.00","balance":5954.62,"balanceText":"$5,954.62","silver":"200g, 2.6oz","notes":"This withdrawal was by PCBWay for the Lamoka1/2 bare boards being presented at the Craft fair. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-23","dateText":"Oct 23, 2026","empty":false,"private":false},{"n":67,"withdraw":0.56,"withdrawText":"$0.56","deposit":0.0,"depositText":"$0.00","balance":5954.06,"balanceText":"$5,954.06","silver":"200g, 2.6oz","notes":"This withdrawal was an international routing fee with  PCBWay for the Lamoka1/2 board order (additional fee). Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-23","dateText":"Oct 23, 2026","empty":false,"private":false},{"n":68,"withdraw":36.33,"withdrawText":"$36.33","deposit":0.0,"depositText":"$0.00","balance":5917.73,"balanceText":"$5,917.73","silver":"200g, 2.6oz","notes":"","enc":{"i":"OVqW6EfNT1IXF05be7/new==","c":"sjTQApTEwQGhuVJQiQWyVQPlE6XIdYODuSZBsb80OnN0qojoQpPdsLpXqangDD8ccFFUVZbuPoh28bzkPxJoh83v8kf9sGQiRmQfUpAzeOE1KM1HGd0KSGZugAHaSEAhxGT7gzGtjTwqsqLoqDVzyxerThvUK+ltLPuoYdbzjfDuASr5k85eoMAExloAgMet"},"nlen":128,"date":"2026-10-24","dateText":"Oct 24, 2026","empty":false,"private":true},{"n":69,"withdraw":31.32,"withdrawText":"$31.32","deposit":0.0,"depositText":"$0.00","balance":5886.41,"balanceText":"$5,886.41","silver":"200g, 2.6oz","notes":"This withdrawal was for Canva, Flamingo and Cactus business cards. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-24","dateText":"Oct 24, 2026","empty":false,"private":false},{"n":70,"withdraw":3.19,"withdrawText":"$3.19","deposit":0.0,"depositText":"$0.00","balance":5883.22,"balanceText":"$5,883.22","silver":"200g, 2.6oz","notes":"This withdrawal was to GoDaddy for the purchase of the domain flamingoandcactus.com. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-24","dateText":"Oct 24, 2026","empty":false,"private":false},{"n":71,"withdraw":10.77,"withdrawText":"$10.77","deposit":0.0,"depositText":"$0.00","balance":5872.46,"balanceText":"$5,872.46","silver":"200g, 2.6oz","notes":"This withdrawal was to Opencode to top of the usage credits (all credits were spent within two days for website work). We paid for this by connecting our banking account directly through Stripe, they sent $0.01.","enc":null,"nlen":0,"date":"2026-10-28","dateText":"Oct 28, 2026","empty":false,"private":false},{"n":72,"withdraw":101.12,"withdrawText":"$101.12","deposit":0.0,"depositText":"$0.00","balance":5771.34,"balanceText":"$5,771.34","silver":"200g, 2.6oz","notes":"This withdrawal was to Mouser electronis for the order of external components for the Lamoka1/2 being ordered (arriving post craft fair).","enc":null,"nlen":0,"date":"2026-10-31","dateText":"Oct 31, 2026","empty":false,"private":false},{"n":73,"withdraw":0.0,"withdrawText":"$0","deposit":15.46,"depositText":"$15.46","balance":5786.82,"balanceText":"$5,786.82","silver":"200g, 2.6oz","notes":"This was a monthly interest payment on the Visions FCU share certificate. The certificate is of 3.65% APY. There was another $0.02 in soft savings from interest.","enc":null,"nlen":0,"date":"2026-11-01","dateText":"Nov 01, 2026","empty":false,"private":false},{"n":74,"withdraw":20.63,"withdrawText":"$20.63","deposit":0.0,"depositText":"$0.00","balance":5766.19,"balanceText":"$5,766.19","silver":"200g, 2.6oz","notes":"","enc":{"i":"ZiDPAfcP+d+7RwYOh2K68A==","c":"aP0JPhJ5XwSpAuMagu1Gl94OduDjcs6tWwjdxdJ+X6aTi2Uy/RrH1zOk1lpc9NoxENPTHymEr6cro7EIHx2YQLzAanEoZd10USSi3/aAlqIgJM4QsZnSh8DgLDSjVCtc/nGpvK+qg5E5IIN/AISDWQ=="},"nlen":99,"date":"2026-11-11","dateText":"Nov 11, 2026","empty":false,"private":true},{"n":75,"withdraw":44.0,"withdrawText":"$44.00","deposit":0.0,"depositText":"$0.00","balance":5722.19,"balanceText":"$5,722.19","silver":"200g, 2.6oz","notes":"This withdrawal was for miscellaneous craft fair expenditures. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-11-14","dateText":"Nov 14, 2026","empty":false,"private":false},{"n":76,"withdraw":71.4,"withdrawText":"$71.40","deposit":0.0,"depositText":"$0.00","balance":5650.79,"balanceText":"$5,650.79","silver":"200g, 2.6oz","notes":"","enc":{"i":"Vp2V7qhcvcreIXc/9jWJ5w==","c":"gsrimDaAHBOFkDe+sLZBqpTay0tT9xHDAHKdwGb/BgHspAv8153U7ZndA/1ikSsID+pw7ZoEtI9X8HnbYmJts5tF2RgVN5szEc3X/SGnCzUp6n59jh6RmnuIYAIkTwXy"},"nlen":87,"date":"2026-11-18","dateText":"Nov 18, 2026","empty":false,"private":true},{"n":77,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":6100.79,"balanceText":"$6,100.79","silver":"200g, 2.6oz","notes":"Normal monthly $450 deposit.","enc":null,"nlen":0,"date":"2026-11-18","dateText":"Nov 18, 2026","empty":false,"private":false},{"n":78,"withdraw":0.0,"withdrawText":"$0.00","deposit":5.0,"depositText":"$5.00","balance":6105.79,"balanceText":"$6,105.79","silver":"200g, 2.6oz","notes":"This was a $5 credit back to the account for using direct bank linking with open code.","enc":null,"nlen":0,"date":"2026-11-20","dateText":"Nov 20, 2026","empty":false,"private":false}];
+const TX = [{"n":1,"withdraw":166.3,"withdrawText":"$166.30","deposit":0.0,"depositText":"$0.00","balance":4.78,"balanceText":"$4.78","silver":"","notes":"This withdrawal was from EBay to work on unit 1 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-03","dateText":"Oct 03, 2025","empty":false,"private":false},{"n":2,"withdraw":0.0,"withdrawText":"$0.00","deposit":578.4,"depositText":"$578.40","balance":578.4,"balanceText":"$578.40","silver":"","notes":"This deposit was a donation by Bear J. Hartjen, and was authorized by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":3,"withdraw":323.5,"withdrawText":"$323.50","deposit":0.0,"depositText":"$0.00","balance":254.9,"balanceText":"$254.90","silver":"","notes":"This withdrawal was from Amazon to work on Unit 1 and 2 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":4,"withdraw":50.14,"withdrawText":"$50.14","deposit":0.0,"depositText":"$0.00","balance":204.76,"balanceText":"$204.76","silver":"","notes":"This withdrawal was from Amazon to work on Unit 1 and 2 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":5,"withdraw":33.68,"withdrawText":"$33.68","deposit":0.0,"depositText":"$0.00","balance":171.08,"balanceText":"$171.08","silver":"","notes":"This withdrawal was from Amazon to work on Unit 1 and 2 of the solar generator box. It was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-06","dateText":"Oct 06, 2025","empty":false,"private":false},{"n":6,"withdraw":0.0,"withdrawText":"$0.00","deposit":400.0,"depositText":"$400.00","balance":404.78,"balanceText":"$404.78","silver":"","notes":"","enc":{"i":"9BnchK6L+WQbfw12z1BBFA==","c":"M91Z5eOTCSFt2VxpMbOKcaT4is9pS7M8+ncIGskD8I1c6dx4wK4nAIEng+42jwtHkLVGJuzTmsZNH8rftIVQpMi07QDJd1rm3BH8Ps679KZLLd0yWWqkJ2xsbkCX2BMkTIB6OrTzkmrT7+aGwdkM4gqoA77uhciUNwKGBdm81kE="},"nlen":113,"date":"2025-10-19","dateText":"Oct 19, 2025","empty":false,"private":true},{"n":7,"withdraw":71.99,"withdrawText":"$71.99","deposit":0.0,"depositText":"$0.00","balance":332.79,"balanceText":"$332.79","silver":"","notes":"This withdrawal was made from Amazon purchasing the finishing components to unit two. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-24","dateText":"Oct 24, 2025","empty":false,"private":false},{"n":8,"withdraw":71.6,"withdrawText":"$71.60","deposit":0.0,"depositText":"$0.00","balance":261.19,"balanceText":"$261.19","silver":"","notes":"This purchase from EBay was made for energy storage on unit 2. This withdrawal was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-24","dateText":"Oct 24, 2025","empty":false,"private":false},{"n":9,"withdraw":0.0,"withdrawText":"$0.00","deposit":38.92,"depositText":"$38.92","balance":300.11,"balanceText":"$300.11","silver":"","notes":"This transaction was made as a donation by Bear J. Hartjen. This deposit was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-10-24","dateText":"Oct 24, 2025","empty":false,"private":false},{"n":10,"withdraw":298.29,"withdrawText":"$298.29","deposit":0.0,"depositText":"$0.00","balance":1.82,"balanceText":"$1.82","silver":"","notes":"This transaction was made due to an \u201coff track mindset\u201d on the part of Bear J. Hartjen... spent all this money on random things he didn\u2019t need. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":null,"dateText":"Unknown","empty":false,"private":false},{"n":11,"withdraw":0.82,"withdrawText":"$0.82","deposit":0.0,"depositText":"$0.00","balance":1.0,"balanceText":"$1.00","silver":"","notes":"The 82 cent balance was making accounting difficult as all assets were physical. This transaction was made and approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-11-27","dateText":"Nov 27, 2025","empty":false,"private":false},{"n":12,"withdraw":0.0,"withdrawText":"$0.00","deposit":453.0,"depositText":"$453.00","balance":454.0,"balanceText":"$454.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by dearest Bear J. Hartjen, some silver was included as an investment fund for the Flamingo and Cactus group.","enc":null,"nlen":0,"date":"2025-12-22","dateText":"Dec 22, 2025","empty":false,"private":false},{"n":13,"withdraw":0.0,"withdrawText":"$0.00","deposit":10.0,"depositText":"$10.00","balance":464.0,"balanceText":"$464.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2025-12-24","dateText":"Dec 24, 2025","empty":false,"private":false},{"n":14,"withdraw":0.0,"withdrawText":"$0.00","deposit":50.0,"depositText":"$50.00","balance":514.0,"balanceText":"$514.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-01-04","dateText":"Jan 04, 2026","empty":false,"private":false},{"n":15,"withdraw":0.0,"withdrawText":"$0.00","deposit":5.0,"depositText":"$5.00","balance":519.0,"balanceText":"$519.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-01-14","dateText":"Jan 14, 2026","empty":false,"private":false},{"n":16,"withdraw":0.0,"withdrawText":"$0.00","deposit":1.0,"depositText":"$1.00","balance":520.0,"balanceText":"$520.00","silver":"200g, 2.1oz","notes":"This transaction was a donation by Bear J. Hartjen. This transaction was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-01-21","dateText":"Jan 21, 2026","empty":false,"private":false},{"n":17,"withdraw":0.0,"withdrawText":"$0.00","deposit":40.0,"depositText":"$40.00","balance":560.0,"balanceText":"$560.00","silver":"200g, 2.1oz","notes":"Deposit.","enc":null,"nlen":0,"date":"2026-01-25","dateText":"Jan 25, 2026","empty":false,"private":false},{"n":18,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":1010.0,"balanceText":"$1,010.00","silver":"200g, 2.1oz","notes":"","enc":{"i":"7G+TK86ZVA5lHMicWJvacA==","c":"oRZP0k+xIHmOmpPxa7I4TI0M1cJKl7KAV7ojPeLEuRyC58m5eWRsc9my1IMllAjHhY/pSDuJuMONLljfuFrsdW5lUwWZQqYgNjZp8uDoM7Y="},"nlen":64,"date":"2026-01-31","dateText":"Jan 31, 2026","empty":false,"private":true},{"n":19,"withdraw":0.0,"withdrawText":"$0.00","deposit":451.71,"depositText":"$451.71","balance":1461.71,"balanceText":"$1,461.71","silver":"200g, 2.1oz","notes":"Transaction was made and approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-02-21","dateText":"Feb 21, 2026","empty":false,"private":false},{"n":20,"withdraw":0.0,"withdrawText":"$0.00","deposit":null,"depositText":"0.5oz silver","balance":1461.71,"balanceText":"$1,461.71","silver":"200g, 2.6oz","notes":"Deposit of half an ounce of silver.","enc":null,"nlen":0,"date":"2026-02-22","dateText":"Feb 22, 2026","empty":false,"private":false},{"n":21,"withdraw":0.0,"withdrawText":"$0.00","deposit":40.0,"depositText":"$40.00","balance":1501.71,"balanceText":"$1,501.71","silver":"200g, 2.6oz","notes":"Deposit.","enc":null,"nlen":0,"date":"2026-02-23","dateText":"Feb 23, 2026","empty":false,"private":false},{"n":22,"withdraw":0.0,"withdrawText":"$0.00","deposit":60.0,"depositText":"$60.00","balance":1561.71,"balanceText":"$1,561.71","silver":"200g, 2.6oz","notes":"","enc":{"i":"dFAcoeigcBBPApm3x0bx1A==","c":"HnPhNjJ4sUYCyeLeiv9S+B4cWNzOCMr1cKUnkNd/Bzjfe9jErW4m1oohh2AriE3Ur7WmbcqeIGVXNK6TNtE6AH7jO9DuJu5TBU9P+Sdp8G+GzFAEg3Jo5Xufd9C6renI1pvWlfVxwow1k/QDfnRSzP3HadHINA4vDlTPYybaur34KqGOrKBvGtaOTDWe8cpz"},"nlen":133,"date":"2026-02-25","dateText":"Feb 25, 2026","empty":false,"private":true},{"n":23,"withdraw":32.09,"withdrawText":"$32.09","deposit":0.0,"depositText":"$0.00","balance":1529.62,"balanceText":"$1,529.62","silver":"200g, 2.6oz","notes":"Lowe's: Paint and caulk for Units 2 and 3. Approved by BJH.","enc":null,"nlen":0,"date":"2026-02-25","dateText":"Feb 25, 2026","empty":false,"private":false},{"n":24,"withdraw":0.0,"withdrawText":"$0.00","deposit":175.0,"depositText":"$175.00","balance":1704.62,"balanceText":"$1,704.62","silver":"200g, 2.6oz","notes":"","enc":{"i":"RmSdyOKBKHlPMAoaMf5XRQ==","c":"9mckkWr5VTs2xkB8eYk6CA+rJY6VaFtKSgc6CL4MKN3kDcol5eN0QWU+DEMVGe9aSWf3pc+g0S1BhOpjWAObYlvd2xqv2Oqk1jdU1JozExE="},"nlen":64,"date":"2026-02-25","dateText":"Feb 25, 2026","empty":false,"private":true},{"n":25,"withdraw":0.0,"withdrawText":"$0.00","deposit":131.0,"depositText":"$131.00","balance":1835.62,"balanceText":"$1,835.62","silver":"200g, 2.6oz","notes":"","enc":{"i":"fN6HPzrGRBB9Mz5YrpWwnA==","c":"4qy/c0kfgxARi7fhSvmcVcul3n45at1vRwgFwhRiBIHOKTd/nR26AnHyQkcoJqTYklIrJjrV1pivXW7yqQXgvw=="},"nlen":52,"date":"2026-03-10","dateText":"Mar 10, 2026","empty":false,"private":true},{"n":26,"withdraw":0.0,"withdrawText":"$0.00","deposit":2.01,"depositText":"$2.01","balance":1837.63,"balanceText":"$1,837.63","silver":"200g, 2.6oz","notes":"Stabilization of the balance to represent Visions FCU certificate.","enc":null,"nlen":0,"date":"2026-03-13","dateText":"Mar 13, 2026","empty":false,"private":false},{"n":27,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":2287.63,"balanceText":"$2,287.63","silver":"200g, 2.6oz","notes":"","enc":{"i":"ilMstOdEVAvOMth3uLG3ow==","c":"PCDjTUAUjocN3jfs8AzrpiK3smtmgvYso60ed1sERUC5tKnT93sKWPmvOjqYvOcZ/mWRpAKsZtSZoigT0cvYCBEnhgujR7qmYnZualfUtIE="},"nlen":64,"date":"2026-03-18","dateText":"Mar 18, 2026","empty":false,"private":true},{"n":28,"withdraw":0.0,"withdrawText":"$0.00","deposit":1.0,"depositText":"$1.00","balance":2288.63,"balanceText":"$2,288.63","silver":"200g, 2.6oz","notes":"Deposit by BJH approved by BJH.","enc":null,"nlen":0,"date":"2026-04-01","dateText":"Apr 01, 2026","empty":false,"private":false},{"n":29,"withdraw":0.0,"withdrawText":"$0.00","deposit":6.12,"depositText":"$6.12","balance":2294.75,"balanceText":"$2,294.75","silver":"200g, 2.6oz","notes":"Monthly interest deposit from Visions FCU. Approved by BJH.","enc":null,"nlen":0,"date":"2026-04-01","dateText":"Apr 01, 2026","empty":false,"private":false},{"n":30,"withdraw":0.0,"withdrawText":"$0.00","deposit":60.0,"depositText":"$60.00","balance":2354.75,"balanceText":"$2,354.75","silver":"200g, 2.6oz","notes":"","enc":{"i":"JMIO7cfV2hibQSt2Lu5Itw==","c":"krJzWhXvpGvJKS4C3y5w6EXidoA/t+5tgRIImJiofzRTrPDs+o3geMZFfBtCROA4EgsszzPY522MbK5LlDemqNDrGyqm3MRrDOIv5yYpIMQ="},"nlen":67,"date":"2026-04-07","dateText":"Apr 07, 2026","empty":false,"private":true},{"n":31,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":2804.75,"balanceText":"$2,804.75","silver":"200g, 2.6oz","notes":"","enc":{"i":"iTpZUPlq/wRwA65gSPf2Tw==","c":"FoW7NFicHBcBWTws/XqJvDGJHdT63L5GeZ/bf2yYvsRCyrFOzQqtczXh3FPpRygTgQz56BGjATttMOQTDOGL4SUHRtkV0F+GHKlcDPRFFk8="},"nlen":64,"date":"2026-04-15","dateText":"Apr 15, 2026","empty":false,"private":true},{"n":32,"withdraw":0.0,"withdrawText":"$0.00","deposit":7.53,"depositText":"$7.53","balance":2812.28,"balanceText":"$2,812.28","silver":"200g, 2.6oz","notes":"Interest payment from Visions FCU. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-05-01","dateText":"May 01, 2026","empty":false,"private":false},{"n":33,"withdraw":0.0,"withdrawText":"$0.00","deposit":20.0,"depositText":"$20.00","balance":2832.28,"balanceText":"$2,832.28","silver":"200g, 2.6oz","notes":"","enc":{"i":"6IO1q+DtiUlJrm4KS6y9QQ==","c":"tI1N7Tu2fsjJBoL8jgdvoMwRpq4t3RqoTXaSmHfuneouF2pYS9uyAq1JtBn/msUnvEh80tTzVI5KwpuJa4pV5w=="},"nlen":55,"date":"2026-05-07","dateText":"May 07, 2026","empty":false,"private":true},{"n":34,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":3282.28,"balanceText":"$3,282.28","silver":"200g, 2.6oz","notes":"","enc":{"i":"+ZOfHFB9qlxxOw1Fiq/6yA==","c":"XGripvWHzDwGPHdELslZKiZqyX8aTiK5Ue4RHOngyfEngImDC+OwaEQBwURwJlo7X8/Yp4Cx2jsQQcYQJg6aGzNNMGnOy1knX+ivGQ/O4B4="},"nlen":64,"date":"2026-05-25","dateText":"May 25, 2026","empty":false,"private":true},{"n":35,"withdraw":50.0,"withdrawText":"$50.00","deposit":0.0,"depositText":"$0.00","balance":3232.28,"balanceText":"$3,232.28","silver":"200g, 2.6oz","notes":"This was a payment for the Owego craft fair Bear is attending.","enc":null,"nlen":0,"date":"2026-05-25","dateText":"May 25, 2026","empty":false,"private":false},{"n":36,"withdraw":0.0,"withdrawText":"$0.00","deposit":150.0,"depositText":"$150.00","balance":3382.28,"balanceText":"$3,382.28","silver":"200g, 2.6oz","notes":"","enc":{"i":"6XWe7oxpn+XSactI1j7bLA==","c":"IAEWXBq/CaM7jZXXnxfOVIMzTPuZLM97fQyDyPswmqvvNM7sZ4g/6zs8wn6TIzFLCmO5RNvv7AwMoJyvuzedY7/E84EizlWuNdoP4dWJy3wX+tY4VG4Jyvdo+K5J+BDo"},"nlen":84,"date":"2026-06-05","dateText":"Jun 05, 2026","empty":false,"private":true},{"n":37,"withdraw":0.0,"withdrawText":"$0.00","deposit":80.0,"depositText":"$80.00","balance":3462.28,"balanceText":"$3,462.28","silver":"200g, 2.6oz","notes":"Bear got this money from selling a Honda (engine) pressure washer.","enc":null,"nlen":0,"date":"2026-06-06","dateText":"Jun 06, 2026","empty":false,"private":false},{"n":38,"withdraw":214.38,"withdrawText":"$214.38","deposit":0.0,"depositText":"$0.00","balance":3247.9,"balanceText":"$3,247.90","silver":"200g, 2.6oz","notes":"Bear spent this money on a new Lenovo Thinkpad T14 Gen2, this is for Bear's work on the Lamoka project and other misc tasks.","enc":null,"nlen":0,"date":"2026-06-06","dateText":"Jun 06, 2026","empty":false,"private":false},{"n":39,"withdraw":0.0,"withdrawText":"$0.00","deposit":50.0,"depositText":"$50.00","balance":3297.9,"balanceText":"$3,297.90","silver":"200g, 2.6oz","notes":"","enc":{"i":"UqbzqpDcfzCYZQ+PfhBzkQ==","c":"qjd1BwD5v0EpOAb9SFiN7hMfJqzHsZe3O0jBo+VsEPxhrGHtmJZ/xHfu9C38Q+wOVXshgt+bHSlmXax3wrvA7iawX6pF074ip0owALonoBikCOz+2n+KVT8z0euQNXmuoo95b0NOQ1wJ40Veww5aAw=="},"nlen":96,"date":"2026-06-14","dateText":"Jun 14, 2026","empty":false,"private":true},{"n":40,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":3747.9,"balanceText":"$3,747.90","silver":"200g, 2.6oz","notes":"","enc":{"i":"mQEC0ktm8ruO5BAwuHYEdw==","c":"iKvNXKtCdUpas7ms1fMPE/4/AUVvLADx2LDqB8NX0GZWh2iT/U8yuA0KV1+1JVbL+yFz1QapLVnikK09Xn+PpOQEnUtxE5k2i7+0y0KNOHcLB43qQz2rECH270BKPTQF+K71w5jDb0xhLD4L+nYurcjgCH/MIkkXCzq+krrlvYPvITN6KJCGbZKRZ6yufeNh6pCpNOB7MwWsxvhqNShL0HAci8ud7gmHSh/dVCglyR4IdEZiPUDhT5xOf5QXkfP6NPUY9b+CR6AmjxM2aJEiwg=="},"nlen":192,"date":"2026-06-24","dateText":"Jun 24, 2026","empty":false,"private":true},{"n":41,"withdraw":13.78,"withdrawText":"$13.78","deposit":0.0,"depositText":"$0.00","balance":3734.12,"balanceText":"$3,734.12","silver":"200g, 2.6oz","notes":"This was a purchase of a wireless mouse for Bear's laptop as the trackpad on the top was having issues. Bear thought of it as a cheap simple fix. The mouse (and trackpad) were bought at Walmart Supercenter in Cobleskill NY. The mouse was really needed to keep making progress on the Lamoka1.","enc":null,"nlen":0,"date":"2026-06-28","dateText":"Jun 28, 2026","empty":false,"private":false},{"n":42,"withdraw":0.0,"withdrawText":"$0.00","deposit":9.58,"depositText":"$9.58","balance":3743.7,"balanceText":"$3,743.70","silver":"200g, 2.6oz","notes":"This was an interest payment from Visions FCU for the month.","enc":null,"nlen":0,"date":"2026-06-30","dateText":"Jun 30, 2026","empty":false,"private":false},{"n":43,"withdraw":5.0,"withdrawText":"$5.00","deposit":0.0,"depositText":"$0.00","balance":3738.7,"balanceText":"$3,738.70","silver":"200g, 2.6oz","notes":"This was a donation from BJH to the Wikimedia Foundation.","enc":null,"nlen":0,"date":"2026-07-12","dateText":"Jul 12, 2026","empty":false,"private":false},{"n":44,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":4188.7,"balanceText":"$4,188.70","silver":"200g, 2.6oz","notes":"","enc":{"i":"Cg2z5HQp/FAwo+L/rua7YA==","c":"3s1JfTh3z8pnrqxF7wQ2NUI9lCWVgNrdqZmA0ULbuWCLmDI0JkqEqzf/oY9mS97mwXL3jDgEfiIivsrHAz49QmFFQeKsi5mltgHoGR86xxY="},"nlen":64,"date":"2026-07-15","dateText":"Jul 15, 2026","empty":false,"private":true},{"n":45,"withdraw":45.92,"withdrawText":"$45.92","deposit":0.0,"depositText":"$0.00","balance":4142.78,"balanceText":"$4,142.78","silver":"200g, 2.6oz","notes":"This went to PCBWay to order the Lamoka1-DEV-Brain.","enc":null,"nlen":0,"date":"2026-07-16","dateText":"Jul 16, 2026","empty":false,"private":false},{"n":46,"withdraw":0.37,"withdrawText":"$0.37","deposit":0.0,"depositText":"$0.00","balance":4142.41,"balanceText":"$4,142.41","silver":"200g, 2.6oz","notes":"This was an international routing fee from PCBWay.","enc":null,"nlen":0,"date":"2026-07-16","dateText":"Jul 16, 2026","empty":false,"private":false},{"n":47,"withdraw":0.0,"withdrawText":"$0.00","deposit":4.74,"depositText":"$4.74","balance":4147.15,"balanceText":"$4,147.15","silver":"200g, 2.6oz","notes":"This was a deposit from BJH, had some coins laying around.","enc":null,"nlen":0,"date":"2026-07-30","dateText":"Jul 30, 2026","empty":false,"private":false},{"n":48,"withdraw":0.0,"withdrawText":"$0.00","deposit":300.0,"depositText":"$300.00","balance":4447.15,"balanceText":"$4,447.15","silver":"200g, 2.6oz","notes":"","enc":{"i":"xGpObIb8UkSrxAgKtJNSkw==","c":"/mflVkdu7M9lEYyX0SUfHK+BPI1pBl0alxvNYW6whdk3pgpt9RY6DbsTqelJm/c4QXKdrpma6JiXlYsJjIx3rslIXfgcMzW9+MPEM3FBA9aNrVa6oDbOM/cZb5jeSU3HdVqPbmvxpYTOwggkvr3bjIxag2jIqrnV4P2s81Kdrn+MaTcXlpEesw0hJ8HB8JBabgpU76Mnb3XvaD0rMGZyk1vUWUSkbWWypyP1DcoVbJTkwCfQwR/IiqQ7k7+0AZu5ygpk+kGc5D117warl9hBgg=="},"nlen":207,"date":"2026-08-01","dateText":"Aug 01, 2026","empty":false,"private":true},{"n":49,"withdraw":7.0,"withdrawText":"$7.00","deposit":0.0,"depositText":"$0.00","balance":4440.15,"balanceText":"$4,440.15","silver":"200g, 2.6oz","notes":"Bear wanted some bubble tea so he bought it from Confection Connection.","enc":null,"nlen":0,"date":"2026-08-01","dateText":"Aug 01, 2026","empty":false,"private":false},{"n":50,"withdraw":null,"withdrawText":"","deposit":627.32,"depositText":"$627.32","balance":5067.47,"balanceText":"$5,067.47","silver":"200g, 2.6oz","notes":"This was an adjustment to increase the amount to the actual total. Bear was not feeling well and thus didnt report things for a little bit, this value however is acurate.  approved by BJH. Bear is currently working on the Lamoka1 inverter section, and getting ready to present it at the rotary craft fair, some business cards and similar will unfortuantly need to be purchased for the fair.","enc":null,"nlen":0,"date":"2026-09-15","dateText":"Sep 15, 2026","empty":false,"private":false},{"n":51,"withdraw":31.3,"withdrawText":"$31.30","deposit":500.0,"depositText":"$500.00","balance":5536.17,"balanceText":"$5,536.17","silver":"200g, 2.6oz","notes":"This was the purchase for the PWM Noctua fan for the Lamoka1/2, the opencode go subscription ($10) and then a normal monthly deposit.","enc":null,"nlen":0,"date":"2026-09-28","dateText":"Sep 28, 2026","empty":false,"private":false},{"n":52,"withdraw":0.0,"withdrawText":"$0","deposit":14.91,"depositText":"$14.91","balance":5551.08,"balanceText":"$5,551.08","silver":"200g, 2.6oz","notes":"This was a monthly interest payment by Visions FCU on the deep savings account.","enc":null,"nlen":0,"date":"2026-10-01","dateText":"Oct 01, 2026","empty":false,"private":false},{"n":53,"withdraw":44.26,"withdrawText":"$44.26","deposit":null,"depositText":"","balance":5506.82,"balanceText":"$5,506.82","silver":"200g, 2.6oz","notes":"","enc":{"i":"sz9DRC86EjB0SEAflfD3Gw==","c":"OrltswXJoXcxX5q31Fc5zcfUTz7unTFlq38s2UyBOEaJ47lU+pxokkY6b3mYIkCv4WxQASyPZoVrNSz6Ls2qUjoP1PlfF4GW8RPJpxyYvtIgeHbjAea0+vuo0cLlRD8RfKPG0GF51/ExemonX0vEH738pxNUhnjjkvtTdpdaSuQobnOuIJa0rTbLWb7Oc9prJd45BPnbqtywTzu4oKdgRw=="},"nlen":159,"date":"2026-10-03","dateText":"Oct 03, 2026","empty":false,"private":true},{"n":54,"withdraw":0.0,"withdrawText":"$0.00","deposit":50.0,"depositText":"$50.00","balance":5556.82,"balanceText":"$5,556.82","silver":"200g, 2.6oz","notes":"","enc":{"i":"pLMoM2W/MUxFGgc+yrwBPg==","c":"l/R6ZlDTYg4zhu6IvzKcJsy05pwVmAKvF783nvALSLgjY2BLoZ3bSjtnRdj2BSlWivsOgIkrp6gZi35nN5Tm4atAGbuSwcO3BXbG+59nT68Z+fmCGFioMJPhtSsVBTG/zFcN5apL47g3U7D9J3wGcKeF/9S5QNR+LT4AumLIpp+yk6x15xR4xVZWAFchQssJNPq76T+K0GIO5eNQlZkdyFPVMpITPKYbLYnP5Vmi4tEIQViuKkEp/gErw/oz9ijo"},"nlen":176,"date":"2026-10-04","dateText":"Oct 04, 2026","empty":false,"private":true},{"n":55,"withdraw":10.0,"withdrawText":"$10.00","deposit":0.0,"depositText":"$0.00","balance":5546.82,"balanceText":"$5,546.82","silver":"200g, 2.6oz","notes":"","enc":{"i":"UwKjpovlLyUkJJCCJNU3Uw==","c":"j6uF04V3N8OtUAAP1iaZfv7xAcGBYCd5bJXcP7V7dJxH/B6S/WJtl0i2Cl2toWTYEN46DzF7va8MnpvGE9nr7ykuZdpmf1KlQV6+S6QNd3madmrXDS5ECbUo97D/N9IWKyDw3YCAmMTVs3CTdc+VhYKuRphQXmrkx9NzgeytkidrGb3vxbyoHG+3qJgI84CI"},"nlen":137,"date":"2026-10-05","dateText":"Oct 05, 2026","empty":false,"private":true},{"n":56,"withdraw":10.93,"withdrawText":"$10.93","deposit":0.0,"depositText":"$0.00","balance":5535.89,"balanceText":"$5,535.89","silver":"200g, 2.6oz","notes":"","enc":{"i":"7ebmUSZ18agjTOnl4qPkVg==","c":"7mQEvC/uffZKSUwJJCMcujMwLDczLjwNG/MArY2kRljQaSUgqzbUBfmwu1ipcV2dbF316uPBGTLApmdT/CvtxoSHEpHfKQFbEKgFDCIjcBcEZfwGiGdu5G4U6JnNclCliWcxnoQNZMvILBKmDVsMLQ=="},"nlen":110,"date":"2026-10-09","dateText":"Oct 09, 2026","empty":false,"private":true},{"n":57,"withdraw":0.0,"withdrawText":"$0.00","deposit":21.3,"depositText":"$21.30","balance":5557.19,"balanceText":"$5,557.19","silver":"200g, 2.6oz","notes":"This was a refunded amount from eBay for the purchase of a Noctua fan that was not as shown in listing. This deposit was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-07","dateText":"Oct 07, 2026","empty":false,"private":false},{"n":58,"withdraw":4.07,"withdrawText":"$4.07","deposit":0.0,"depositText":"$0.00","balance":5553.12,"balanceText":"$5,553.12","silver":"200g, 2.6oz","notes":"","enc":{"i":"VTheRaP+NAz3yn5Da6bXlQ==","c":"fztpoF1eSA7NLJfw70HALqOtYIuDWFP/Dj46OMi1uE1TqYcFREMBi/QTyThuXGl233lM5sndY76kvS7DXXFA3F0P0P0snAMdx0PTrkReJXKnwAFb9qVAqJdyA9lMso21KnzjYzTXIZ+xmZ3P2DrNkRAThNh4zXK5uUwpciaoX0HsfogVE3OrzZD/ArL9tU7o"},"nlen":139,"date":"2026-10-10","dateText":"Oct 10, 2026","empty":false,"private":true},{"n":59,"withdraw":25.0,"withdrawText":"$25.00","deposit":0.0,"depositText":"$0.00","balance":5528.12,"balanceText":"$5,528.12","silver":"200g, 2.6oz","notes":"","enc":{"i":"5+fj5Nbn7KnoL6jcQvxI5w==","c":"vfH9qbthMZ0ic5nBqi4Xdz01vcYhsiSsQntJTGI8FVUEHmlGBQ4WlDmBevP5dbUkNMnnpmQD9yiNRLdqorj1zH1Si94cAatJ33AxAPY43t3qcUyytCGTjLQuSc5NnwhNbPv/K2uj/OeJ7eGcSTMeuEbL5m4DtyWZ1Jsmeh8Nd3VlBhf6HV022i+4Yldr2X7P8Lmc23inOqfxUbddSbWUZQ=="},"nlen":152,"date":"2026-10-11","dateText":"Oct 11, 2026","empty":false,"private":true},{"n":60,"withdraw":0.0,"withdrawText":"$0.00","deposit":20.02,"depositText":"$20.02","balance":5548.14,"balanceText":"$5,548.14","silver":"200g, 2.6oz","notes":"","enc":{"i":"hPyajaB2ApGlAi71n+0iYg==","c":"1NkksRKgY1V6dEf3DGS+cHJU8C6qvOKYXpGVVYIe2VaW0eUBLn8gkkK6k24HeNio/qeXrVmTcH30MRbqYa3rD4brZFWRtiP1HqBOwvsoqQHdHgJHZEa1ac6wTnfRMODp"},"nlen":90,"date":"2026-10-13","dateText":"Oct 13, 2026","empty":false,"private":true},{"n":61,"withdraw":0.0,"withdrawText":"$0.00","deposit":5.0,"depositText":"$5.00","balance":5553.14,"balanceText":"$5,553.14","silver":"200g, 2.6oz","notes":"","enc":{"i":"UBfWBgSWUA04XWQxGCHYew==","c":"Ms/MXq6LZGUW46Zw0PSC3oioDe5TLErJRe+8M9K/eXJFGEXlGz0tWU1iNOZ/Ghb1hkVaMLEmypT+zg3sm1RizuDjgxG9Jld78v8ECL7hCtYd1GIE2id1X+zqbDFnQ4PXrYrHDCtJ6FlL7NyLKgl/Ov9p11LqscB2Cltv+so+OJyQ+6+PkhpiaGP0c0ay7NDBmB5HYkadlIDbWUIPwgyxNQ=="},"nlen":151,"date":"2026-10-17","dateText":"Oct 17, 2026","empty":false,"private":true},{"n":62,"withdraw":0.0,"withdrawText":"$0.00","deposit":10.0,"depositText":"$10.00","balance":5563.14,"balanceText":"$5,563.14","silver":"200g, 2.6oz","notes":"","enc":{"i":"3fEGp04Z5cg9eqRtm4Bndw==","c":"vl8dwM2vRgSXTM+NElfKdZUhLUgYI3JFhluED/wxzn0NhwFAcODa/FVhRu6f4KAqeUhEJL0Bb6f04IYoRf+YwjL6a8/XixAovN//6LNxAUwb8711nkSCzmr6vPxnHnHwdO7XbVY0ZL+KAn6cSjOFZ6TVMP62YmXMjPkkt3kmnuN4T99QwGqomBuQ9Wu0ERHCEulKS/4cxeZ0Ho+92Jl6Hg=="},"nlen":156,"date":"2026-10-18","dateText":"Oct 18, 2026","empty":false,"private":true},{"n":63,"withdraw":1.0,"withdrawText":"$1.00","deposit":0.0,"depositText":"$0.00","balance":5562.14,"balanceText":"$5,562.14","silver":"200g, 2.6oz","notes":"This withdrawal was for one month of Spotify Premium, bought at the $1 promotional rate. This withdrawal was approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-19","dateText":"Oct 19, 2026","empty":false,"private":false},{"n":64,"withdraw":0.0,"withdrawText":"$0.00","deposit":11.92,"depositText":"$11.92","balance":5574.06,"balanceText":"$5,574.06","silver":"200g, 2.6oz","notes":"This deposit was coins on hand: $0.92 in coins plus $11.00 in additional coins. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-20","dateText":"Oct 20, 2026","empty":false,"private":false},{"n":65,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":6024.06,"balanceText":"$6,024.06","silver":"200g, 2.6oz","notes":"","enc":{"i":"YfZgh+nmmZS16Ae7RCy7cQ==","c":"mFLTvyiuvrOZ/9tJrt1HqCuK6I3JDz8QrIGDVYLJkHUp4V69h5kBGc8FFpqpTtaQrzjRETlk8rS6TMIftuNkzA0pwOrAcfsegSaIeCNQgYk="},"nlen":64,"date":"2026-10-21","dateText":"Oct 21, 2026","empty":false,"private":true},{"n":66,"withdraw":69.44,"withdrawText":"$69.44","deposit":0.0,"depositText":"$0.00","balance":5954.62,"balanceText":"$5,954.62","silver":"200g, 2.6oz","notes":"This withdrawal was by PCBWay for the Lamoka1/2 bare boards being presented at the Craft fair. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-23","dateText":"Oct 23, 2026","empty":false,"private":false},{"n":67,"withdraw":0.56,"withdrawText":"$0.56","deposit":0.0,"depositText":"$0.00","balance":5954.06,"balanceText":"$5,954.06","silver":"200g, 2.6oz","notes":"This withdrawal was an international routing fee with  PCBWay for the Lamoka1/2 board order (additional fee). Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-23","dateText":"Oct 23, 2026","empty":false,"private":false},{"n":68,"withdraw":36.33,"withdrawText":"$36.33","deposit":0.0,"depositText":"$0.00","balance":5917.73,"balanceText":"$5,917.73","silver":"200g, 2.6oz","notes":"","enc":{"i":"OVqW6EfNT1IXF05be7/new==","c":"sjTQApTEwQGhuVJQiQWyVQPlE6XIdYODuSZBsb80OnN0qojoQpPdsLpXqangDD8ccFFUVZbuPoh28bzkPxJoh83v8kf9sGQiRmQfUpAzeOE1KM1HGd0KSGZugAHaSEAhxGT7gzGtjTwqsqLoqDVzyxerThvUK+ltLPuoYdbzjfDuASr5k85eoMAExloAgMet"},"nlen":128,"date":"2026-10-24","dateText":"Oct 24, 2026","empty":false,"private":true},{"n":69,"withdraw":31.32,"withdrawText":"$31.32","deposit":0.0,"depositText":"$0.00","balance":5886.41,"balanceText":"$5,886.41","silver":"200g, 2.6oz","notes":"This withdrawal was for Canva, Flamingo and Cactus business cards. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-24","dateText":"Oct 24, 2026","empty":false,"private":false},{"n":70,"withdraw":3.19,"withdrawText":"$3.19","deposit":0.0,"depositText":"$0.00","balance":5883.22,"balanceText":"$5,883.22","silver":"200g, 2.6oz","notes":"This withdrawal was to GoDaddy for the purchase of the domain flamingoandcactus.com. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-10-24","dateText":"Oct 24, 2026","empty":false,"private":false},{"n":71,"withdraw":10.77,"withdrawText":"$10.77","deposit":0.0,"depositText":"$0.00","balance":5872.46,"balanceText":"$5,872.46","silver":"200g, 2.6oz","notes":"This withdrawal was to Opencode to top of the usage credits (all credits were spent within two days for website work). We paid for this by connecting our banking account directly through Stripe, they sent $0.01.","enc":null,"nlen":0,"date":"2026-10-28","dateText":"Oct 28, 2026","empty":false,"private":false},{"n":72,"withdraw":101.12,"withdrawText":"$101.12","deposit":0.0,"depositText":"$0.00","balance":5771.34,"balanceText":"$5,771.34","silver":"200g, 2.6oz","notes":"This withdrawal was to Mouser electronis for the order of external components for the Lamoka1/2 being ordered (arriving post craft fair).","enc":null,"nlen":0,"date":"2026-10-31","dateText":"Oct 31, 2026","empty":false,"private":false},{"n":73,"withdraw":0.0,"withdrawText":"$0","deposit":15.46,"depositText":"$15.46","balance":5786.82,"balanceText":"$5,786.82","silver":"200g, 2.6oz","notes":"This was a monthly interest payment on the Visions FCU share certificate. The certificate is of 3.65% APY. There was another $0.02 in soft savings from interest.","enc":null,"nlen":0,"date":"2026-11-01","dateText":"Nov 01, 2026","empty":false,"private":false},{"n":74,"withdraw":20.63,"withdrawText":"$20.63","deposit":0.0,"depositText":"$0.00","balance":5766.19,"balanceText":"$5,766.19","silver":"200g, 2.6oz","notes":"","enc":{"i":"ZiDPAfcP+d+7RwYOh2K68A==","c":"aP0JPhJ5XwSpAuMagu1Gl94OduDjcs6tWwjdxdJ+X6aTi2Uy/RrH1zOk1lpc9NoxENPTHymEr6cro7EIHx2YQLzAanEoZd10USSi3/aAlqIgJM4QsZnSh8DgLDSjVCtc/nGpvK+qg5E5IIN/AISDWQ=="},"nlen":99,"date":"2026-11-11","dateText":"Nov 11, 2026","empty":false,"private":true},{"n":75,"withdraw":44.0,"withdrawText":"$44.00","deposit":0.0,"depositText":"$0.00","balance":5722.19,"balanceText":"$5,722.19","silver":"200g, 2.6oz","notes":"This withdrawal was for miscellaneous craft fair expenditures. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-11-14","dateText":"Nov 14, 2026","empty":false,"private":false},{"n":76,"withdraw":71.4,"withdrawText":"$71.40","deposit":0.0,"depositText":"$0.00","balance":5650.79,"balanceText":"$5,650.79","silver":"200g, 2.6oz","notes":"","enc":{"i":"Vp2V7qhcvcreIXc/9jWJ5w==","c":"gsrimDaAHBOFkDe+sLZBqpTay0tT9xHDAHKdwGb/BgHspAv8153U7ZndA/1ikSsID+pw7ZoEtI9X8HnbYmJts5tF2RgVN5szEc3X/SGnCzUp6n59jh6RmnuIYAIkTwXy"},"nlen":87,"date":"2026-11-18","dateText":"Nov 18, 2026","empty":false,"private":true},{"n":77,"withdraw":0.0,"withdrawText":"$0.00","deposit":450.0,"depositText":"$450.00","balance":6100.79,"balanceText":"$6,100.79","silver":"200g, 2.6oz","notes":"Normal monthly $450 deposit.","enc":null,"nlen":0,"date":"2026-11-18","dateText":"Nov 18, 2026","empty":false,"private":false},{"n":78,"withdraw":0.0,"withdrawText":"$0.00","deposit":5.0,"depositText":"$5.00","balance":6105.79,"balanceText":"$6,105.79","silver":"200g, 2.6oz","notes":"This was a $5 credit back to the account for using direct bank linking with open code.","enc":null,"nlen":0,"date":"2026-11-20","dateText":"Nov 20, 2026","empty":false,"private":false},{"n":79,"withdraw":3.99,"withdrawText":"$3.99","deposit":0.0,"depositText":"$0.00","balance":6101.8,"balanceText":"$6,101.80","silver":"200g, 2.6oz","notes":"This withdrawal was for three months of Apple Music, to keep the music subscription going. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-11-23","dateText":"Nov 23, 2026","empty":false,"private":false},{"n":80,"withdraw":10.0,"withdrawText":"$10.00","deposit":0.0,"depositText":"$0.00","balance":6091.8,"balanceText":"$6,091.80","silver":"200g, 2.6oz","notes":"This withdrawal was for one month of OpenCode Go, for continued work on the website and specific intricate Lamoka1/2 work. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-11-24","dateText":"Nov 24, 2026","empty":false,"private":false},{"n":81,"withdraw":286.36,"withdrawText":"$286.36","deposit":0.0,"depositText":"$0.00","balance":5805.44,"balanceText":"$5,805.44","silver":"200g, 2.6oz","notes":"This withdrawal was for the purchase of gold and silver as an investment for the Flamingo and Cactus group. The metals are still in shipping, so their amounts are not added to the holdings yet. Approved by Bear J. Hartjen.","enc":null,"nlen":0,"date":"2026-11-25","dateText":"Nov 25, 2026","empty":false,"private":false}];
 
 const num = v => typeof v === "number" ? v : null;
 const money = n => n === null || n === undefined
@@ -444,14 +456,14 @@ async function refreshSpot(){
   document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) refreshSpot(); });
 })();
 
-/* ------------------------------------------------------------------ candles */
-function buildCandles(){
-  /* One candle per transaction.
+/* ------------------------------------------------------------------ points */
+function buildPoints(){
+  /* One point per transaction.
      open  = the balance carried in from the previous transaction
      close = the new balance after this one
      high  = max(open, close), low = min(open, close)
      The ledger itself has two places where the running balance jumps by more
-     than the recorded deposit/withdrawal; those candles get flagged. */
+     than the recorded deposit/withdrawal; those points get flagged. */
   const out = [];
   let prevClose = null;
   for (const t of TX){
@@ -474,7 +486,7 @@ function buildCandles(){
   return out;
 }
 
-const CANDLES = buildCandles();
+const POINTS = buildPoints();
 
 /* Trailing 10-day window for the blue moving-average line.
 
@@ -483,8 +495,8 @@ const CANDLES = buildCandles();
    a single day no longer fills the whole window, and a month with nothing
    in it no longer pretends to be an average of the last few old entries.
 
-   For each candle the window is the ten calendar days ending on that
-   candle's date -- its own day plus the nine before it -- and the average
+   For each point the window is the ten calendar days ending on that
+   point's date -- its own day plus the nine before it -- and the average
    is taken over the ending balance of every transaction dated inside it.
 
    One ledger entry carries no date. It borrows the date of the entry before
@@ -501,8 +513,8 @@ function dayNumber(iso){
   return Date.UTC(+m[1], +m[2]-1, +m[3]) / 86400000;
 }
 
-/* every candle gets a day number; undated ones borrow the previous date */
-const DAYS = CANDLES.map(c => dayNumber(c.iso));
+/* every point gets a day number; undated ones borrow the previous date */
+const DAYS = POINTS.map(c => dayNumber(c.iso));
 for (let i = 0; i < DAYS.length; i++){
   if (DAYS[i] !== null) continue;
   const before = DAYS.slice(0, i).reverse().find(d => d !== null);
@@ -513,135 +525,251 @@ for (let i = 0; i < DAYS.length; i++){
 }
 
 /* the moving average, plus how many transactions fed it */
-const MA = CANDLES.map((c,i)=>{
+const MA = POINTS.map((c,i)=>{
   const d = DAYS[i];
   if (d === null) return { value: c.close, count: 1 };
   let s = 0, n = 0;
-  for (let k = 0; k < CANDLES.length; k++){
+  for (let k = 0; k < POINTS.length; k++){
     if (DAYS[k] === null) continue;
-    const age = d - DAYS[k];                 /* days before this candle's day */
-    if (age >= 0 && age < MA_WINDOW_DAYS){ s += CANDLES[k].close; n++; }
+    const age = d - DAYS[k];                 /* days before this point's day */
+    if (age >= 0 && age < MA_WINDOW_DAYS){ s += POINTS[k].close; n++; }
   }
   return { value: n ? s/n : c.close, count: n };
 });
 
+/* ------------------------------------------------------------------ charts */
 (function(){
-  const svg = document.getElementById("chart");
-  const tip = document.getElementById("tip");
-  if (!CANDLES.length){ svg.innerHTML = '<text x="10" y="30" class="axlbl">No data</text>'; return; }
+  const fallback = document.getElementById("chartfallback");
+  const balanceCanvas = document.getElementById("chart-balance");
+  const monthlyCanvas = document.getElementById("chart-monthly");
+  if (!POINTS.length) { if (fallback) fallback.hidden = false; return; }
+  if (!window.Chart || !balanceCanvas || !monthlyCanvas) {
+    if (fallback) fallback.hidden = false;
+    return;
+  }
 
-  const H = 330, PL = 74, PR = 18, PT = 26, PB = 34;
-  let lo = Infinity, hi = -Infinity;
-  CANDLES.forEach(c=>{ lo = Math.min(lo,c.low); hi = Math.max(hi,c.high); });
-  const pad = (hi-lo)*0.08 || 10;
-  lo = Math.max(0, lo-pad); hi = hi+pad;
+  const C = {
+    ink: "#141414", ink2: "#3d3d3d", muted: "#6b6b6b",
+    rule: "#c9c9c9", rule2: "#e3e1da", paper: "#ffffff",
+    gold: "#8a6a12", up: "#1c6b3a", down: "#9c1f16", blue: "#1c4fd8"
+  };
+  Chart.defaults.font.family = '"Helvetica Neue", Arial, sans-serif';
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = C.muted;
 
-  function draw(){
-    const W = Math.max(640, svg.parentElement.clientWidth);
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.setAttribute("width", W);
-    svg.setAttribute("height", H);
-    svg.style.height = H+"px";
+  const moneyTick = v => "$" + Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const signedMoney = n => n === 0 ? money(0) : (n < 0 ? "-" : "+") + money(Math.abs(n));
+  const tooltipBase = {
+    backgroundColor: C.paper, titleColor: C.ink, bodyColor: C.ink2,
+    borderColor: C.ink, borderWidth: 1, padding: 10, cornerRadius: 2,
+    titleFont: { family: '"Helvetica Neue", Arial, sans-serif', size: 11, weight: "700" },
+    bodyFont: { family: '"Helvetica Neue", Arial, sans-serif', size: 12 },
+    displayColors: false
+  };
 
-    const plotW = W - PL - PR;
-    const step  = plotW / CANDLES.length;
-    const bw    = Math.max(3, Math.min(22, step*0.6));
-    const cx    = i => PL + step*i + step/2;
-    const y     = v => PT + (1-(v-lo)/(hi-lo))*(H-PT-PB);
+  const lastMa = MA[MA.length - 1];
+  const maNote = document.getElementById("ma-note");
+  if (maNote && lastMa) maNote.textContent = "10-day avg " + money(lastMa.value);
 
-    let grid = "", labs = "";
-    for (let i=0;i<=4;i++){
-      const v = lo + (hi-lo)*i/4, yy = y(v);
-      grid += `<line class="gl" x1="${PL}" y1="${yy.toFixed(1)}" x2="${W-PR}" y2="${yy.toFixed(1)}"/>`;
-      labs += `<text class="axlbl" x="${PL-9}" y="${(yy+4).toFixed(1)}" text-anchor="end">${"$"+Math.round(v).toLocaleString()}</text>`;
-    }
+  const pointBg = POINTS.map(c => c.close >= c.open ? C.paper : C.down);
+  const pointBorder = POINTS.map(c => c.close >= c.open ? C.up : C.down);
 
-    let xlabels = "", body = "";
-    CANDLES.forEach((c,i)=>{
-      const up = c.close >= c.open;
-      const x  = cx(i);
-      const yt = y(Math.max(c.open,c.close)), yb = y(Math.min(c.open,c.close));
-      const h  = Math.max(1.5, yb-yt);
-      body += `<line class="wick" x1="${x.toFixed(1)}" y1="${y(c.high).toFixed(1)}" x2="${x.toFixed(1)}" y2="${y(c.low).toFixed(1)}"/>`;
-      body += `<rect class="${up?"candle-up":"candle-dn"}" x="${(x-bw/2).toFixed(1)}" y="${yt.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}"/>`;
-      body += `<rect class="hit" data-i="${i}" x="${(x-step/2).toFixed(1)}" y="${PT}" width="${step.toFixed(1)}" height="${H-PT-PB}" fill="transparent"/>`;
-    });
-
-    /* label every Nth candle with its transaction number */
-    const every = Math.max(1, Math.ceil(CANDLES.length/14));
-    CANDLES.forEach((c,i)=>{
-      if (i % every === 0 || i === CANDLES.length-1)
-        xlabels += `<text class="axlbl" x="${cx(i).toFixed(1)}" y="${H-10}" text-anchor="middle">${c.label}</text>`;
-    });
-
-    /* blue moving-average line following the value of the holdings */
-    const maPath = MA.map((m,i)=>({ i, x: cx(i), v: m.value }));
-    const maD = maPath.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+y(p.v).toFixed(1)).join(" ");
-    const lastMa = maPath[maPath.length-1];
-    const maLine =
-      `<path class="mavg" d="${maD}"/>` +
-      `<circle class="mavgdot" cx="${lastMa.x.toFixed(1)}" cy="${y(lastMa.v).toFixed(1)}" r="3"/>` +
-      `<text class="avglbl" x="${(lastMa.x-8).toFixed(1)}" y="${(y(lastMa.v)-12).toFixed(1)}" text-anchor="end">10-day avg ${money(lastMa.v)}</text>`;
-
-    svg.innerHTML = grid + labs + body + maLine + xlabels;
-
-    /* hover tooltips */
-    const hits = svg.querySelectorAll(".hit");
-    hits.forEach(el=>{
-      el.addEventListener("mouseenter", ()=>{
-        const c = CANDLES[+el.dataset.i];
-        const up = c.close >= c.open;
-        const ma = MA[+el.dataset.i];
-        tip.innerHTML =
-          `<div class="tt-t">Transaction ${c.n} &mdash; ${c.date}</div>` +
-          `<div class="tt-r"><span>Opened at</span><span>${money(c.open)}</span></div>` +
-          `<div class="tt-r"><span>Closed at</span><span>${money(c.close)}</span></div>` +
-          `<div class="tt-r"><span>Change</span><span style="color:${up?"var(--up)":"var(--down)"}">${(c.close-c.open>=0?"+":"")+money(c.close-c.open)}</span></div>` +
-          `<div class="tt-r"><span>10-day avg</span><span style="color:#1c4fd8">${money(ma.value)}</span></div>` +
-          `<div class="tt-r"><span>in window</span><span>${ma.count} transaction${ma.count===1?"":"s"}</span></div>` +
-          (c.deposits  ? `<div class="tt-r"><span>Deposit</span><span>${money(c.deposits)}</span></div>`  : "") +
-          (c.withdrawals?`<div class="tt-r"><span>Withdrawal</span><span>${money(c.withdrawals)}</span></div>`:"") +
-          (c.gap ? `<div class="tt-r"><span>Unrecorded</span><span>${money(c.gap)}</span></div>` : "");
-        const svgRect = svg.getBoundingClientRect();
-        const wrapRect = svg.parentElement.getBoundingClientRect();
-        const i = +el.dataset.i;
-        const px = svgRect.left - wrapRect.left + cx(i);
-        const py = svgRect.top  - wrapRect.top  + y(c.high);
-        tip.style.opacity = "1";
-        /* park the box on the roomier side of the candle so it never sits
-           on top of it, then draw a leader line from the candle to the box */
-        const tw = tip.offsetWidth, th = tip.offsetHeight;
-        const wrapW = wrapRect.width;
-        let left = (cx(i) > W/2) ? px - tw - 16 : px + 16;
-        left = Math.max(0, Math.min(wrapW - tw, left));
-        const below = py < th + 28;
-        const top = Math.max(0, below ? py + 20 : py - th - 14);
-        tip.style.left = left + "px";
-        tip.style.top  = top + "px";
-        let leader = svg.querySelector("#leader");
-        if (!leader){
-          leader = document.createElementNS("http://www.w3.org/2000/svg","line");
-          leader.setAttribute("id","leader");
-          leader.setAttribute("class","leader");
-          svg.appendChild(leader);
+  new Chart(balanceCanvas.getContext("2d"), {
+    type: "line",
+    data: {
+      labels: POINTS.map(c => c.label),
+      datasets: [
+        {
+          label: "Balance",
+          data: POINTS.map(c => c.close),
+          borderColor: C.ink,
+          backgroundColor: "rgba(201,162,39,.14)",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.18,
+          pointRadius: POINTS.length > 60 ? 2.5 : 3.2,
+          pointHoverRadius: 5,
+          pointBackgroundColor: pointBg,
+          pointBorderColor: pointBorder,
+          pointBorderWidth: 1.4,
+          spanGaps: true
+        },
+        {
+          label: "10-day average",
+          data: MA.map(m => m.value),
+          borderColor: C.blue,
+          borderWidth: 1.8,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          fill: false,
+          tension: 0.18
         }
-        const ox = svgRect.left - wrapRect.left, oy = svgRect.top - wrapRect.top;
-        leader.setAttribute("x1", cx(i).toFixed(1));
-        leader.setAttribute("y1", y(c.high).toFixed(1));
-        leader.setAttribute("x2", (left + tw/2 - ox).toFixed(1));
-        leader.setAttribute("y2", ((below ? top : top + th) - oy).toFixed(1));
-      });
-    });
-    svg.addEventListener("mouseleave", ()=>{
-      tip.style.opacity = "0";
-      const leader = svg.querySelector("#leader");
-      if (leader) leader.remove();
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: Object.assign({}, tooltipBase, {
+          filter: item => item.datasetIndex === 0,
+          callbacks: {
+            title: items => {
+              const c = POINTS[items[0].dataIndex];
+              return "#" + c.n + " \u00b7 " + c.date;
+            },
+            label: item => "Close " + money(item.parsed.y),
+            afterBody: items => {
+              const i = items[0].dataIndex;
+              const c = POINTS[i];
+              const ma = MA[i];
+              const lines = [
+                "Opened at " + money(c.open),
+                "Change " + signedMoney(+(c.close - c.open).toFixed(2)),
+                "10-day avg " + money(ma.value) + " (" + ma.count + " in window)"
+              ];
+              if (c.deposits) lines.push("Deposit " + money(c.deposits));
+              if (c.withdrawals) lines.push("Withdrawal " + money(c.withdrawals));
+              if (c.gap) lines.push("Unrecorded " + money(c.gap));
+              return lines;
+            }
+          }
+        })
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { color: C.rule },
+          ticks: { color: C.muted, maxTicksLimit: 12, maxRotation: 0, autoSkip: true }
+        },
+        y: {
+          beginAtZero: false,
+          grid: { color: C.rule2 },
+          border: { display: false },
+          ticks: { color: C.muted, maxTicksLimit: 6, callback: moneyTick }
+        }
+      }
+    }
+  });
+
+  /* Month buckets for the second chart. Undated entries borrow the date of
+     the entry before them, the same rule the moving average uses, so every
+     dollar stays in a month. */
+  const MONTH_NAMES = ["January","February","March","April","May","June","July",
+                       "August","September","October","November","December"];
+  const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const buckets = {};
+  const keys = [];
+  POINTS.forEach((c, i) => {
+    if (DAYS[i] === null) return;
+    const d = new Date(DAYS[i] * 86400000);
+    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
+    const key = y + "-" + String(m).padStart(2, "0");
+    if (!buckets[key]) {
+      buckets[key] = { key, y, m, in: 0, out: 0, close: 0, count: 0 };
+      keys.push(key);
+    }
+    const row = buckets[key];
+    row.in += c.deposits;
+    row.out += c.withdrawals;
+    row.close = c.close;
+    row.count++;
+  });
+  keys.sort();
+  const MONTHS = [];
+  if (keys.length) {
+    let y = +keys[0].slice(0, 4), m = +keys[0].slice(5, 7);
+    const endY = +keys[keys.length - 1].slice(0, 4);
+    const endM = +keys[keys.length - 1].slice(5, 7);
+    while (y < endY || (y === endY && m <= endM)) {
+      const key = y + "-" + String(m).padStart(2, "0");
+      const row = buckets[key] || { key, y, m, in: 0, out: 0, close: 0, count: 0 };
+      row.in = +row.in.toFixed(2);
+      row.out = +row.out.toFixed(2);
+      row.net = +(row.in - row.out).toFixed(2);
+      row.label = MONTH_NAMES[m - 1] + " " + y;
+      row.short = MONTH_SHORT[m - 1] + " " + String(y).slice(2);
+      MONTHS.push(row);
+      m++;
+      if (m === 13) { m = 1; y++; }
+    }
+    let prevClose = 0;
+    MONTHS.forEach(row => {
+      if (!row.count) row.close = prevClose;
+      else prevClose = row.close;
     });
   }
 
-  draw();
-  let t;
-  window.addEventListener("resize", ()=>{ tip.style.opacity = "0"; clearTimeout(t); t = setTimeout(draw,120); });
+  const monthBlock = monthlyCanvas.closest(".chartblock");
+  if (!MONTHS.length) {
+    if (monthBlock) monthBlock.hidden = true;
+    return;
+  }
+
+  new Chart(monthlyCanvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: MONTHS.map(row => row.short),
+      datasets: [
+        {
+          label: "Money in",
+          data: MONTHS.map(row => row.in),
+          backgroundColor: C.gold,
+          borderRadius: 2,
+          maxBarThickness: 18
+        },
+        {
+          label: "Money out",
+          data: MONTHS.map(row => row.out),
+          backgroundColor: C.down,
+          borderRadius: 2,
+          maxBarThickness: 18
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            color: C.muted, usePointStyle: true, boxWidth: 8, boxHeight: 8,
+            padding: 14
+          }
+        },
+        tooltip: Object.assign({}, tooltipBase, {
+          displayColors: true,
+          callbacks: {
+            title: items => MONTHS[items[0].dataIndex].label,
+            label: item => item.dataset.label + " " + money(item.parsed.y),
+            afterBody: items => {
+              const row = MONTHS[items[0].dataIndex];
+              return "Net " + money(row.net) + " \u00b7 ending " + money(row.close);
+            }
+          }
+        })
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { color: C.rule },
+          ticks: { color: C.muted, maxTicksLimit: 10, maxRotation: 0, autoSkip: true }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: C.rule2 },
+          border: { display: false },
+          ticks: { color: C.muted, maxTicksLimit: 6, callback: moneyTick }
+        }
+      }
+    }
+  });
 })();
 
 /* ------------------------------------------------------------------ table */
