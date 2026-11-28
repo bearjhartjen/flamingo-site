@@ -3468,6 +3468,9 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         "<head>\n"
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n'
+        '<meta http-equiv="Pragma" content="no-cache">\n'
+        '<meta http-equiv="Expires" content="0">\n'
         f"<title>{html.escape(page_title)}</title>\n"
         f'<meta name="description" content="{html.escape(desc, quote=True)}">\n'
         f'<link rel="canonical" href="{canon}">\n'
