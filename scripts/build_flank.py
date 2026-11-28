@@ -646,6 +646,9 @@ document.getElementById("stats").innerHTML =
    per troy oz, and bare "oz" is read as troy oz, the precious-metal unit. */
 let SILVER_PRICE = null;
 let GOLD_PRICE = null;
+const ALLOC_CATS = ["gold","silver","cash","coin","checking","savings","deepSavings"];
+const ALLOC_LABELS = {gold:"Gold",silver:"Silver",cash:"Cash",coin:"Coin",checking:"Checking",savings:"Savings",deepSavings:"Deep savings"};
+let ALLOC_TOTAL = 0;
 const G_PER_OZT = 31.1034768;
 const SPOT_URL = "https://api.gold-api.com/price/XAG";
 const SPOT_EVERY_MS = 60000;
@@ -799,10 +802,6 @@ async function refreshGoldSpot(){
 })();
 
 /* ------------------------------------------------------------------ allocation bar */
-const ALLOC_CATS = ["gold","silver","cash","coin","checking","savings","deepSavings"];
-const ALLOC_LABELS = {gold:"Gold",silver:"Silver",cash:"Cash",coin:"Coin",checking:"Checking",savings:"Savings",deepSavings:"Deep savings"};
-let ALLOC_TOTAL = 0;
-
 function allocationValue(cat){
   if (cat === "gold") return (HOLDINGS_GOLD_OZT || 0) * (GOLD_PRICE || 0);
   if (cat === "silver") return (HOLDINGS_OZT || 0) * (SILVER_PRICE || 0);
@@ -815,7 +814,6 @@ function allocationValue(cat){
 }
 
 function updateAllocation(){
-  if (typeof ALLOC_CATS === "undefined" || !ALLOC_CATS) return;
   const vals = ALLOC_CATS.map(c => ({ cat:c, value: allocationValue(c) }));
   ALLOC_TOTAL = vals.reduce((s,v)=>s+v.value,0);
   const totalEl = document.getElementById("allocation-total");
