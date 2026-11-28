@@ -977,19 +977,19 @@
 
 ## Transaction 83
 
-- **Withdraw of:** $
-- **Deposit of:** $
-- **New balance:** $
-- **Silver holdings:** 
+- **Withdraw of:** $0.00
+- **Deposit of:** $10.35
+- **New balance:** $5,777.99
+- **Silver holdings:** 200g, 2.6oz
 - **Gold holdings:** 
-- **Cash:** $
-- **Coin:** $
-- **Checking:** $
-- **Savings:** $
-- **Deep savings:** $
+- **Cash:** $0
+- **Coin:** $12.27
+- **Checking:** $33.85
+- **Savings:** $0.00
+- **Deep savings:** $5,731.87
 - **Private:** no
-- **Notes:** 
-- **Transaction was made on:** 
+- **Notes:** Approved by Bear
+- **Transaction was made on:** 11-28-2026
 
 ---
 
