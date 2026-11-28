@@ -17,3 +17,6 @@ Thumbs.db
 .flamingo-events-backup-*/
 /site/uploads/
 .flamingo-upgrade-backup-*/
+
+# beehest gate report (untracked output of scripts/beehave_gate.py)
+reports/

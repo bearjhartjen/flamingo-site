@@ -584,6 +584,45 @@ EDITOR_CSS = site_build.CSS + r'''
     font:12.5px/1.5 Georgia,"Times New Roman",serif;
   }
   .editing #canvas .gen-preview{outline:2px dashed #1c4fd8;outline-offset:4px}
+  /* The Polls page: the live poll texts are generated from polls.json.
+     Show them here with an edit button; the form iframe stays out of the
+     editing canvas and only appears in Preview. */
+  #canvas .poll-preview{
+    border:1px solid var(--rule);border-left:3px solid var(--gold);
+    border-radius:6px;background:var(--paper2);color:var(--ink2);
+    padding:12px 14px;margin:14px 0;
+  }
+  #canvas .poll-preview-bar{
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;
+    border-bottom:1px solid var(--rule);padding-bottom:10px;margin-bottom:4px;
+  }
+  #canvas .poll-preview-bar .pp-note{
+    flex:1 1 260px;font:12.5px/1.5 Georgia,"Times New Roman",serif;color:var(--muted);
+  }
+  #canvas .poll-preview button{
+    border:1px solid var(--ink);border-radius:2px;background:var(--paper);
+    color:var(--ink);padding:6px 12px;cursor:pointer;
+    font:600 10.5px "Helvetica Neue",Arial,sans-serif;letter-spacing:.8px;text-transform:uppercase;
+  }
+  #canvas .poll-preview button:hover{background:var(--ink);color:var(--paper)}
+  #canvas .poll-preview button.primary{background:var(--ink);color:var(--paper)}
+  #canvas .poll-preview button.primary:hover{background:var(--paper);color:var(--ink)}
+  #canvas .poll-preview-card{padding:12px 0;border-bottom:1px solid var(--rule2)}
+  #canvas .poll-preview-card:last-child{border-bottom:0}
+  #canvas .poll-preview-card h3{
+    margin:0 0 4px;font:600 15px "Helvetica Neue",Arial,sans-serif;color:var(--ink);
+    letter-spacing:0;text-transform:none;
+  }
+  #canvas .poll-preview-details{
+    margin:0 0 8px;font:14px/1.55 Georgia,"Times New Roman",serif;color:var(--ink2);
+  }
+  #canvas .poll-preview-q{
+    margin:0 0 4px;font:italic 14px/1.5 Georgia,"Times New Roman",serif;color:var(--ink);
+  }
+  #canvas .poll-preview-status{
+    margin:0 0 8px;font:600 10px "Helvetica Neue",Arial,sans-serif;
+    letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);
+  }
   .evcal-label{font:600 15px "Helvetica Neue",Arial,sans-serif;color:var(--ink)}
   .editing .evcal .ev-day{cursor:pointer}
   .editing .evcal .ev-day:hover{transform:scale(1.06);z-index:2}
@@ -1084,8 +1123,8 @@ __CSS__
 <div class="ld-back" id="pollsDlg" hidden>
   <div class="ld-box wide" role="dialog" aria-modal="true" aria-labelledby="pollsDlgTitle">
     <h3 id="pollsDlgTitle">Polls</h3>
-    <p class="dlg-note">Each poll is a product or project put up for a yes or no vote. Add the two Google Form links and the two public sheet links when they exist; the page shows live counts and public comments from those sheets.</p>
-    <label class="dlg-field">Page introduction (shown above every poll)<textarea id="pollIntro" maxlength="2000"></textarea></label>
+    <p class="dlg-note">Each poll is a product or project put up for a yes or no vote. The page introduction, product explanation and question are the public texts above the form; the Google Form itself is not edited here. Add the two Google Form links and the two public sheet links when they exist; the page shows live counts and public comments from those sheets.</p>
+    <label class="dlg-field">Page introduction (shown above every poll)<textarea id="pollIntro" rows="3" maxlength="2000"></textarea></label>
     <div id="pollsList"></div>
     <div id="pollForm" hidden>
       <h4 id="pollFormTitle" style="margin:14px 0 2px;font-size:13px">New poll</h4>
@@ -1093,7 +1132,7 @@ __CSS__
         <label class="dlg-field" style="flex:1">Product or project name<input id="pollTitle" maxlength="160"></label>
       </div>
       <label class="dlg-field">Question voters read<input id="pollQuestion" maxlength="400" placeholder="Should we build this?"></label>
-      <label class="dlg-field">Details<textarea id="pollDetails" maxlength="2000"></textarea></label>
+      <label class="dlg-field">Product explanation (shown above the vote form)<textarea id="pollDetails" rows="8" maxlength="2000"></textarea></label>
       <div class="dlg-row">
         <label class="dlg-field" style="flex:1">Opens<input id="pollOpens" type="date"></label>
         <label class="dlg-field" style="flex:1">Closes<input id="pollCloses" type="date"></label>
@@ -1106,7 +1145,7 @@ __CSS__
       <label class="dlg-field">Developers sheet CSV URL<input id="pollDevCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
       <label class="dlg-field">Financial sheet CSV URL<input id="pollFinCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
       <label class="dlg-field">Users sheet CSV URL<input id="pollUserCsv" maxlength="500" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"></label>
-      <label class="dlg-field">Decision note (published when it closes)<textarea id="pollDecision" maxlength="2000"></textarea></label>
+      <label class="dlg-field">Decision note (published when it closes)<textarea id="pollDecision" rows="3" maxlength="2000"></textarea></label>
       <div class="dlg-row"><label><input type="checkbox" id="pollClosed"> Voting closed</label></div>
       <div class="dlg-actions">
         <button type="button" class="primary" id="pollSave">Save this poll</button>
@@ -1621,6 +1660,7 @@ async function restoreDraft(){
   if (choice === "discard") { clearDraft(SLUG); return false; }
   canvas.innerHTML = draft.body; selImg = null; replaceTarget = null;
   renderGeneratedMarkers();
+  renderPollPreview();
   if (draft.form && typeof draft.form === "object") FORM = Object.assign({}, FORM, draft.form);
   const siteSettingsCurrent = !!draft.siteBase && draft.siteBase === serverSiteSnapshot;
   if (draft.site && siteSettingsCurrent) SITE = Object.assign({}, SITE, draft.site);
@@ -2089,8 +2129,15 @@ $("#evCancel").onclick = () => { $("#eventDlg").hidden = true; if (EVRETURN) ope
 /* ---- polls: products put up for a yes or no vote ---- */
 let POLLS = {intro: "", polls: []};
 let POLL_EDIT = null;
-async function openPollsDialog(){
+let POLLS_LOADED = false;
+async function loadPolls(force){
+  if (POLLS_LOADED && !force) return POLLS;
   try { const j = await api("/api/polls", {}); if (j && j.doc) POLLS = j.doc; } catch(e){}
+  POLLS_LOADED = true;
+  return POLLS;
+}
+async function openPollsDialog(){
+  await loadPolls(true);
   $("#pollIntro").value = POLLS.intro || "";
   POLL_EDIT = null;
   $("#pollForm").hidden = true;
@@ -2179,10 +2226,17 @@ function readPollForm(){
 async function savePollsDoc(){
   const payload = {intro: $("#pollIntro").value, polls: POLLS.polls};
   const j = await api("/api/polls/save", payload);
-  if (j && j.doc) POLLS = j.doc;
+  if (j && j.doc) {
+    POLLS = j.doc;
+    POLLS_LOADED = true;
+    renderPollPreview();
+  }
 }
 $("#pollAdd").onclick = () => fillPollForm(null);
-$("#pollsClose").onclick = () => { $("#pollsDlg").hidden = true; };
+$("#pollsClose").onclick = async () => {
+  await savePollsDoc();
+  $("#pollsDlg").hidden = true;
+};
 $("#pollCancel").onclick = () => {
   POLL_EDIT = null;
   $("#pollForm").hidden = true;
@@ -2210,6 +2264,80 @@ $("#pollDelete").onclick = async () => {
   renderPollsList();
   status.textContent = "Poll deleted";
 };
+/* The Polls page canvas: show the public texts from polls.json with a
+   direct edit button. The Google Form iframe is not loaded into the
+   editing canvas; Preview shows the real form. */
+let POLL_PREVIEW_REQ = 0;
+function pollPreviewButton(label, primary){
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = label;
+  if (primary) b.className = "primary";
+  return b;
+}
+async function renderPollPreview(){
+  if (SLUG !== "polls") return;
+  const existing = canvas.querySelector("[data-poll-preview]");
+  const marker = existing || Array.from(canvas.querySelectorAll("p"))
+    .find(el => el.textContent.trim() === "[poll list]");
+  if (!marker) return;
+  const mine = ++POLL_PREVIEW_REQ;
+  await loadPolls(false);
+  if (mine !== POLL_PREVIEW_REQ || SLUG !== "polls") return;
+  let box = canvas.querySelector("[data-poll-preview]");
+  if (!box) {
+    box = document.createElement("div");
+    box.setAttribute("data-poll-preview", "");
+    box.contentEditable = "false";
+    marker.replaceWith(box);
+  }
+  box.innerHTML = "";
+  const bar = document.createElement("div");
+  bar.className = "poll-preview-bar";
+  const note = document.createElement("span");
+  note.className = "pp-note";
+  note.textContent = "Poll texts — edit the product explanation and question here; the vote form itself stays in Google Forms.";
+  const manage = pollPreviewButton("Manage polls", true);
+  manage.onclick = () => openPollsDialog();
+  bar.append(note, manage);
+  box.append(bar);
+  if (POLLS.intro) {
+    const intro = document.createElement("p");
+    intro.className = "pp-note";
+    intro.textContent = POLLS.intro;
+    box.append(intro);
+  }
+  if (!POLLS.polls.length) {
+    const empty = document.createElement("p");
+    empty.className = "pp-note";
+    empty.textContent = "No polls yet. Use Manage polls to add the first one.";
+    box.append(empty);
+    return;
+  }
+  POLLS.polls.forEach((poll, idx) => {
+    const card = document.createElement("section");
+    card.className = "poll-preview-card";
+    const title = document.createElement("h3");
+    title.textContent = poll.title || "Poll";
+    const details = document.createElement("p");
+    details.className = "poll-preview-details";
+    details.textContent = poll.details || "";
+    const question = document.createElement("p");
+    question.className = "poll-preview-q";
+    question.textContent = poll.question || "";
+    const state = document.createElement("p");
+    state.className = "poll-preview-status";
+    state.textContent = poll.closed ? "Voting is closed" : "Voting is open";
+    const edit = pollPreviewButton("Edit poll texts");
+    edit.onclick = async () => {
+      await openPollsDialog();
+      const current = POLLS.polls.findIndex(p => p.id === poll.id);
+      if (current >= 0) fillPollForm(current);
+    };
+    card.append(title, details, question, state, edit);
+    box.append(card);
+  });
+}
 /* ---- dated news articles for the Latest page ---- */
 function openNewsDialog(){
   const now = new Date();
@@ -2385,7 +2513,12 @@ function renderGeneratedMarkers(){
 }
 function syncFormMarker(){
   const current = SITE.pages.find(p => p.slug === SLUG);
-  if (current && current.form) { decorateFormMarker(); renderGeneratedMarkers(); return; }
+  if (current && current.form) {
+    decorateFormMarker();
+    renderGeneratedMarkers();
+    renderPollPreview();
+    return;
+  }
   const existing = canvas.querySelector('[data-form-marker="contact"]');
   const marker = existing || Array.from(canvas.querySelectorAll("p")).find(el => el.textContent.trim() === "[contact form]");
   if (marker) {
@@ -2393,6 +2526,7 @@ function syncFormMarker(){
     marker.contentEditable = "false"; marker.textContent = "Contact form is off — enable it in Page settings to publish it";
   }
   renderGeneratedMarkers();
+  renderPollPreview();
 }
 function bodyForSave(){
   const copy = canvas.cloneNode(true);
@@ -2405,6 +2539,9 @@ function bodyForSave(){
   Array.from(copy.querySelectorAll("[data-form-block]")).forEach(node => {
     if (page && page.form) node.replaceWith(markerPara("[contact form]"));
     else node.remove();
+  });
+  Array.from(copy.querySelectorAll("[data-poll-preview]")).forEach(node => {
+    node.replaceWith(markerPara("[poll list]"));
   });
   Array.from(copy.querySelectorAll("[data-generated-marker]")).forEach(node => {
     const marker = node.getAttribute("data-generated-marker") || "";
@@ -2811,6 +2948,8 @@ function doUndo(){
     }
   }
   hi--; canvas.innerHTML = hist[hi]; selImg = null; imgButtons();
+  renderGeneratedMarkers();
+  renderPollPreview();
   canvas.focus();
   let restored = false;
   if (savedPath) {
@@ -2843,6 +2982,8 @@ function doRedo(){
     }
   }
   hi++; canvas.innerHTML = hist[hi]; selImg = null; imgButtons();
+  renderGeneratedMarkers();
+  renderPollPreview();
   canvas.focus();
   let restored = false;
   if (savedPath) {
@@ -4591,6 +4732,7 @@ histReset();
 renderCalBlock();
 renderFormBlock();
 renderGeneratedMarkers();
+renderPollPreview();
 async function initEditor(){
   let last = null;
   try { last = localStorage.getItem(LAST_PAGE_KEY); } catch (e) {}

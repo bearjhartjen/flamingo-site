@@ -695,6 +695,9 @@ something a visitor can poke at.
   Google Form content is 760px tall; at phone width it is 916px. The
   iframe is now 840px on desktop and 980px on phones, so Yes, No, the
   Comment box and Submit are all visible without an inner scrollbar.
+- **Only the first vote form loads eagerly.** The second poll's form is
+  `loading="lazy"`, so the page does not download two Google Forms up
+  front; it appears when the reader scrolls near it.
 
 ### Favicon vs link preview (November 2026)
 
@@ -708,3 +711,14 @@ something a visitor can poke at.
   orange artwork; the tab stays clean.
 - **Both icons are content-stamped** in the page head, so a browser or
   iMessage cache cannot keep serving the old icon after a change.
+
+### Poll texts are editable in the builder (November 2026)
+
+- **The Polls page canvas shows the public texts**, not just the
+  `[poll list]` marker: product name, product explanation, question and
+  voting state, with **Manage polls** and **Edit poll texts** buttons.
+- **Every text above the form is editable** in the poll dialog: the page
+  introduction, product name, product explanation, question, dates and
+  decision note. `Done` now saves the page introduction too. The Google
+  Form itself stays in Google Forms and is not loaded into the editing
+  canvas; Preview shows the real form.

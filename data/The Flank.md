@@ -960,3 +960,15 @@
 - **Private:** no
 - **Notes:** This withdrawal was for the purchase of gold and silver as an investment for the Flamingo and Cactus group. The metals are still in shipping, so their amounts are not added to the holdings yet. Approved by Bear J. Hartjen.
 - **Transaction was made on:** 11-25-2026
+
+---
+
+## Transaction 82
+
+- **Withdraw of:** $37.80
+- **Deposit of:** $0.00
+- **New balance:** $5,767.64
+- **Silver holdings:** 200g, 2.6oz
+- **Private:** yes
+- **Notes:** [[FCEnc n:118 iv:SfYG+g0tcwnDEEQADe33wg== ct:m+w7SOnt++k9sxNu4afyVQGF79Y2XjRfOt2rkiciZm6c8BJYwLawjYFsOwSu5FwRFC7Ojsx+ZaJUoRd7tgMKyzW2+QFO1cFkdkpq5omyd0yw9NEMwwS/iFr/7nlkHpXbvskPN6kkNUwC9Xy8xV867cvzvxXhN9xmhvRx6MbGNlk=]]
+- **Transaction was made on:** 11-27-2026

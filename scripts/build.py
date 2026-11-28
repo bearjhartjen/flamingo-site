@@ -2540,6 +2540,7 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
     doc = polls_doc or POLL_DEFAULTS
     today = datetime.date.today()
     parts = []
+    form_count = 0
     for poll in doc.get("polls", []):
         pid = html.escape(poll.get("id") or "poll", quote=True)
         title = html.escape(poll.get("title") or "Poll")
@@ -2553,7 +2554,9 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
         signed = poll.get("signed_form") or ""
         if form:
             embed = html.escape(form + ("&" if "?" in form else "?") + "embedded=true", quote=True)
-            form_html = (f'<div class="poll-form"><iframe src="{embed}" '
+            loading = ' loading="lazy"' if form_count else ""
+            form_count += 1
+            form_html = (f'<div class="poll-form"><iframe src="{embed}"{loading} '
                          'title="Vote form" allowfullscreen></iframe></div>')
         else:
             form_html = '<p class="pc-empty">The voting form is not connected yet.</p>'

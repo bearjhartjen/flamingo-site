@@ -1374,8 +1374,9 @@ def check(data_path: Path, logo_path: Path):
             tx = json.loads(m.group(1))
             expect(len(tx) == n, f"embedded ledger parses back to {n} records")
             priv = sorted(t["n"] for t in tx if t.get("private"))
-            expect(priv == sorted(PRIVATE_TX),
-                   f"embedded data flags the {len(PRIVATE_TX)} private transactions")
+            expected_priv = sorted(r["n"] for r in filled if r.get("private"))
+            expect(priv == expected_priv,
+                   f"embedded data flags the {len(expected_priv)} private transactions")
             encd = [t for t in tx if t.get("enc")]
             expect(len(encd) == len(priv),
                    f"every private record carries an encrypted blob ({len(encd)})")
