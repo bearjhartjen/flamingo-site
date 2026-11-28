@@ -15,9 +15,9 @@
 <meta property="og:image" content="https://flamingoandcactus.com/apple-touch-icon.png?v=392d9156d4">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://flamingoandcactus.com/#organization","name":"Flamingo & Cactus","alternateName":["Flamingo and Cactus","Flamingo & Cactus Group"],"url":"https://flamingoandcactus.com/","logo":"https://flamingoandcactus.com/apple-touch-icon.png","description":"The website dedicated to the Flamingo and Cactus group. Everything Flamingo and Cactus can be found here.","email":"flamingoncactusgroup@gmail.com","telephone":"+1-607-205-6663","address":{"@type":"PostalAddress","addressLocality":"Owego","addressRegion":"NY","addressCountry":"US"},"knowsAbout":["open-source hardware","PCB design","electrical unit construction","inverters"],"member":{"@type":"Person","name":"Bear J. Hartjen","jobTitle":"Manager","url":"https://flamingoandcactus.com/people.html","sameAs":["https://github.com/bearjhartjen"]}},{"@type":"WebSite","@id":"https://flamingoandcactus.com/#website","url":"https://flamingoandcactus.com/","name":"Flamingo & Cactus","alternateName":"Flamingo and Cactus","publisher":{"@id":"https://flamingoandcactus.com/#organization"}}]}</script>
-<link rel="stylesheet" href="assets/site.css?v=9c9c8825d3">
+<link rel="stylesheet" href="assets/site.css?v=ff840e0341">
 </head>
-<body data-theme="classic" data-star-animation="comic">
+<body data-theme="classic" data-default-theme="classic" data-star-animation="comic">
 <script>try{var t=localStorage.getItem('fc-theme');if(t==='midnight'||t==='classic'||t==='parchment'||t==='ink')document.body.dataset.theme=t}catch(_){}</script>
 <div class="page">
 
@@ -47,7 +47,6 @@
    right in Classic, Parchment, Ink and Midnight alike. */
 .poll{border:1px solid var(--rule);border-radius:6px;padding:18px 20px;margin:16px 0;background:var(--paper2);color:var(--ink2)}
 .poll h3{margin:0 0 4px;font-size:22px;color:var(--ink)}
-.poll-q{margin:0 0 8px;font-size:17px;color:var(--ink)}
 .poll-details{color:var(--ink2);margin:0 0 8px}
 .poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 10px;letter-spacing:.3px}
 .poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 12px}
@@ -56,18 +55,13 @@
 .poll-tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .poll-pane[hidden]{display:none}
 .poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);margin:12px 0 0}
-.poll-bars{margin:0 0 10px}
-.pb-row{display:flex;align-items:center;gap:10px;margin:0 0 6px}
-.pb-label{flex:0 0 96px;font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
-.pb-bar{flex:1;display:flex;height:15px;border-radius:3px;overflow:hidden;background:var(--rule2);min-width:80px}
-.pb-bar i{display:block;height:100%}
-.pb-yes{background:#2e8b57}
-.pb-no{background:#b0463c}
-.pb-num{flex:0 0 auto;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);white-space:nowrap}
+.poll-chart{position:relative;height:62px;max-width:520px;margin:0 0 10px}
+.poll-chart canvas{display:block;width:100%!important;height:100%!important}
 .poll-total{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0}
 .poll-counts b{font-size:15px}
-.poll-form iframe{width:100%;max-width:640px;height:840px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
-@media (max-width:640px){.poll-form iframe{height:980px}}
+.poll-form iframe{width:100%;max-width:640px;height:1000px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+@media (max-width:700px){.poll-form iframe{height:1180px}}
+@media (max-width:380px){.poll-form iframe{height:1260px}}
 .poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
 .poll-links a{display:inline-block;margin:0 10px 6px 0}
 .pc-item{padding:8px 0;border-bottom:1px solid var(--rule2);margin:0;font-size:15px}
@@ -75,11 +69,10 @@
 .pc-vote.no{color:#a1261e}
 .pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin-left:8px}
 .pc-empty{color:var(--muted);font-style:italic}
-body[data-theme="ink"] .pb-yes,body[data-theme="midnight"] .pb-yes{background:#4fbf82}
-body[data-theme="ink"] .pb-no,body[data-theme="midnight"] .pb-no{background:#e07a6f}
 body[data-theme="ink"] .pc-vote,body[data-theme="midnight"] .pc-vote{color:#7ee2a8}
 body[data-theme="ink"] .pc-vote.no,body[data-theme="midnight"] .pc-vote.no{color:#ff9d9d}
-</style><section class="poll" data-poll="open-jewel" data-anon="https://docs.google.com/spreadsheets/d/e/2PACX-1vTvAKwCJWaGe-HSnLrTuGh4LbZUGgJJfmjkuBR4JpUAifM-HSY3HNgtYlN6cYYSlwgZLTlt9RiOkWcS/pub?gid=1840370635&amp;single=true&amp;output=csv" data-signed="" data-dev="" data-fin="" data-user=""><h3>Open-jewel</h3><p class="poll-details">The Open-jewel project will be an open source wearable device with RGB LEDs on the whole face. This unit will be quite small and light. It will need to have serious battery management considerations to ensure that it&#x27;s not a huge inconvenience to charge it up. The firmware on this device will need to be very precise and solid as this unit will potentially be seen for extended periods of time. Ideas for LED presentation include but are certainly not limited to: Water falling down the front pixel display, rainbow spiraling around, dim pulsing screen, etc.</p><p class="poll-q">Do you think this is a good idea for a product? Only click YES if you think Flamingo &amp; Cactus can realistically create such a unit, and if you will in some way assist in the development, be that through feedback, financial backing, hardware design, firmware design, etc.</p><p class="poll-when">Voting is open</p><p class="poll-note">All votes and comments are public.</p><div class="poll-tabs"><button type="button" class="on" data-ptab="vote">Vote</button><button type="button" data-ptab="comments">Comments</button></div><div class="poll-pane" data-ppane="vote"><div class="poll-form"><iframe src="https://docs.google.com/forms/d/e/1FAIpQLSctg08QxHitxL3k7tgrYFVKJf2LGTX_zo4x8uCB5LBLLTdlIA/viewform?embedded=true" title="Vote form" allowfullscreen></iframe></div><p class="poll-links"><a href="https://docs.google.com/forms/d/e/1FAIpQLSctg08QxHitxL3k7tgrYFVKJf2LGTX_zo4x8uCB5LBLLTdlIA/viewform" target="_blank" rel="noopener">Open the anonymous form in its own tab</a></p></div><div class="poll-pane" data-ppane="comments" hidden><p class="pc-empty">No comments yet.</p></div><p class="poll-counts" data-pcounts>Counts load once the form is connected.</p></section><section class="poll" data-poll="u-till" data-anon="https://docs.google.com/spreadsheets/d/e/2PACX-1vRFj5BirEaLaBycCkbY64-MY40ibtRV3AxAqfOXlisCZAL5UizXhT5lv5G0E7SzzDtSuIEKAvduoCwl/pub?gid=699877767&amp;single=true&amp;output=csv" data-signed="" data-dev="" data-fin="" data-user=""><h3>U-till</h3><p class="poll-details">The U-till project is a very intriguing idea, it aims to take a small footprint (similar size to an Air pod pro 3 case) and create a fully interactive and accessible device, like the flipper zero in the sense that it will have exposed GPio, Bluetooth, Wifi, and a USB-C port. The devices interface will simply be a whole array of Neopixel RGBs on the face of the unit, this is because at the time of writing this, we do not have a strong firmware ground, and a more complex screen may take longer to ship the idea out. Small form factor, and diverse usage is where this idea shines. Taking the base of the Lamoka1-DEV-Brain R1, we can create a completely open computer in the inner palm of your hand. We think this could be grounds for an amazing community project, some cool features (with connected GPio devices) could be music reactive lighting setup, to have individual frequency tracking bars in different sections on the display, all rising to the beats. Another idea is a clock/night-table display, even though the display will be quite small, we think it&#x27;s possible to get some good visual. As with all other Flamingo &amp; Cactus products, U-till we be as simple, and discrete as possible, no extra craziness. Every one of our products aims to release maximum functional capacity possible, if we can add a cool new feature in for relatively cheap, there&#x27;s no reason not to.</p><p class="poll-q">Do you think this is a good idea for a product? Only click YES if you think Flamingo &amp; Cactus can realistically create such a unit, and if you will in some way assist in the development, be that through feedback, financial backing, hardware design, firmware design, etc.</p><p class="poll-when">Voting is open</p><p class="poll-note">All votes and comments are public.</p><div class="poll-tabs"><button type="button" class="on" data-ptab="vote">Vote</button><button type="button" data-ptab="comments">Comments</button></div><div class="poll-pane" data-ppane="vote"><div class="poll-form"><iframe src="https://docs.google.com/forms/d/e/1FAIpQLSfyZuVRFuN_K7UP4gpW2JEzBJlEkI5nAefpmOpbqOe2heawrA/viewform?embedded=true" loading="lazy" title="Vote form" allowfullscreen></iframe></div><p class="poll-links"><a href="https://docs.google.com/forms/d/e/1FAIpQLSfyZuVRFuN_K7UP4gpW2JEzBJlEkI5nAefpmOpbqOe2heawrA/viewform" target="_blank" rel="noopener">Open the anonymous form in its own tab</a></p></div><div class="poll-pane" data-ppane="comments" hidden><p class="pc-empty">No comments yet.</p></div><p class="poll-counts" data-pcounts>Counts load once the form is connected.</p></section><script>(function(){
+</style><section class="poll" data-poll="open-jewel" data-anon="https://docs.google.com/spreadsheets/d/e/2PACX-1vTvAKwCJWaGe-HSnLrTuGh4LbZUGgJJfmjkuBR4JpUAifM-HSY3HNgtYlN6cYYSlwgZLTlt9RiOkWcS/pub?gid=373017254&amp;single=true&amp;output=csv" data-signed="" data-dev="" data-fin="" data-user=""><h3>Open-jewel</h3><p class="poll-details">The Open-jewel project will be an open source wearable device with RGB LEDs on the whole face. This unit will be quite small and light. It will need to have serious battery management considerations to ensure that it&#x27;s not a huge inconvenience to charge it up. The firmware on this device will need to be very precise and solid as this unit will potentially be seen for extended periods of time. Ideas for LED presentation include but are certainly not limited to: Water falling down the front pixel display, rainbow spiraling around, dim pulsing screen, etc.</p><p class="poll-when">Voting is open</p><p class="poll-note">All votes and comments are public.</p><div class="poll-tabs"><button type="button" class="on" data-ptab="vote">Vote</button><button type="button" data-ptab="comments">Comments</button></div><div class="poll-pane" data-ppane="vote"><div class="poll-form"><iframe src="https://docs.google.com/forms/d/e/1FAIpQLSctg08QxHitxL3k7tgrYFVKJf2LGTX_zo4x8uCB5LBLLTdlIA/viewform?embedded=true" title="Vote form" allowfullscreen></iframe></div></div><div class="poll-pane" data-ppane="comments" hidden><p class="pc-empty">No comments yet.</p></div><p class="poll-counts" data-pcounts>Counts load once the form is connected.</p></section><section class="poll" data-poll="u-till" data-anon="https://docs.google.com/spreadsheets/d/e/2PACX-1vRFj5BirEaLaBycCkbY64-MY40ibtRV3AxAqfOXlisCZAL5UizXhT5lv5G0E7SzzDtSuIEKAvduoCwl/pub?gid=1824571981&amp;single=true&amp;output=csv" data-signed="" data-dev="" data-fin="" data-user=""><h3>U-till</h3><p class="poll-details">The U-till project is a very intriguing idea, it aims to take a small footprint (similar size to an Air pod pro 3 case) and create a fully interactive and accessible device, like the flipper zero in the sense that it will have exposed GPio, Bluetooth, Wifi, and a USB-C port. The devices interface will simply be a whole array of Neopixel RGBs on the face of the unit, this is because at the time of writing this, we do not have a strong firmware ground, and a more complex screen may take longer to ship the idea out. Small form factor, and diverse usage is where this idea shines. Taking the base of the Lamoka1-DEV-Brain R1, we can create a completely open computer in the inner palm of your hand. We think this could be grounds for an amazing community project, some cool features (with connected GPio devices) could be music reactive lighting setup, to have individual frequency tracking bars in different sections on the display, all rising to the beats. Another idea is a clock/night-table display, even though the display will be quite small, we think it&#x27;s possible to get some good visual. As with all other Flamingo &amp; Cactus products, U-till we be as simple, and discrete as possible, no extra craziness. Every one of our products aims to release maximum functional capacity possible, if we can add a cool new feature in for relatively cheap, there&#x27;s no reason not to.</p><p class="poll-when">Voting is open</p><p class="poll-note">All votes and comments are public.</p><div class="poll-tabs"><button type="button" class="on" data-ptab="vote">Vote</button><button type="button" data-ptab="comments">Comments</button></div><div class="poll-pane" data-ppane="vote"><div class="poll-form"><iframe src="https://docs.google.com/forms/d/e/1FAIpQLSfyZuVRFuN_K7UP4gpW2JEzBJlEkI5nAefpmOpbqOe2heawrA/viewform?embedded=true" loading="lazy" title="Vote form" allowfullscreen></iframe></div></div><div class="poll-pane" data-ppane="comments" hidden><p class="pc-empty">No comments yet.</p></div><p class="poll-counts" data-pcounts>Counts load once the form is connected.</p></section><script src="assets/chart.umd.min.js"></script>
+<script>(function(){
 function csv(t){var r=[],row=[],f="",i=0;for(;i<t.length;i++){var c=t[i];
 if(c=='"'){if(t[i+1]=='"'){f+='"';i++;}else{var q=true;i++;while(i<t.length&&q){if(t[i]=='"'){if(t[i+1]=='"'){f+='"';i++;}else{q=false;}i++;}else{f+=t[i];i++;}}i--;}}
 else if(c==","){row.push(f);f="";}else if(c=="\n"){row.push(f);r.push(row);row=[];f="";}else if(c!="\r"){f+=c;}}
@@ -88,12 +81,53 @@ function pick(rows){var out=[];for(var i=1;i<rows.length;i++){var R=rows[i];if(!
 var vote=(R[1]||"").trim().toLowerCase();var comment=(R[2]||"").trim();out.push({vote:vote,comment:comment});}return out;}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 var secs=document.querySelectorAll("section.poll");
-function bar(label,yes,no){
-  var total=yes+no||1,py=Math.round(yes*100/total),pn=100-py;
-  return '<div class="pb-row"><span class="pb-label">'+esc(label)+'</span>'+
-    '<span class="pb-bar"><i class="pb-yes" style="width:'+py+'%"></i>'+
-    '<i class="pb-no" style="width:'+pn+'%"></i></span>'+
-    '<span class="pb-num">'+yes+' yes · '+no+' no</span></div>';
+var charts=[];
+var reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function palette(){
+  var cs=getComputedStyle(document.body);
+  return {yes:(cs.getPropertyValue("--poll-yes")||"").trim()||"#2e8b57",
+          no:(cs.getPropertyValue("--poll-no")||"").trim()||"#b0463c"};
+}
+function pct(v,total){return total?Math.round(v*100/total):0;}
+function drawChart(box,labels,counts){
+  if(!window.Chart)return;
+  box.style.height=(labels.length*46+16)+"px";
+  var canvas=document.createElement("canvas");
+  canvas.setAttribute("aria-hidden","true");
+  box.appendChild(canvas);
+  var colors=palette();
+  var chart=new window.Chart(canvas.getContext("2d"),{
+    type:"bar",
+    data:{labels:labels,datasets:[
+      {label:"Yes",data:counts.map(function(c){return c.yes;}),backgroundColor:colors.yes,borderWidth:0,stack:"votes"},
+      {label:"No",data:counts.map(function(c){return c.no;}),backgroundColor:colors.no,borderWidth:0,stack:"votes"}
+    ]},
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:reduceMotion?false:undefined,
+      scales:{
+        x:{max:100,stacked:true,grid:{display:false,drawBorder:false},ticks:{display:false}},
+        y:{stacked:true,grid:{display:false,drawBorder:false},ticks:{display:false}}
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+": "+ctx.parsed.x;}}}
+      }
+    }
+  });
+  charts.push(chart);
+}
+if(window.MutationObserver){
+  new MutationObserver(function(){
+    var colors=palette();
+    charts.forEach(function(chart){
+      chart.data.datasets[0].backgroundColor=colors.yes;
+      chart.data.datasets[1].backgroundColor=colors.no;
+      chart.update("none");
+    });
+  }).observe(document.body,{attributes:true,attributeFilter:["data-theme"]});
 }
 function tally(rows){
   var yes=0,no=0;
@@ -108,8 +142,8 @@ secs.forEach(function(sec){
   var pools=[{k:"dev",label:"Developers",u:sec.getAttribute("data-dev")},
              {k:"fin",label:"Financial",u:sec.getAttribute("data-fin")},
              {k:"usr",label:"Users",u:sec.getAttribute("data-user")}];
-  var extra=[{k:"anon",label:"Anonymous",u:sec.getAttribute("data-anon"),signed:false},
-             {k:"signed",label:"Signed in",u:sec.getAttribute("data-signed"),signed:true}];
+  var extra=[{k:"anon",u:sec.getAttribute("data-anon"),signed:false},
+             {k:"signed",u:sec.getAttribute("data-signed"),signed:true}];
   var anyPool=pools.some(function(x){return x.u;});
   var sources=(anyPool?pools:extra).filter(function(x){return x.u;});
   if(!sources.length)return;
@@ -125,27 +159,37 @@ secs.forEach(function(sec){
     }
     var rows=[].concat.apply([],all),t=tally(rows),signed=0;
     rows.forEach(function(r){if(r.signed)signed++;});
-    var onlyAnon=!anyPool&&sources.length===1&&sources[0].k==="anon";
-    var html="";
+    var singleAnon=!anyPool&&sources.length===1&&sources[0].k==="anon";
+    var labels=[],values=[];
     if(anyPool){
       pools.forEach(function(p){
         var mine=rows.filter(function(r){return r.pool===p.k;});
         if(!mine.length)return;
-        var pt=tally(mine);
-        html+=bar(p.label,pt.yes,pt.no);
+        var pt=tally(mine),ptot=pt.yes+pt.no;
+        labels.push(p.label);values.push({yes:pct(pt.yes,ptot),no:pct(pt.no,ptot)});
       });
+    }else{
+      var hasSigned=sources.some(function(x){return x.signed;}),tot=t.yes+t.no;
+      labels.push(hasSigned?"Result":"Everyone");
+      values.push({yes:pct(t.yes,tot),no:pct(t.no,tot)});
     }
-    html+=bar(onlyAnon?"Anonymous":(anyPool?"Everyone":"Result"),t.yes,t.no);
-    counts.innerHTML='<div class="poll-bars">'+html+'</div><p class="poll-total">'+
-      (onlyAnon ? rows.length+' total'
+    counts.innerHTML="";
+    var box=document.createElement("div");
+    box.className="poll-chart";
+    counts.appendChild(box);
+    drawChart(box,labels,values);
+    var total=document.createElement("p");
+    total.className="poll-total";
+    total.textContent=(singleAnon ? rows.length+' total'
                 : t.yes+' yes · '+t.no+' no · '+rows.length+' total'+
-                  ' · '+signed+' signed in, '+(rows.length-signed)+' not signed in')+'</p>';
+                  ' · '+signed+' signed in, '+(rows.length-signed)+' not signed in');
+    counts.appendChild(total);
     var withC=rows.filter(function(r){return r.comment;});
     if(withC.length){
       paneC.innerHTML=withC.map(function(r){
         var no=r.vote.indexOf("no")===0;
         return '<p class="pc-item"><span class="pc-vote'+(no?' no':'')+'">'+(no?"No":"Yes")+'</span>'+
-          esc(r.comment)+(onlyAnon?'':(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>'))+'</p>';
+          esc(r.comment)+(singleAnon?'':(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>'))+'</p>';
       }).join("");
     }
   });
@@ -158,6 +202,6 @@ document.addEventListener("click",function(e){var b=e.target.closest("[data-ptab
     <button type="button" class="themetoggle" id="theme-toggle">Dark mode</button>
   </footer>
 </div>
-<script src="assets/site.js?v=9c9c8825d3"></script>
+<script src="assets/site.js?v=ff840e0341"></script>
 </body>
 </html>
