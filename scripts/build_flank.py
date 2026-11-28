@@ -817,6 +817,7 @@ function allocationValue(cat){
 }
 
 function updateAllocation(){
+  if (typeof ALLOC_CATS === "undefined" || !ALLOC_CATS) return;
   const vals = ALLOC_CATS.map(c => ({ cat:c, value: allocationValue(c) }));
   ALLOC_TOTAL = vals.reduce((s,v)=>s+v.value,0);
   const totalEl = document.getElementById("allocation-total");
