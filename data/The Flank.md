@@ -981,6 +981,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -993,6 +999,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1005,6 +1017,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1017,6 +1035,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1029,6 +1053,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1041,6 +1071,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1053,6 +1089,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1065,6 +1107,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1077,6 +1125,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1089,6 +1143,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1101,6 +1161,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1113,6 +1179,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1125,6 +1197,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1137,6 +1215,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1149,6 +1233,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1161,6 +1251,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1173,6 +1269,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1185,6 +1287,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1197,6 +1305,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
@@ -1209,6 +1323,12 @@
 - **Deposit of:** $
 - **New balance:** $
 - **Silver holdings:** 
+- **Gold holdings:** 
+- **Cash:** $
+- **Coin:** $
+- **Checking:** $
+- **Savings:** $
+- **Deep savings:** $
 - **Private:** no
 - **Notes:** 
 - **Transaction was made on:** 
