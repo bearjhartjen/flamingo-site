@@ -1562,6 +1562,7 @@ STAR_SUB = "Click me"
 # short on a phone. Each is rendered only when its page exists.
 FOOTER_LINKS = (("latest", "News"), ("feedback", "Feedback"),
                 ("promotional", "Promotional"), ("settings", "Settings"))
+FOOTER_EXTERNAL_LINKS = (("Logo", "https://github.com/bearjhartjen/Flamingoncactuslogo"),)
 
 # Inbox for the contact form. Submissions POST here and FormSubmit forwards
 # them to this address (first submission needs a one-time activation click
@@ -3451,9 +3452,11 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
     # wired by site.js (the same fc-theme key the Settings page writes).
     footer_text = html.escape(footer).strip()
     footer_links = " &middot; ".join(
-        f'<a href="{html.escape(s)}.html">{html.escape(label)}</a>'
-        for s, label in FOOTER_LINKS
-        if any(p["slug"] == s for p in pages))
+        [f'<a href="{html.escape(s)}.html">{html.escape(label)}</a>'
+         for s, label in FOOTER_LINKS
+         if any(p["slug"] == s for p in pages)] +
+        [f'<a href="{html.escape(url)}" target="_blank" rel="noopener">{html.escape(label)}</a>'
+         for label, url in FOOTER_EXTERNAL_LINKS])
     footer_block = ('  <footer>\n'
                     + (f'    <p>{footer_text}</p>\n' if footer_text else "")
                     + (f'    <p class="footlinks">{footer_links}</p>\n' if footer_links else "")
@@ -4652,6 +4655,9 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
             expect("giscus.html" in sm, "sitemap lists the Giscus-ting page")
         expect('href="settings.html"' in idx and 'class="footlinks"' in idx,
                "the footer carries the Settings link (and the other small links)")
+        expect('href="https://github.com/bearjhartjen/Flamingoncactuslogo"' in idx
+               and 'target="_blank"' in idx,
+               "the footer carries the external Logo link next to Settings")
         expect('href="promotional.html"' in idx and '>Promotional</a>' in idx,
                "Promotional sits in the footer with Settings")
         expect("promotional" not in sm, "sitemap keeps the footer pages unlisted")
