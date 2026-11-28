@@ -616,9 +616,6 @@ EDITOR_CSS = site_build.CSS + r'''
   #canvas .poll-preview-details{
     margin:0 0 8px;font:14px/1.55 Georgia,"Times New Roman",serif;color:var(--ink2);
   }
-  #canvas .poll-preview-q{
-    margin:0 0 4px;font:italic 14px/1.5 Georgia,"Times New Roman",serif;color:var(--ink);
-  }
   #canvas .poll-preview-status{
     margin:0 0 8px;font:600 10px "Helvetica Neue",Arial,sans-serif;
     letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);
@@ -1123,7 +1120,7 @@ __CSS__
 <div class="ld-back" id="pollsDlg" hidden>
   <div class="ld-box wide" role="dialog" aria-modal="true" aria-labelledby="pollsDlgTitle">
     <h3 id="pollsDlgTitle">Polls</h3>
-    <p class="dlg-note">Each poll is a product or project put up for a yes or no vote. The page introduction, product explanation and question are the public texts above the form; the Google Form itself is not edited here. Add the two Google Form links and the two public sheet links when they exist; the page shows live counts and public comments from those sheets.</p>
+    <p class="dlg-note">Each poll is a product or project put up for a yes or no vote. The page introduction and product explanation are the public texts above the form; the Google Form itself is not edited here. Add the two Google Form links and the two public sheet links when they exist; the page shows live counts and public comments from those sheets.</p>
     <label class="dlg-field">Page introduction (shown above every poll)<textarea id="pollIntro" rows="3" maxlength="2000"></textarea></label>
     <div id="pollsList"></div>
     <div id="pollForm" hidden>
@@ -1131,7 +1128,6 @@ __CSS__
       <div class="dlg-row">
         <label class="dlg-field" style="flex:1">Product or project name<input id="pollTitle" maxlength="160"></label>
       </div>
-      <label class="dlg-field">Question voters read<input id="pollQuestion" maxlength="400" placeholder="Should we build this?"></label>
       <label class="dlg-field">Product explanation (shown above the vote form)<textarea id="pollDetails" rows="8" maxlength="2000"></textarea></label>
       <div class="dlg-row">
         <label class="dlg-field" style="flex:1">Opens<input id="pollOpens" type="date"></label>
@@ -2163,7 +2159,7 @@ function renderPollsList(){
     when.textContent = (poll.opens || "—") + " → " + (poll.closes || "—");
     const what = document.createElement("span");
     what.className = "evwhat";
-    what.textContent = poll.title || poll.question || "Poll";
+    what.textContent = poll.title || "Poll";
     const edit = document.createElement("button");
     edit.type = "button";
     edit.textContent = "Edit";
@@ -2185,7 +2181,6 @@ function fillPollForm(idx){
   POLL_EDIT = (idx === null) ? null : idx;
   const p = (idx === null) ? {} : (POLLS.polls[idx] || {});
   $("#pollTitle").value = p.title || "";
-  $("#pollQuestion").value = p.question || "";
   $("#pollDetails").value = p.details || "";
   $("#pollOpens").value = p.opens || "";
   $("#pollCloses").value = p.closes || "";
@@ -2208,7 +2203,6 @@ function readPollForm(){
   return {
     id: (POLL_EDIT !== null && POLLS.polls[POLL_EDIT] && POLLS.polls[POLL_EDIT].id) || ("poll-" + Date.now()),
     title: $("#pollTitle").value.trim(),
-    question: $("#pollQuestion").value.trim(),
     details: $("#pollDetails").value.trim(),
     opens: $("#pollOpens").value,
     closes: $("#pollCloses").value,
@@ -2245,7 +2239,7 @@ $("#pollCancel").onclick = () => {
 };
 $("#pollSave").onclick = async () => {
   const poll = readPollForm();
-  if (!poll.title && !poll.question) { status.textContent = "Give the poll a product name or a question"; $("#pollTitle").focus(); return; }
+  if (!poll.title) { status.textContent = "Give the poll a product name"; $("#pollTitle").focus(); return; }
   if (POLL_EDIT === null) POLLS.polls.push(poll); else POLLS.polls[POLL_EDIT] = poll;
   await savePollsDoc();
   POLL_EDIT = null;
@@ -2296,7 +2290,7 @@ async function renderPollPreview(){
   bar.className = "poll-preview-bar";
   const note = document.createElement("span");
   note.className = "pp-note";
-  note.textContent = "Poll texts — edit the product explanation and question here; the vote form itself stays in Google Forms.";
+  note.textContent = "Poll texts — edit the product explanation here; the vote form itself stays in Google Forms.";
   const manage = pollPreviewButton("Manage polls", true);
   manage.onclick = () => openPollsDialog();
   bar.append(note, manage);
@@ -2322,9 +2316,6 @@ async function renderPollPreview(){
     const details = document.createElement("p");
     details.className = "poll-preview-details";
     details.textContent = poll.details || "";
-    const question = document.createElement("p");
-    question.className = "poll-preview-q";
-    question.textContent = poll.question || "";
     const state = document.createElement("p");
     state.className = "poll-preview-status";
     state.textContent = poll.closed ? "Voting is closed" : "Voting is open";
@@ -2334,7 +2325,7 @@ async function renderPollPreview(){
       const current = POLLS.polls.findIndex(p => p.id === poll.id);
       if (current >= 0) fillPollForm(current);
     };
-    card.append(title, details, question, state, edit);
+    card.append(title, details, state, edit);
     box.append(card);
   });
 }

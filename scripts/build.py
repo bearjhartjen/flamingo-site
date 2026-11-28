@@ -574,9 +574,15 @@ def _clean_href(href: str) -> str | None:
     return None
 
 
+_REMOTE_IMG = re.compile(
+    r"https://raw\.githubusercontent\.com/bearjhartjen/"
+    r"(?:Lamoka1-half|Lamoka1-DEV-Brain)/master/Images/[A-Za-z0-9._-]+\.(?:webp|png)")
+
 def _clean_src(src: str) -> str | None:
     s = (src or "").strip()
     if s.startswith("uploads/") and ".." not in s and '"' not in s:
+        return s
+    if _REMOTE_IMG.fullmatch(s):
         return s
     return None
 
@@ -764,6 +770,8 @@ CSS = r'''  :root{
     --rule2:#ececec;
     --link:#0b2a8c;
     --gold:#c9a227;
+    --poll-yes:#2e8b57;
+    --poll-no:#b0463c;
   }
   body[data-theme="classic"] .contactform{background:#ffffff}
   body[data-theme="parchment"]{
@@ -788,6 +796,8 @@ CSS = r'''  :root{
     --rule2:#544b3e;
     --link:#9db8ff;
     --gold:#d29922;
+    --poll-yes:#4fbf82;
+    --poll-no:#e07a6f;
   }
   body[data-theme="midnight"]{
     --paper:#221c2c;
@@ -800,6 +810,8 @@ CSS = r'''  :root{
     --rule2:#3b2d54;
     --link:#d3b8ff;
     --gold:#e3b83b;
+    --poll-yes:#4fbf82;
+    --poll-no:#e07a6f;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -2423,7 +2435,7 @@ monthSel.addEventListener("change",function(){cm=+monthSel.value;renderGrid();})
 
 
 POLL_DEFAULTS = {"intro": "", "polls": []}
-POLL_TEXT_LIMITS = {"id": 64, "title": 160, "question": 400, "details": 2000,
+POLL_TEXT_LIMITS = {"id": 64, "title": 160, "details": 2000,
                     "opens": 10, "closes": 10, "decision": 2000}
 POLL_URL_FIELDS = ("anon_form", "signed_form", "anon_csv", "signed_csv",
                    "dev_csv", "finance_csv", "user_csv")
@@ -2443,6 +2455,11 @@ def sanitize_poll(raw) -> dict:
         if not ok and re.match(r"^http://(127\.0\.0\.1|localhost):\d+/[^\s<>\"']*$", url):
             ok = True
         out[key] = url if ok else ""
+    try:
+        height = int(str(src.get("form_height", "") or "").strip())
+    except (TypeError, ValueError):
+        height = None
+    out["form_height"] = min(2000, max(400, height)) if height is not None else ""
     out["closed"] = bool(src.get("closed"))
     return out
 
@@ -2497,7 +2514,6 @@ POLLS_CSS = """<style>
    right in Classic, Parchment, Ink and Midnight alike. */
 .poll{border:1px solid var(--rule);border-radius:6px;padding:18px 20px;margin:16px 0;background:var(--paper2);color:var(--ink2)}
 .poll h3{margin:0 0 4px;font-size:22px;color:var(--ink)}
-.poll-q{margin:0 0 8px;font-size:17px;color:var(--ink)}
 .poll-details{color:var(--ink2);margin:0 0 8px}
 .poll-when{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 10px;letter-spacing:.3px}
 .poll-note{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0 0 12px}
@@ -2506,18 +2522,13 @@ POLLS_CSS = """<style>
 .poll-tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .poll-pane[hidden]{display:none}
 .poll-counts{font:13px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);margin:12px 0 0}
-.poll-bars{margin:0 0 10px}
-.pb-row{display:flex;align-items:center;gap:10px;margin:0 0 6px}
-.pb-label{flex:0 0 96px;font:11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
-.pb-bar{flex:1;display:flex;height:15px;border-radius:3px;overflow:hidden;background:var(--rule2);min-width:80px}
-.pb-bar i{display:block;height:100%}
-.pb-yes{background:#2e8b57}
-.pb-no{background:#b0463c}
-.pb-num{flex:0 0 auto;font:11px "Helvetica Neue",Arial,sans-serif;color:var(--ink2);white-space:nowrap}
+.poll-chart{position:relative;height:62px;max-width:520px;margin:0 0 10px}
+.poll-chart canvas{display:block;width:100%!important;height:100%!important}
 .poll-total{font:12px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin:0}
 .poll-counts b{font-size:15px}
-.poll-form iframe{width:100%;max-width:640px;height:840px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
-@media (max-width:640px){.poll-form iframe{height:980px}}
+.poll-form iframe{width:100%;max-width:640px;height:1000px;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+@media (max-width:700px){.poll-form iframe{height:1180px}}
+@media (max-width:380px){.poll-form iframe{height:1260px}}
 .poll-links{margin:8px 0 0;font:13px "Helvetica Neue",Arial,sans-serif}
 .poll-links a{display:inline-block;margin:0 10px 6px 0}
 .pc-item{padding:8px 0;border-bottom:1px solid var(--rule2);margin:0;font-size:15px}
@@ -2525,8 +2536,6 @@ POLLS_CSS = """<style>
 .pc-vote.no{color:#a1261e}
 .pc-signed{font:11px "Helvetica Neue",Arial,sans-serif;color:var(--muted);margin-left:8px}
 .pc-empty{color:var(--muted);font-style:italic}
-body[data-theme="ink"] .pb-yes,body[data-theme="midnight"] .pb-yes{background:#4fbf82}
-body[data-theme="ink"] .pb-no,body[data-theme="midnight"] .pb-no{background:#e07a6f}
 body[data-theme="ink"] .pc-vote,body[data-theme="midnight"] .pc-vote{color:#7ee2a8}
 body[data-theme="ink"] .pc-vote.no,body[data-theme="midnight"] .pc-vote.no{color:#ff9d9d}
 </style>"""
@@ -2544,7 +2553,6 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
     for poll in doc.get("polls", []):
         pid = html.escape(poll.get("id") or "poll", quote=True)
         title = html.escape(poll.get("title") or "Poll")
-        question = html.escape(poll.get("question") or "")
         details = html.escape(poll.get("details") or "")
         is_open = _poll_open(poll, today)
         status = "Voting is open" if is_open else "Voting is closed"
@@ -2552,11 +2560,13 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
         decision = html.escape(poll.get("decision") or "")
         form = poll.get("anon_form") or ""
         signed = poll.get("signed_form") or ""
+        form_height = poll.get("form_height") or ""
         if form:
             embed = html.escape(form + ("&" if "?" in form else "?") + "embedded=true", quote=True)
             loading = ' loading="lazy"' if form_count else ""
+            style = f' style="height:{int(form_height)}px"' if form_height else ""
             form_count += 1
-            form_html = (f'<div class="poll-form"><iframe src="{embed}"{loading} '
+            form_html = (f'<div class="poll-form"><iframe src="{embed}"{loading}{style} '
                          'title="Vote form" allowfullscreen></iframe></div>')
         else:
             form_html = '<p class="pc-empty">The voting form is not connected yet.</p>'
@@ -2564,9 +2574,6 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
         if signed:
             links.append(f'<a href="{html.escape(signed, quote=True)}" target="_blank" rel="noopener">'
                          'Vote with a Google sign-in</a>')
-        if form:
-            links.append(f'<a href="{html.escape(form, quote=True)}" target="_blank" rel="noopener">'
-                         'Open the anonymous form in its own tab</a>')
         links_html = f'<p class="poll-links">{" · ".join(links)}</p>' if links else ""
         decision_html = f'<p class="poll-details"><b>Decision:</b> {decision}</p>' if decision else ""
         parts.append(
@@ -2577,7 +2584,6 @@ def place_polls(body_html: str, polls_doc: dict | None = None) -> tuple[str, str
             f' data-user="{html.escape(poll.get("user_csv") or "", quote=True)}">'
             f'<h3>{title}</h3>'
             f'<p class="poll-details">{details}</p>'
-            f'<p class="poll-q">{question}</p>'
             f'<p class="poll-when">{html.escape(status)}{(" · " + html.escape(when)) if when else ""}</p>'
             '<p class="poll-note">All votes and comments are public.</p>'
             '<div class="poll-tabs"><button type="button" class="on" data-ptab="vote">Vote</button>'
@@ -2600,12 +2606,53 @@ function pick(rows){var out=[];for(var i=1;i<rows.length;i++){var R=rows[i];if(!
 var vote=(R[1]||"").trim().toLowerCase();var comment=(R[2]||"").trim();out.push({vote:vote,comment:comment});}return out;}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 var secs=document.querySelectorAll("section.poll");
-function bar(label,yes,no){
-  var total=yes+no||1,py=Math.round(yes*100/total),pn=100-py;
-  return '<div class="pb-row"><span class="pb-label">'+esc(label)+'</span>'+
-    '<span class="pb-bar"><i class="pb-yes" style="width:'+py+'%"></i>'+
-    '<i class="pb-no" style="width:'+pn+'%"></i></span>'+
-    '<span class="pb-num">'+yes+' yes · '+no+' no</span></div>';
+var charts=[];
+var reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function palette(){
+  var cs=getComputedStyle(document.body);
+  return {yes:(cs.getPropertyValue("--poll-yes")||"").trim()||"#2e8b57",
+          no:(cs.getPropertyValue("--poll-no")||"").trim()||"#b0463c"};
+}
+function pct(v,total){return total?Math.round(v*100/total):0;}
+function drawChart(box,labels,counts){
+  if(!window.Chart)return;
+  box.style.height=(labels.length*46+16)+"px";
+  var canvas=document.createElement("canvas");
+  canvas.setAttribute("aria-hidden","true");
+  box.appendChild(canvas);
+  var colors=palette();
+  var chart=new window.Chart(canvas.getContext("2d"),{
+    type:"bar",
+    data:{labels:labels,datasets:[
+      {label:"Yes",data:counts.map(function(c){return c.yes;}),backgroundColor:colors.yes,borderWidth:0,stack:"votes"},
+      {label:"No",data:counts.map(function(c){return c.no;}),backgroundColor:colors.no,borderWidth:0,stack:"votes"}
+    ]},
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:reduceMotion?false:undefined,
+      scales:{
+        x:{max:100,stacked:true,grid:{display:false,drawBorder:false},ticks:{display:false}},
+        y:{stacked:true,grid:{display:false,drawBorder:false},ticks:{display:false}}
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+": "+ctx.parsed.x;}}}
+      }
+    }
+  });
+  charts.push(chart);
+}
+if(window.MutationObserver){
+  new MutationObserver(function(){
+    var colors=palette();
+    charts.forEach(function(chart){
+      chart.data.datasets[0].backgroundColor=colors.yes;
+      chart.data.datasets[1].backgroundColor=colors.no;
+      chart.update("none");
+    });
+  }).observe(document.body,{attributes:true,attributeFilter:["data-theme"]});
 }
 function tally(rows){
   var yes=0,no=0;
@@ -2620,8 +2667,8 @@ secs.forEach(function(sec){
   var pools=[{k:"dev",label:"Developers",u:sec.getAttribute("data-dev")},
              {k:"fin",label:"Financial",u:sec.getAttribute("data-fin")},
              {k:"usr",label:"Users",u:sec.getAttribute("data-user")}];
-  var extra=[{k:"anon",label:"Anonymous",u:sec.getAttribute("data-anon"),signed:false},
-             {k:"signed",label:"Signed in",u:sec.getAttribute("data-signed"),signed:true}];
+  var extra=[{k:"anon",u:sec.getAttribute("data-anon"),signed:false},
+             {k:"signed",u:sec.getAttribute("data-signed"),signed:true}];
   var anyPool=pools.some(function(x){return x.u;});
   var sources=(anyPool?pools:extra).filter(function(x){return x.u;});
   if(!sources.length)return;
@@ -2637,33 +2684,45 @@ secs.forEach(function(sec){
     }
     var rows=[].concat.apply([],all),t=tally(rows),signed=0;
     rows.forEach(function(r){if(r.signed)signed++;});
-    var onlyAnon=!anyPool&&sources.length===1&&sources[0].k==="anon";
-    var html="";
+    var singleAnon=!anyPool&&sources.length===1&&sources[0].k==="anon";
+    var labels=[],values=[];
     if(anyPool){
       pools.forEach(function(p){
         var mine=rows.filter(function(r){return r.pool===p.k;});
         if(!mine.length)return;
-        var pt=tally(mine);
-        html+=bar(p.label,pt.yes,pt.no);
+        var pt=tally(mine),ptot=pt.yes+pt.no;
+        labels.push(p.label);values.push({yes:pct(pt.yes,ptot),no:pct(pt.no,ptot)});
       });
+    }else{
+      var hasSigned=sources.some(function(x){return x.signed;}),tot=t.yes+t.no;
+      labels.push(hasSigned?"Result":"Everyone");
+      values.push({yes:pct(t.yes,tot),no:pct(t.no,tot)});
     }
-    html+=bar(onlyAnon?"Anonymous":(anyPool?"Everyone":"Result"),t.yes,t.no);
-    counts.innerHTML='<div class="poll-bars">'+html+'</div><p class="poll-total">'+
-      (onlyAnon ? rows.length+' total'
+    counts.innerHTML="";
+    var box=document.createElement("div");
+    box.className="poll-chart";
+    counts.appendChild(box);
+    drawChart(box,labels,values);
+    var total=document.createElement("p");
+    total.className="poll-total";
+    total.textContent=(singleAnon ? rows.length+' total'
                 : t.yes+' yes · '+t.no+' no · '+rows.length+' total'+
-                  ' · '+signed+' signed in, '+(rows.length-signed)+' not signed in')+'</p>';
+                  ' · '+signed+' signed in, '+(rows.length-signed)+' not signed in');
+    counts.appendChild(total);
     var withC=rows.filter(function(r){return r.comment;});
     if(withC.length){
       paneC.innerHTML=withC.map(function(r){
         var no=r.vote.indexOf("no")===0;
         return '<p class="pc-item"><span class="pc-vote'+(no?' no':'')+'">'+(no?"No":"Yes")+'</span>'+
-          esc(r.comment)+(onlyAnon?'':(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>'))+'</p>';
+          esc(r.comment)+(singleAnon?'':(r.signed?'<span class="pc-signed">signed in</span>':'<span class="pc-signed">not signed in</span>'))+'</p>';
       }).join("");
     }
   });
 });
 document.addEventListener("click",function(e){var b=e.target.closest("[data-ptab]");if(!b)return;var sec=b.closest("section.poll");sec.querySelectorAll("[data-ptab]").forEach(function(x){x.classList.toggle("on",x===b);});var want=b.getAttribute("data-ptab");sec.querySelectorAll("[data-ppane]").forEach(function(p){p.hidden=p.getAttribute("data-ppane")!==want;});});
 })();</script>"""
+    if doc.get("polls"):
+        script = '<script src="assets/chart.umd.min.js"></script>\n' + script
     return marker_re.sub(lambda m: markup, body_html), script
 
 
@@ -2743,7 +2802,8 @@ SITE_JS = r'''(function () {
   // console instead of being swallowed.
   var THEMES = ["classic", "parchment", "ink", "midnight"];
   var body = document.body;
-  var defaultTheme = body.dataset.theme || "classic";
+  var defaultTheme = body.dataset.defaultTheme || body.dataset.theme || "classic";
+  function isDark(name) { return name === "midnight" || name === "ink"; }
 
   function savedTheme() {
     try { return localStorage.getItem("fc-theme"); } catch (err) { return null; }
@@ -2758,13 +2818,18 @@ SITE_JS = r'''(function () {
   var themeButton = document.getElementById("theme-toggle");
   function labelThemeButton() {
     if (themeButton) {
-      themeButton.textContent = body.dataset.theme === "midnight" ? "Light mode" : "Dark mode";
+      themeButton.textContent = isDark(body.dataset.theme) ? "Light mode" : "Dark mode";
     }
   }
   labelThemeButton();
   if (themeButton) {
     themeButton.addEventListener("click", function () {
-      var next = body.dataset.theme === "midnight" ? defaultTheme : "midnight";
+      var next;
+      if (isDark(body.dataset.theme)) {
+        next = isDark(defaultTheme) ? "parchment" : defaultTheme;
+      } else {
+        next = "midnight";
+      }
       body.dataset.theme = next;
       saveTheme(next);
       labelThemeButton();
@@ -3206,6 +3271,15 @@ def lazy_images(fragment: str, eager_first: bool = False) -> str:
 
 _IMAGE_SIZES: dict = {}
 
+# The two product renders live in the product repos and are linked by URL.
+# They have no local file to measure, so their intrinsic size is recorded
+# here to keep the page from jumping while they load.
+REMOTE_IMAGE_SIZES: dict = {
+    "https://raw.githubusercontent.com/bearjhartjen/Lamoka1-half/master/Images/lamoka1-2-render-top.webp": (1064, 1064),
+    "https://raw.githubusercontent.com/bearjhartjen/Lamoka1-half/master/Images/lamoka1-2-render-top-440.webp": (440, 440),
+    "https://raw.githubusercontent.com/bearjhartjen/Lamoka1-DEV-Brain/master/Images/lamoka1-dev-brain-render-top.webp": (1064, 448),
+}
+
 
 def image_size(path: Path):
     """(width, height) from a PNG, GIF, JPEG or WebP header, else None.
@@ -3273,9 +3347,11 @@ def size_images(fragment: str, sizes=None) -> str:
         if re.search(r"\b(?:width|height)=", tag):
             return tag
         hit = re.search(r'\bsrc="uploads/([^"/]+)"', tag)
-        if not hit:
-            return tag
-        dim = sizes.get(hit.group(1))
+        if hit:
+            dim = sizes.get(hit.group(1))
+        else:
+            remote = re.search(r'\bsrc="(https://[^"]+)"', tag)
+            dim = REMOTE_IMAGE_SIZES.get(remote.group(1)) if remote else None
         if not dim:
             return tag
         w, h = dim
@@ -3404,7 +3480,7 @@ def render_page(title: str, tagline: str, footer: str, theme: str,
         + css_link() + "\n"
         + custom_style_block(custom_css) +
         "</head>\n"
-        f'<body{body_attrs} data-theme="{theme}" data-star-animation="{STAR_ANIMATION_DEFAULT}">\n'
+        f'<body{body_attrs} data-theme="{theme}" data-default-theme="{theme}" data-star-animation="{STAR_ANIMATION_DEFAULT}">\n'
         f"{THEME_BOOT_TAG}"
         '<div class="page">\n'
         f"{badges}"
@@ -3448,7 +3524,7 @@ __CSSLINK__
 __CSS__
 </style>
 </head>
-<body data-theme="classic">
+<body data-theme="classic" data-default-theme="classic">
 <div class="page">
   <div class="masthead">
     <a class="logolink" href="/" aria-label="Go to the main page"><img src="__LOGO__" alt="Flamingo &amp; Cactus" width="96" height="96"></a>
@@ -3489,7 +3565,7 @@ __CSSLINK__
 __CSS__
 </style>
 </head>
-<body data-theme="classic">
+<body data-theme="classic" data-default-theme="classic">
 <div class="page">
   <div class="masthead">
     <img src="__LOGO__" alt="Flamingo and Cactus">
@@ -3715,12 +3791,14 @@ def build(data_path: Path, pages_dir: Path, logo_path: Path,
           .replace("__LOGO__", "/" + logo_uri)
           .replace("__NAV__", nav_html(site["pages"], "", "/"))
           .replace("__TAGLINE__", html.escape(site["tagline"]))
-          .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
+          .replace('data-theme="classic" data-default-theme="classic"',
+                   f'data-theme="{site["theme"]}" data-default-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "404.html", nf)
     ck = (CONTACT_ACK.replace("__CSSLINK__", css_link("/"))
           .replace("__CSS__", safe_custom_css(site.get("custom_css", "")))
           .replace("__LOGO__", "/" + logo_uri)
-          .replace('data-theme="classic"', f'data-theme="{site["theme"]}"'))
+          .replace('data-theme="classic" data-default-theme="classic"',
+                   f'data-theme="{site["theme"]}" data-default-theme="{site["theme"]}"'))
     write_text_atomic(out_dir / "contact-ack.html", ck)
     # A page deleted from site.json must stop being published. Earlier
     # builds never took anything down, so a removed page stayed live.
@@ -4034,6 +4112,27 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
         expect(size_images('<img src="uploads/a.png" width="10" height="20" alt="">', {"a.png": (640, 480)}) ==
                '<img src="uploads/a.png" width="10" height="20" alt="">',
                "image sizes written by hand are never overwritten")
+        good = ("https://raw.githubusercontent.com/bearjhartjen/Lamoka1-half/"
+                "master/Images/lamoka1-2-render-top.webp")
+        expect(good in sanitize(f'<img src="{good}" alt="x">'),
+               "sanitizer keeps a render URL from the product repos")
+        for bad in (good.replace("bearjhartjen", "someoneelse"),
+                    good.replace("https://", "http://"),
+                    good.replace("/master/", "/main/"),
+                    good + "?x=1",
+                    good.replace("/Images/", "/Images/../")):
+            expect(bad not in sanitize(f'<img src="{bad}" alt="x">'),
+                   "sanitizer still drops an off-site image: " + bad[:58])
+        expect('width="1064" height="1064"' in size_images(f'<img src="{good}" alt="">', {}),
+               "the Lamoka1/2 render gets its intrinsic size")
+        expect('width="1064" height="448"' in size_images(
+                   '<img src="https://raw.githubusercontent.com/bearjhartjen/Lamoka1-DEV-Brain/'
+                   'master/Images/lamoka1-dev-brain-render-top.webp" alt="">', {}),
+               "the DEV-Brain render gets its intrinsic size")
+        expect('width="440" height="440"' in size_images(
+                   '<img src="https://raw.githubusercontent.com/bearjhartjen/Lamoka1-half/'
+                   'master/Images/lamoka1-2-render-top-440.webp" alt="">', {}),
+               "the home-page thumbnail gets its intrinsic size")
 
         # FIX 1: hostile hrefs dropped, safe ones survive
         for bad_href in ("//evil.com/x", "/../../etc/passwd", "javascript:alert(1)", "data:text/html,hi"):
@@ -4600,6 +4699,56 @@ def check(data_path: Path, pages_dir: Path, logo_path: Path, uploads_dir: Path, 
                "the GitHub strip marker never leaks onto the home page")
         expect('<button type="button" class="themetoggle" id="theme-toggle">' in home_html,
                "the footer theme button is wired for site.js")
+        polls_html = (tmp / "polls.html").read_text(encoding="utf-8")
+        expect("poll-q" not in polls_html and "Open the anonymous form" not in polls_html,
+               "the Polls page drops the repeated question and the anonymous-tab link")
+        chart_at = polls_html.find('<script src="assets/chart.umd.min.js"></script>')
+        poll_at = polls_html.find('var secs=document.querySelectorAll("section.poll")')
+        expect(chart_at != -1 and poll_at != -1 and chart_at < poll_at,
+               "the Polls page loads Chart.js before the poll script")
+        expect("height:1000px" in polls_html and "height:1180px" in polls_html
+               and "height:1260px" in polls_html,
+               "the Polls iframe carries the 1000 / 1180 / 1260 px heights")
+        _poll_markup, _poll_js = place_polls(
+            "<p>[poll list]</p>",
+            {"polls": [{"id": "fit", "title": "Fit", "details": "d",
+                        "anon_form": "https://example.com/form", "form_height": 1234}]})
+        expect('style="height:1234px"' in _poll_markup and "chart.umd.min.js" in _poll_js,
+               "a poll with form_height renders that height on its iframe")
+        built_pages = ([tmp / f"{p['slug']}.html" for p in site["pages"]]
+                       + [tmp / "404.html", tmp / "contact-ack.html"])
+        expect(all(f'data-default-theme="{site["theme"]}"' in f.read_text(encoding="utf-8")
+                   for f in built_pages),
+               "every built page carries data-default-theme matching the site theme")
+        expect('"ink"' in _js and '"midnight"' in _js
+               and "body.dataset.defaultTheme || body.dataset.theme" in _js,
+               "the site script treats ink and midnight as dark and reads data-default-theme")
+        _san = sanitize_poll({"title": "T", "question": "old question", "form_height": 500})
+        expect("question" not in _san and _san["form_height"] == 500,
+               "sanitize_poll drops question and keeps a valid form_height")
+        expect(sanitize_poll({"form_height": 50})["form_height"] == 400
+               and sanitize_poll({"form_height": 5000})["form_height"] == 2000,
+               "sanitize_poll clamps a bad form_height into 400-2000")
+        products_html = (tmp / "products.html").read_text(encoding="utf-8")
+        index_html = (tmp / "index.html").read_text(encoding="utf-8")
+        expect("raw.githubusercontent.com/bearjhartjen/Lamoka1-half/master/Images/"
+               "lamoka1-2-render-top.webp" in products_html
+               and "raw.githubusercontent.com/bearjhartjen/Lamoka1-DEV-Brain/master/Images/"
+                   "lamoka1-dev-brain-render-top.webp" in products_html,
+               "the products page links the renders from their repos")
+        expect("raw.githubusercontent.com/bearjhartjen/Lamoka1-half/master/Images/"
+               "lamoka1-2-render-top-440.webp" in index_html,
+               "the home page links its thumbnail from the repo")
+        expect("uploads/lamoka1-2-render" not in products_html
+               and "uploads/lamoka1-dev-brain-render" not in products_html
+               and "uploads/lamoka1-2-render" not in index_html,
+               "no local render copies are referenced")
+        expect(not [p for p in (tmp / "uploads").glob("lamoka1*render*")],
+               "no render files are copied into the built site")
+        expect('width="1064" height="1064"' in products_html
+               and 'width="1064" height="448"' in products_html
+               and 'width="440" height="440"' in index_html,
+               "the repo renders carry their intrinsic sizes")
         if not ok:
             raise SystemExit("check FAILED")
         print(f"check passed in {tmp}")

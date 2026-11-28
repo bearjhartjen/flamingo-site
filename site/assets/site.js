@@ -7,7 +7,8 @@
   // console instead of being swallowed.
   var THEMES = ["classic", "parchment", "ink", "midnight"];
   var body = document.body;
-  var defaultTheme = body.dataset.theme || "classic";
+  var defaultTheme = body.dataset.defaultTheme || body.dataset.theme || "classic";
+  function isDark(name) { return name === "midnight" || name === "ink"; }
 
   function savedTheme() {
     try { return localStorage.getItem("fc-theme"); } catch (err) { return null; }
@@ -22,13 +23,18 @@
   var themeButton = document.getElementById("theme-toggle");
   function labelThemeButton() {
     if (themeButton) {
-      themeButton.textContent = body.dataset.theme === "midnight" ? "Light mode" : "Dark mode";
+      themeButton.textContent = isDark(body.dataset.theme) ? "Light mode" : "Dark mode";
     }
   }
   labelThemeButton();
   if (themeButton) {
     themeButton.addEventListener("click", function () {
-      var next = body.dataset.theme === "midnight" ? defaultTheme : "midnight";
+      var next;
+      if (isDark(body.dataset.theme)) {
+        next = isDark(defaultTheme) ? "parchment" : defaultTheme;
+      } else {
+        next = "midnight";
+      }
       body.dataset.theme = next;
       saveTheme(next);
       labelThemeButton();

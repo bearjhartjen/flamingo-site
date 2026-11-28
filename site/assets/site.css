@@ -9,6 +9,8 @@
 --rule2:#ececec;
 --link:#0b2a8c;
 --gold:#c9a227;
+--poll-yes:#2e8b57;
+--poll-no:#b0463c;
 }
 body[data-theme="classic"] .contactform{background:#ffffff}
 body[data-theme="parchment"]{
@@ -33,6 +35,8 @@ body[data-theme="ink"]{
 --rule2:#544b3e;
 --link:#9db8ff;
 --gold:#d29922;
+--poll-yes:#4fbf82;
+--poll-no:#e07a6f;
 }
 body[data-theme="midnight"]{
 --paper:#221c2c;
@@ -45,6 +49,8 @@ body[data-theme="midnight"]{
 --rule2:#3b2d54;
 --link:#d3b8ff;
 --gold:#e3b83b;
+--poll-yes:#4fbf82;
+--poll-no:#e07a6f;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}
