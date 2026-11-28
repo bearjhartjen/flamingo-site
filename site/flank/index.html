@@ -457,6 +457,8 @@ document.getElementById("stats").innerHTML =
    the last price kept in localStorage and says so.
    Holdings strings look like "200g, 2.6oz": grams convert at 31.1034768 g
    per troy oz, and bare "oz" is read as troy oz, the precious-metal unit. */
+let SILVER_PRICE = null;
+let GOLD_PRICE = null;
 const G_PER_OZT = 31.1034768;
 const SPOT_URL = "https://api.gold-api.com/price/XAG";
 const SPOT_EVERY_MS = 60000;
@@ -538,10 +540,6 @@ async function refreshSpot(){
   setInterval(refreshSpot, SPOT_EVERY_MS);
   document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) refreshSpot(); });
 })();
-
-/* gold price global for allocation bar */
-let SILVER_PRICE = null;
-let GOLD_PRICE = null;
 
 /* update silver renderSpot to record price: monkeypatch by editing renderSpot? Instead add assignment inside. */
 /* We'll instead modify renderSpot and renderGoldSpot to set globals + call updateAllocation. */
