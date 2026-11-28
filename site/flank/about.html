@@ -74,6 +74,37 @@
   .silverval{font-size:12px;color:var(--faint);font-family:"Helvetica Neue",Arial,sans-serif;margin-top:4px}
   .silverval b{color:var(--muted);font-weight:600}
 
+  /* ---------- holdings allocation ---------- */
+  .allocation{max-width:720px;margin:2.5rem auto 1rem;padding:1.1rem 0 0;border-top:1px solid #d8d1c2;color:#302c24;font-family:Georgia,"Times New Roman",serif;position:relative}
+  .allocation__heading{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:.8rem}
+  .allocation__heading h2{margin:0;color:#514630;font-size:1rem;font-weight:600;letter-spacing:.025em}
+  .allocation__heading p{margin:0;color:#70695d;font-size:.88rem}
+  .allocation__heading strong{color:#302c24;font-weight:600}
+  .allocation__bar{display:flex;width:100%;height:13px;overflow:hidden;border:1px solid #c8c0b0;border-radius:2px;background:#eee9df}
+  .allocation__bar .segment{display:block;height:100%;cursor:pointer;transition:filter .12s ease}
+  .allocation__bar .segment:hover{filter:brightness(1.12)}
+  .segment.gold{background:#8a6a12}
+  .segment.silver{background:#aeb1ad}
+  .segment.cash{background:#6b8f6b}
+  .segment.coin{background:#bd9360}
+  .segment.checking{background:#657b8a}
+  .segment.savings{background:#8997a1}
+  .segment.deep-savings{background:#a7aa8b}
+  .allocation__bar .segment + .segment{box-shadow:inset 1px 0 rgba(255,255,255,.65)}
+  .allocation__legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem 1rem;margin:.85rem 0 0;padding:0;list-style:none;color:#5c5549;font:0.78rem/1.3 Arial,sans-serif}
+  .allocation__legend li{display:flex;align-items:center;gap:.4rem;white-space:nowrap;cursor:default}
+  .allocation__legend b{margin-left:auto;color:#302c24;font-weight:600}
+  .swatch{width:9px;height:9px;flex:0 0 9px;border:1px solid rgba(48,44,36,.12);border-radius:50%}
+  .swatch.gold{background:#8a6a12}
+  .swatch.silver{background:#aeb1ad}
+  .swatch.cash{background:#6b8f6b}
+  .swatch.coin{background:#bd9360}
+  .swatch.checking{background:#657b8a}
+  .swatch.savings{background:#8997a1}
+  .swatch.deep-savings{background:#a7aa8b}
+  .allocation__tooltip{position:absolute;background:#302c24;color:#f5f1e8;font:12px/1.4 "Helvetica Neue",Arial,sans-serif;padding:6px 9px;border-radius:4px;pointer-events:none;white-space:nowrap;z-index:5;transform:translate(-50%,-130%)}
+  @media (max-width:560px){.allocation{margin-top:2rem}.allocation__legend{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
   .stats{
     text-align:center;color:var(--muted);font-size:13.5px;padding:0 0 20px;
     font-family:"Helvetica Neue",Arial,sans-serif;
@@ -268,14 +299,21 @@
     at the live spot price (troy ounces at XAG/USD) for reference. Where a point jumps by more than the recorded deposit or
     withdrawal, its tooltip flags the difference as <b>Unrecorded</b>.</p>
 
-    <h2>Where the live silver price comes from</h2>
-    <p>The silver spot flag at the top of the ledger page and the approximate
-    value under Silver Holdings are fetched live in the browser from the free
-    public feed at <a href="https://gold-api.com/">api.gold-api.com</a> (no key, XAG/USD per troy
-    ounce), refreshed about once a minute. The flag also stamps the time of
-    the last successful refresh, so it reads as alive even while the price
-    sits on one cent. If the feed cannot be reached, the
+    <h2>Where the live silver and gold prices come from</h2>
+    <p>The silver spot flag and the approximate value under Silver Holdings are
+    fetched live in the browser from the free public feed at
+    <a href="https://gold-api.com/">api.gold-api.com</a> (no key, XAG/USD per troy
+    ounce), refreshed about once a minute. A second flag tracks gold (XAU/USD)
+    and the approximate value under Gold Holdings the same way. Both flags stamp
+    the time of the last successful refresh. If a feed cannot be reached, the
     page shows the last price it saw and says so.</p>
+
+    <h2>Holdings allocation</h2>
+    <p>At the bottom of the ledger page, a holdings allocation bar compares the
+    total US dollar value of Gold, Silver, Cash, Coin, Checking, Savings and
+    Deep savings (the last at 3.65%). Values come from the ledger&rsquo;s per-transaction
+    columns plus the live spot prices for gold and silver. Hovering a partition
+    shows its dollar value, share and, for the metals, the weight in troy ounces.</p>
 
     <h2>The rest of the page</h2>
     <p>Beneath the charts is the full ledger as a table, newest first. The

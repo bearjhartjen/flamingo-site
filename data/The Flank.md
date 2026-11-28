@@ -972,3 +972,243 @@
 - **Private:** yes
 - **Notes:** [[FCEnc n:118 iv:SfYG+g0tcwnDEEQADe33wg== ct:m+w7SOnt++k9sxNu4afyVQGF79Y2XjRfOt2rkiciZm6c8BJYwLawjYFsOwSu5FwRFC7Ojsx+ZaJUoRd7tgMKyzW2+QFO1cFkdkpq5omyd0yw9NEMwwS/iFr/7nlkHpXbvskPN6kkNUwC9Xy8xV867cvzvxXhN9xmhvRx6MbGNlk=]]
 - **Transaction was made on:** 11-27-2026
+
+---
+
+## Transaction 83
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 84
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 85
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 86
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 87
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 88
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 89
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 90
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 91
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 92
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 93
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 94
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 95
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 96
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 97
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 98
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 99
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 100
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 101
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 
+
+---
+
+## Transaction 102
+
+- **Withdraw of:** $
+- **Deposit of:** $
+- **New balance:** $
+- **Silver holdings:** 
+- **Private:** no
+- **Notes:** 
+- **Transaction was made on:** 

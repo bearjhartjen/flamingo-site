@@ -125,6 +125,12 @@ def parse_records(data_path: Path):
                 "balance": b_val,
                 "balanceText": b_txt,
                 "silver": f.get("silver holdings", ""),
+                "gold": f.get("gold holdings", ""),
+                "cash": money(f.get("cash", ""))[0],
+                "coin": money(f.get("coin", ""))[0],
+                "checking": money(f.get("checking", ""))[0],
+                "savings": money(f.get("savings", ""))[0],
+                "deepSavings": money(f.get("deep savings", ""))[0],
                 "notes": notes,
                 "enc": enc,
                 "nlen": nlen,
@@ -243,6 +249,37 @@ CSS = r'''  :root{
   .spotflag.old .dot{background:var(--faint)}
   .silverval{font-size:12px;color:var(--faint);font-family:"Helvetica Neue",Arial,sans-serif;margin-top:4px}
   .silverval b{color:var(--muted);font-weight:600}
+
+  /* ---------- holdings allocation ---------- */
+  .allocation{max-width:720px;margin:2.5rem auto 1rem;padding:1.1rem 0 0;border-top:1px solid #d8d1c2;color:#302c24;font-family:Georgia,"Times New Roman",serif;position:relative}
+  .allocation__heading{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:.8rem}
+  .allocation__heading h2{margin:0;color:#514630;font-size:1rem;font-weight:600;letter-spacing:.025em}
+  .allocation__heading p{margin:0;color:#70695d;font-size:.88rem}
+  .allocation__heading strong{color:#302c24;font-weight:600}
+  .allocation__bar{display:flex;width:100%;height:13px;overflow:hidden;border:1px solid #c8c0b0;border-radius:2px;background:#eee9df}
+  .allocation__bar .segment{display:block;height:100%;cursor:pointer;transition:filter .12s ease}
+  .allocation__bar .segment:hover{filter:brightness(1.12)}
+  .segment.gold{background:#8a6a12}
+  .segment.silver{background:#aeb1ad}
+  .segment.cash{background:#6b8f6b}
+  .segment.coin{background:#bd9360}
+  .segment.checking{background:#657b8a}
+  .segment.savings{background:#8997a1}
+  .segment.deep-savings{background:#a7aa8b}
+  .allocation__bar .segment + .segment{box-shadow:inset 1px 0 rgba(255,255,255,.65)}
+  .allocation__legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem 1rem;margin:.85rem 0 0;padding:0;list-style:none;color:#5c5549;font:0.78rem/1.3 Arial,sans-serif}
+  .allocation__legend li{display:flex;align-items:center;gap:.4rem;white-space:nowrap;cursor:default}
+  .allocation__legend b{margin-left:auto;color:#302c24;font-weight:600}
+  .swatch{width:9px;height:9px;flex:0 0 9px;border:1px solid rgba(48,44,36,.12);border-radius:50%}
+  .swatch.gold{background:#8a6a12}
+  .swatch.silver{background:#aeb1ad}
+  .swatch.cash{background:#6b8f6b}
+  .swatch.coin{background:#bd9360}
+  .swatch.checking{background:#657b8a}
+  .swatch.savings{background:#8997a1}
+  .swatch.deep-savings{background:#a7aa8b}
+  .allocation__tooltip{position:absolute;background:#302c24;color:#f5f1e8;font:12px/1.4 "Helvetica Neue",Arial,sans-serif;padding:6px 9px;border-radius:4px;pointer-events:none;white-space:nowrap;z-index:5;transform:translate(-50%,-130%)}
+  @media (max-width:560px){.allocation{margin-top:2rem}.allocation__legend{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
   .stats{
     text-align:center;color:var(--muted);font-size:13.5px;padding:0 0 20px;
@@ -409,6 +446,7 @@ __CSS__
 <div class="page">
 
   <a class="spotflag" id="spotflag" href="https://gold-api.com/" target="_blank" rel="noopener" title="Live silver spot (XAG/USD per troy oz) — click to check the feed"><span class="dot"></span><span id="spotflag-txt">Ag spot &mdash;</span></a>
+  <a class="spotflag" id="goldspotflag" href="https://gold-api.com/" target="_blank" rel="noopener" title="Live gold spot (XAU/USD per troy oz) — click to check the feed"><span class="dot" style="background:#8a6a12"></span><span id="goldspotflag-txt">Au spot &mdash;</span></a>
 
   <div class="masthead">
     <img src="__LOGO__" alt="Flamingo and Cactus">
@@ -422,6 +460,12 @@ __CSS__
       <div class="k">Current Balance</div>
       <div class="v" id="h-balance">&mdash;</div>
       <div class="n" id="h-balance-note"></div>
+    </div>
+    <div class="item">
+      <div class="k">Gold Holdings</div>
+      <div class="v gold" id="h-gold">&mdash;</div>
+      <div class="n">physical reserve</div>
+      <div class="silverval" id="h-gold-val"></div>
     </div>
     <div class="item last">
       <div class="k">Silver Holdings</div>
@@ -487,6 +531,7 @@ __CSS__
          <th class="r">Deposit</th>
          <th class="r">Balance</th>
          <th>Silver</th>
+         <th>Gold</th>
          <th>Notes</th>
        </tr>
     </thead>
@@ -500,6 +545,32 @@ __CSS__
     <button class="btn" id="lockbtn">Unlock</button>
     <div class="lockmsg" id="lockmsg"></div>
   </div>
+
+  <section class="allocation" id="allocation" aria-labelledby="allocation-title">
+    <div class="allocation__heading">
+      <h2 id="allocation-title">Holdings allocation</h2>
+      <p>Total value <strong id="allocation-total">$0.00</strong></p>
+    </div>
+    <div class="allocation__bar" id="allocation-bar" role="img" aria-label="Holdings allocation">
+      <span class="segment gold" data-cat="gold" style="width:0%"></span>
+      <span class="segment silver" data-cat="silver" style="width:0%"></span>
+      <span class="segment cash" data-cat="cash" style="width:0%"></span>
+      <span class="segment coin" data-cat="coin" style="width:0%"></span>
+      <span class="segment checking" data-cat="checking" style="width:0%"></span>
+      <span class="segment savings" data-cat="savings" style="width:0%"></span>
+      <span class="segment deep-savings" data-cat="deepSavings" style="width:0%"></span>
+    </div>
+    <ul class="allocation__legend" id="allocation-legend">
+      <li data-cat="gold"><span class="swatch gold"></span>Gold <b>0%</b></li>
+      <li data-cat="silver"><span class="swatch silver"></span>Silver <b>0%</b></li>
+      <li data-cat="cash"><span class="swatch cash"></span>Cash <b>0%</b></li>
+      <li data-cat="coin"><span class="swatch coin"></span>Coin <b>0%</b></li>
+      <li data-cat="checking"><span class="swatch checking"></span>Checking <b>0%</b></li>
+      <li data-cat="savings"><span class="swatch savings"></span>Savings <b>0%</b></li>
+      <li data-cat="deepSavings"><span class="swatch deep-savings"></span>Deep savings &middot; 3.65% <b>0%</b></li>
+    </ul>
+    <div class="allocation__tooltip" id="allocation-tooltip" hidden></div>
+  </section>
 </div>
 
 <script src="chart.umd.min.js"></script>
@@ -533,18 +604,28 @@ const totals = TX.reduce((a,t)=>{
   a.withdrawals+= num(t.withdraw) || 0;
   if (t.balance !== null) a.lastBalance = t.balance;
   if (t.silver) a.silver = t.silver;
+  if (t.gold) a.gold = t.gold;
+  if (t.cash !== null && t.cash !== undefined) a.cash = t.cash;
+  if (t.coin !== null && t.coin !== undefined) a.coin = t.coin;
+  if (t.checking !== null && t.checking !== undefined) a.checking = t.checking;
+  if (t.savings !== null && t.savings !== undefined) a.savings = t.savings;
+  if (t.deepSavings !== null && t.deepSavings !== undefined) a.deepSavings = t.deepSavings;
   a.count++;
   return a;
-},{deposits:0, withdrawals:0, lastBalance:null, silver:"", count:0});
+},{deposits:0, withdrawals:0, lastBalance:null, silver:"", gold:"", cash:null, coin:null, checking:null, savings:null, deepSavings:null, count:0});
 
 const dated = TX.filter(t => t.date);
 const lastTx = TX[TX.length-1];
+
+/* Cash defaults to the ledger balance when no explicit Cash column exists. */
+if (totals.cash === null || totals.cash === undefined) totals.cash = totals.lastBalance;
 
 document.getElementById("h-balance").textContent = money(totals.lastBalance);
 document.getElementById("h-balance-note").textContent =
   "as of " + (lastTx.dateText || "the last entry");
 document.getElementById("h-silver").textContent = totals.silver || "\u2014";
 document.getElementById("note-silver").textContent = totals.silver || "none on record";
+document.getElementById("h-gold").textContent = totals.gold || "\u2014";
 
 document.getElementById("stats").innerHTML =
   `<b>${totals.count}</b> transactions &nbsp;&middot;&nbsp; ` +
@@ -574,6 +655,7 @@ function silverOzt(s){
   return ozt;
 }
 const HOLDINGS_OZT = silverOzt(totals.silver);
+const HOLDINGS_GOLD_OZT = silverOzt(totals.gold);
 
 function renderSpot(price, mode, atMs){
   const flag = document.getElementById("spotflag");
@@ -583,6 +665,8 @@ function renderSpot(price, mode, atMs){
     flag.className = "spotflag off";
     txt.textContent = "Ag spot unavailable";
     if (val) val.textContent = "";
+    SILVER_PRICE = null;
+    updateAllocation();
     return;
   }
   const p = money(price) + "/ozt";
@@ -602,6 +686,8 @@ function renderSpot(price, mode, atMs){
   if (val) val.innerHTML = HOLDINGS_OZT > 0
     ? "&#8776; <b>" + money(price * HOLDINGS_OZT) + "</b> at spot " + p
     : "";
+  SILVER_PRICE = price;
+  updateAllocation();
 }
 
 async function refreshSpot(){
@@ -635,6 +721,142 @@ async function refreshSpot(){
   refreshSpot();
   setInterval(refreshSpot, SPOT_EVERY_MS);
   document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) refreshSpot(); });
+})();
+
+/* gold price global for allocation bar */
+let SILVER_PRICE = null;
+let GOLD_PRICE = null;
+
+/* update silver renderSpot to record price: monkeypatch by editing renderSpot? Instead add assignment inside. */
+/* We'll instead modify renderSpot and renderGoldSpot to set globals + call updateAllocation. */
+
+/* ------------------------------------------------------------------ gold spot */
+const GOLD_SPOT_URL = "https://api.gold-api.com/price/XAU";
+
+function renderGoldSpot(price, mode, atMs){
+  const flag = document.getElementById("goldspotflag");
+  const txt  = document.getElementById("goldspotflag-txt");
+  const val  = document.getElementById("h-gold-val");
+  if (price === null || !(price > 0)){
+    flag.className = "spotflag off";
+    txt.textContent = "Au spot unavailable";
+    if (val) val.textContent = "";
+    GOLD_PRICE = null;
+    updateAllocation();
+    return;
+  }
+  GOLD_PRICE = price;
+  const p = money(price) + "/ozt";
+  if (mode === "live"){
+    flag.className = "spotflag";
+    txt.textContent = "Au " + p + " \u00b7 live \u00b7 " + new Date().toLocaleTimeString();
+  } else {
+    flag.className = "spotflag " + (mode === "cached" ? "old" : "off");
+    const age = atMs ? Math.max(0, Date.now() - atMs) : null;
+    const when = age === null ? "" : age < 90e3 ? " \u00b7 just now"
+      : age < 3600e3 ? " \u00b7 " + Math.round(age/60e3) + "m ago"
+      : " \u00b7 " + Math.round(age/3600e3) + "h ago";
+    txt.textContent = "Au " + p + (mode === "cached" ? " \u00b7 last seen" + when : when);
+  }
+  if (val) val.innerHTML = HOLDINGS_GOLD_OZT > 0
+    ? "&#8776; <b>" + money(price * HOLDINGS_GOLD_OZT) + "</b> at spot " + p
+    : "";
+  updateAllocation();
+}
+
+async function refreshGoldSpot(){
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(()=>ctl.abort(), 10000);
+    const res = await fetch(GOLD_SPOT_URL, { cache: "no-store", signal: ctl.signal });
+    clearTimeout(to);
+    if (!res.ok) throw new Error("spot HTTP " + res.status);
+    const j = await res.json();
+    const price = Number(j.price);
+    if (!isFinite(price) || price <= 0) throw new Error("bad spot payload");
+    const atMs = Date.parse(j.updatedAt) || Date.now();
+    try { localStorage.setItem("flankAuSpot", JSON.stringify({ price, atMs })); } catch(e){}
+    renderGoldSpot(price, "live", atMs);
+  } catch(e){
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem("flankAuSpot") || "null"); } catch(e2){}
+    if (cached && isFinite(cached.price) && cached.price > 0)
+      renderGoldSpot(cached.price, "cached", cached.atMs || 0);
+    else
+      renderGoldSpot(null);
+  }
+}
+
+(function(){
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem("flankAuSpot") || "null"); } catch(e){}
+  if (cached && isFinite(cached.price) && cached.price > 0)
+    renderGoldSpot(cached.price, "cached", cached.atMs || 0);
+  refreshGoldSpot();
+  setInterval(refreshGoldSpot, SPOT_EVERY_MS);
+  document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) refreshGoldSpot(); });
+})();
+
+/* ------------------------------------------------------------------ allocation bar */
+const ALLOC_CATS = ["gold","silver","cash","coin","checking","savings","deepSavings"];
+const ALLOC_LABELS = {gold:"Gold",silver:"Silver",cash:"Cash",coin:"Coin",checking:"Checking",savings:"Savings",deepSavings:"Deep savings"};
+let ALLOC_TOTAL = 0;
+
+function allocationValue(cat){
+  if (cat === "gold") return (HOLDINGS_GOLD_OZT || 0) * (GOLD_PRICE || 0);
+  if (cat === "silver") return (HOLDINGS_OZT || 0) * (SILVER_PRICE || 0);
+  if (cat === "cash") return totals.cash || 0;
+  if (cat === "coin") return totals.coin || 0;
+  if (cat === "checking") return totals.checking || 0;
+  if (cat === "savings") return totals.savings || 0;
+  if (cat === "deepSavings") return totals.deepSavings || 0;
+  return 0;
+}
+
+function updateAllocation(){
+  const vals = ALLOC_CATS.map(c => ({ cat:c, value: allocationValue(c) }));
+  ALLOC_TOTAL = vals.reduce((s,v)=>s+v.value,0);
+  const totalEl = document.getElementById("allocation-total");
+  if (totalEl) totalEl.textContent = money(ALLOC_TOTAL);
+  const bar = document.getElementById("allocation-bar");
+  vals.forEach(v => {
+    const seg = bar ? bar.querySelector('.segment[data-cat="' + v.cat + '"]') : null;
+    const pct = ALLOC_TOTAL > 0 ? (v.value / ALLOC_TOTAL * 100) : 0;
+    if (seg){ seg.style.width = pct + "%"; seg.dataset.value = v.value; seg.dataset.pct = pct; }
+    const b = document.querySelector('#allocation-legend li[data-cat="' + v.cat + '"] b');
+    if (b) b.textContent = pct.toFixed(1) + "%";
+  });
+  if (bar) bar.setAttribute("aria-label", "Holdings allocation: " + vals.map(v => ALLOC_LABELS[v.cat] + " " + (ALLOC_TOTAL>0 ? (v.value/ALLOC_TOTAL*100).toFixed(0) : 0) + "%").join(", ") + ".");
+}
+
+function showAllocationTooltip(seg){
+  const tooltip = document.getElementById("allocation-tooltip");
+  if (!tooltip) return;
+  const cat = seg.dataset.cat;
+  const value = parseFloat(seg.dataset.value) || 0;
+  const pct = parseFloat(seg.dataset.pct) || 0;
+  let extra = "";
+  if (cat === "gold") extra = " \u00b7 " + (HOLDINGS_GOLD_OZT || 0).toFixed(4) + " troy oz";
+  if (cat === "silver") extra = " \u00b7 " + (HOLDINGS_OZT || 0).toFixed(4) + " troy oz";
+  if (cat === "deepSavings") extra = " \u00b7 3.65% APY";
+  tooltip.textContent = ALLOC_LABELS[cat] + ": " + money(value) + " (" + pct.toFixed(1) + "%)" + extra;
+  tooltip.hidden = false;
+  const alloc = document.querySelector(".allocation");
+  const r = seg.getBoundingClientRect();
+  const ar = alloc.getBoundingClientRect();
+  tooltip.style.left = (r.left - ar.left + r.width/2) + "px";
+  tooltip.style.top = (r.top - ar.top - 4) + "px";
+}
+
+(function(){
+  document.querySelectorAll(".allocation__bar .segment").forEach(seg => {
+    seg.addEventListener("mouseenter", () => showAllocationTooltip(seg));
+    seg.addEventListener("mouseleave", () => {
+      const t = document.getElementById("allocation-tooltip");
+      if (t) t.hidden = true;
+    });
+  });
+  updateAllocation();
 })();
 
 /* ------------------------------------------------------------------ points */
@@ -1001,6 +1223,7 @@ function render(){
       + '<td class="r">' + dCell + "</td>"
       + '<td class="r bal">' + money(t.balance) + "</td>"
       + '<td class="silver">' + esc(t.silver || "—") + "</td>"
+      + '<td class="silver">' + esc(t.gold || "—") + "</td>"
       + '<td class="notes">' + noteCell(t) + "</td>"
       + "</tr>";
   }).join("");
@@ -1179,14 +1402,21 @@ __CSS__
     at the live spot price (troy ounces at XAG/USD) for reference. Where a point jumps by more than the recorded deposit or
     withdrawal, its tooltip flags the difference as <b>Unrecorded</b>.</p>
 
-    <h2>Where the live silver price comes from</h2>
-    <p>The silver spot flag at the top of the ledger page and the approximate
-    value under Silver Holdings are fetched live in the browser from the free
-    public feed at <a href="https://gold-api.com/">api.gold-api.com</a> (no key, XAG/USD per troy
-    ounce), refreshed about once a minute. The flag also stamps the time of
-    the last successful refresh, so it reads as alive even while the price
-    sits on one cent. If the feed cannot be reached, the
+    <h2>Where the live silver and gold prices come from</h2>
+    <p>The silver spot flag and the approximate value under Silver Holdings are
+    fetched live in the browser from the free public feed at
+    <a href="https://gold-api.com/">api.gold-api.com</a> (no key, XAG/USD per troy
+    ounce), refreshed about once a minute. A second flag tracks gold (XAU/USD)
+    and the approximate value under Gold Holdings the same way. Both flags stamp
+    the time of the last successful refresh. If a feed cannot be reached, the
     page shows the last price it saw and says so.</p>
+
+    <h2>Holdings allocation</h2>
+    <p>At the bottom of the ledger page, a holdings allocation bar compares the
+    total US dollar value of Gold, Silver, Cash, Coin, Checking, Savings and
+    Deep savings (the last at 3.65%). Values come from the ledger&rsquo;s per-transaction
+    columns plus the live spot prices for gold and silver. Hovering a partition
+    shows its dollar value, share and, for the metals, the weight in troy ounces.</p>
 
     <h2>The rest of the page</h2>
     <p>Beneath the charts is the full ledger as a table, newest first. The

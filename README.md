@@ -109,6 +109,16 @@ scripts/sync-ledger.sh` does the same by hand. Install the watcher with
 `sh scripts/install-watcher.sh`, remove it with `sh
 scripts/uninstall-watcher.sh`.
 
+The ledger now tracks more than cash and silver. Each transaction can carry
+optional columns for `Gold holdings` (weight, like silver), `Cash`, `Coin`,
+`Checking`, `Savings` and `Deep savings` (dollar amounts). The ledger page
+shows a live gold spot flag (XAU/USD) next to the silver one, a `Gold
+Holdings` headline figure, and a holdings allocation bar at the very bottom
+that compares the total US dollar value of Gold, Silver, Cash, Coin,
+Checking, Savings and Deep savings (the last at 3.65%). Hovering a
+partition shows its dollar value, share and, for the metals, the weight in
+troy ounces. The bar recomputes whenever either spot price refreshes.
+
 ### Financials, live repositories, and Giscus-ting
 
 The Financials page is a deliberately small teaser: money in, money out, a

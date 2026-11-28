@@ -28,6 +28,22 @@ on `http://127.0.0.1:8767/` that only your own computer can reach.
 We did it this way on purpose. No accounts to hack. No database to break.
 If you can edit files, you can run the whole site.
 
+## Gold holdings, allocation bar, and full holdings columns (2026-11-28)
+
+Added gold tracking and a transparent holdings comparison to the Flank
+ledger. The ledger now supports optional per-transaction columns for
+`Gold holdings`, `Cash`, `Coin`, `Checking`, `Savings` and `Deep savings`
+alongside the existing `Silver holdings`. The ledger page shows a live gold
+spot flag (XAU/USD) next to the silver one, a `Gold Holdings` headline
+figure with an approximate dollar value at spot, and a holdings allocation
+bar at the very bottom comparing the total US dollar value of Gold, Silver,
+Cash, Coin, Checking, Savings and Deep savings (the last at 3.65%). Hovering
+a partition shows its dollar value, share and, for the metals, the weight in
+troy ounces; the bar recomputes whenever either spot price refreshes. The
+about page documents the new feeds and the bar. Beehest was unavailable
+(model/auth issues), so these edits were made directly; `build.py --check`
+and `build_flank.py --check` both pass.
+
 ## The site is static
 
 `scripts/build.py` reads `data/` and writes `site/` from scratch every
